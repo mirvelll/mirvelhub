@@ -627,6 +627,14 @@
                     </div>
                     <div class="pt-6 border-t border-white/10 space-y-4">
                         <button onclick="saveProfile()" class="w-full bg-green-600 py-4 rounded-xl font-bold hover:bg-green-500 transition-all shadow-lg btn-neon">Сохранить изменения</button>
+                        
+                        <!-- Блок аудита и синхронизации опыта хаба -->
+                        <div class="bg-white/5 p-4 rounded-2xl border border-white/5 space-y-2">
+                            <p class="text-xs font-black text-cyan-400 uppercase tracking-widest">🛡️ Аудит хаба и перепроверка опыта</p>
+                            <p class="text-[11px] text-gray-400">Перепроверить и синхронизировать ваш уровень на основе реального количества дисков, прослушиваний и достижений.</p>
+                            <button onclick="auditAndSyncXP()" class="w-full bg-cyan-600/20 hover:bg-cyan-600/40 border border-cyan-500/30 py-2.5 rounded-xl text-xs font-bold text-cyan-300 transition-all">Синхронизировать опыт и достижения 🎯</button>
+                        </div>
+
                         <div class="grid grid-cols-2 gap-4">
                             <button onclick="exportData()" class="w-full bg-purple-600/40 border border-purple-500/20 py-3 rounded-xl text-sm font-bold hover:bg-purple-600/60 transition">Экспорт (.json)</button>
                             <input type="file" id="import-file" onchange="importData(event)" accept=".json" class="hidden">
@@ -1462,12 +1470,37 @@
                     { req: 50, label: 'Lvl 3', xp: 250, desc: 'Запустить проигрывание релиза 50 раз' }
                 ]
             },
+            { 
+                id: 'merch_lord', 
+                title: 'Властелин Мерча', 
+                icon: '👕', 
+                isTiered: true, 
+                getVal: d => (d.stuff || []).filter(i => i.category === 'clothing').length,
+                tiers: [
+                    { req: 1, label: 'Lvl 1', xp: 40, desc: 'Добавить 1 предмет одежды или музыкального мерча' },
+                    { req: 3, label: 'Lvl 2', xp: 80, desc: 'Собрать 3 предмета одежды или музыкального мерча' },
+                    { req: 6, label: 'Lvl 3', xp: 150, desc: 'Собрать 6 предметов одежды или музыкального мерча' }
+                ]
+            },
             { id: 'first_item', title: 'Первая игла / Луч', desc: 'Добавьте ваш первый музыкальный релиз в коллекцию (CD или Винил)', icon: '⭐', xp: 50, cond: d => ((d.cds?.length || 0) + (d.vinyls?.length || 0)) >= 1 },
             { id: 'goal_completed', title: 'Целеустремлённый', desc: 'Отметьте хотя бы одну выполненную коллекционную цель (CD или Винил)', icon: '🎯', xp: 100, cond: d => (d.goals || []).some(g => g.hasCd || g.hasVinyl) },
             { id: 'theme_customizer', title: 'Стиляга', desc: 'Переключите стандартную цветовую тему хаба на любую другую', icon: '🎨', xp: 30, cond: d => !!d.selectedTheme },
             { id: 'custom_cd', title: 'Особый ценитель', desc: 'Добавьте в хаб хотя бы один кастомный CD диск ✨', icon: '✨', xp: 75, cond: d => (d.cds || []).some(c => c.isCustom) },
             { id: 'free_music', title: 'Сладкая халява', desc: 'Добавьте бесплатный релиз (0 ₴) или подарок в коллекцию', icon: '🎈', xp: 50, cond: d => [...(d.cds || []), ...(d.vinyls || [])].some(i => i.price === 0 || i.isGift) },
-            { id: 'super_wish', title: 'Элитное желание', desc: 'Добавьте в Wishlist вещь стоимостью 5000 ₴ или выше', icon: '💸', xp: 100, cond: d => (d.wishlists || []).some(i => i.price >= 5000) }
+            { id: 'super_wish', title: 'Элитное желание', desc: 'Добавьте в Wishlist вещь стоимостью 5000 ₴ или выше', icon: '💸', xp: 100, cond: d => (d.wishlists || []).some(i => i.price >= 5000) },
+            { id: 'decade_hopper', title: 'Эпоха за эпохой', desc: 'Собрать релизы как минимум из 3 разных десятилетий (например, 80-е, 90-е, 00-е)', icon: '🕰️', xp: 80, cond: d => {
+                const decades = new Set();
+                [...(d.cds || []), ...(d.vinyls || [])].forEach(i => {
+                    const y = parseInt(i.year);
+                    if (y && y > 1900 && y < 2100) decades.add(Math.floor(y / 10) * 10);
+                });
+                return decades.size >= 3;
+            }},
+            { id: 'rating_critic', title: 'Строгий критик', desc: 'Поставить оценку 5 звёзд как минимум 5 вашим релизам', icon: '🌟', xp: 60, cond: d => [...(d.cds || []), ...(d.vinyls || [])].filter(i => (i.rating || 0) === 5).length >= 5 },
+            { id: 'perfectionist', title: 'Перфекционист', desc: 'Указать физическое расположение (полку/шкаф) как минимум для 5 предметов', icon: '📍', xp: 70, cond: d => [...(d.cds || []), ...(d.vinyls || []), ...(d.stuff || [])].filter(i => (i.storageLocation || '').trim().length > 0).length >= 5 },
+            { id: 'budget_master', title: 'Инвестор в хобби', desc: 'Настроить планировщик бюджета в Wishlist на сумму более 5000 ₴', icon: '📈', xp: 40, cond: d => (d.hobbyBudget || 0) > 5000 },
+            { id: 'social_collector', title: 'Цифровой меломан', desc: 'Добавить ссылки на маркетплейсы/источники (URL) как минимум к 3 релизам или желаниям', icon: '🌐', xp: 50, cond: d => [...(d.cds || []), ...(d.vinyls || []), ...(d.stuff || []), ...(d.wishlists || [])].filter(i => (i.url || '').trim().length > 0).length >= 3 },
+            { id: 'high_fidelity', title: 'Hi-Fi Аудиофил', desc: 'Добавить хотя бы одно устройство в категорию аудиотехники/девайсов (gear)', icon: '🔌', xp: 60, cond: d => (d.stuff || []).some(i => i.category === 'gear') }
         ];
 
         const defaultSites = [
@@ -1541,6 +1574,68 @@
             return count;
         }
 
+        function getValidAchievementIDs() {
+            const valid = new Set();
+            ACHIEVEMENTS_LIST.forEach(ach => {
+                if (ach.isTiered) {
+                    ach.tiers.forEach((tier, idx) => {
+                        valid.add(`${ach.id}_${idx}`);
+                    });
+                } else {
+                    valid.add(ach.id);
+                }
+            });
+            return valid;
+        }
+
+        function sanitizeUnlockedAchievements() {
+            if (!data.unlockedAchievements) data.unlockedAchievements = [];
+            const valid = getValidAchievementIDs();
+            // Отбрасываем ID, которых нет в текущей версии Achievements List
+            data.unlockedAchievements = data.unlockedAchievements.filter(id => valid.has(id));
+            // Исключаем дубликаты
+            data.unlockedAchievements = [...new Set(data.unlockedAchievements)];
+        }
+
+        window.auditAndSyncXP = () => {
+            // 1. Очищаем достижения от устаревших или поврежденных ID
+            sanitizeUnlockedAchievements();
+
+            // 2. Считаем чистый опыт, заработанный на текущих достижениях
+            let totalAchievementsXP = 0;
+            const unlocked = new Set(data.unlockedAchievements);
+
+            ACHIEVEMENTS_LIST.forEach(ach => {
+                if (ach.isTiered) {
+                    ach.tiers.forEach((tier, idx) => {
+                        if (unlocked.has(`${ach.id}_${idx}`)) {
+                            totalAchievementsXP += tier.xp;
+                        }
+                    });
+                } else {
+                    if (unlocked.has(ach.id)) {
+                        totalAchievementsXP += ach.xp;
+                    }
+                }
+            });
+
+            // 3. Добавляем честный опыт за активность (без начислений "из воздуха")
+            // Прослушивания: 10 XP за каждый скробблинг
+            const totalPlays = [...(data.cds || []), ...(data.vinyls || [])].reduce((acc, i) => acc + (i.playCount || 0), 0);
+            const playsXP = totalPlays * 10;
+
+            // Каталогизация: 25 XP за добавление каждого предмета в хаб
+            const totalItemsCount = (data.cds?.length || 0) + (data.vinyls?.length || 0) + (data.stuff?.length || 0);
+            const catalogXP = totalItemsCount * 25;
+
+            // Консолидация
+            const auditedXP = totalAchievementsXP + playsXP + catalogXP;
+            data.xp = auditedXP;
+
+            save();
+            showToast(`🔄 Опыт пересчитан! Реальный итог: <strong>${auditedXP} XP</strong> (Уровень ${Math.floor(auditedXP / 500) + 1})`);
+        };
+
         function addXP(amount, reason) {
             if (!amount || amount <= 0) return;
             const oldLvl = Math.floor((data.xp || 0) / 500) + 1;
@@ -1561,10 +1656,8 @@
             if (isCheckingAchievements) return;
             isCheckingAchievements = true;
 
-            if (!data.unlockedAchievements) data.unlockedAchievements = [];
-
-            // Санация дубликатов на лету
-            data.unlockedAchievements = [...new Set(data.unlockedAchievements)];
+            // Очищаем и нормализуем массив до пересчета
+            sanitizeUnlockedAchievements();
 
             ACHIEVEMENTS_LIST.forEach(ach => {
                 if (ach.isTiered) {
@@ -1590,8 +1683,8 @@
                 }
             });
 
-            // Принудительная финальная санация
-            data.unlockedAchievements = [...new Set(data.unlockedAchievements)];
+            // Повторная санация для стабильности сохранения
+            sanitizeUnlockedAchievements();
             isCheckingAchievements = false;
         }
     </script>
@@ -3038,12 +3131,12 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
                 }
             });
 
-            // Рендер достижений (ИСПРАВЛЕН БАГ 37 из 23)
+            // Рендер достижений
             const achGrid = document.getElementById('achievements-grid');
             if (achGrid) {
-                // Применяем Set, чтобы жестко исключить любые дубликаты
-                const unlocked = [...new Set(data.unlockedAchievements || [])];
-                data.unlockedAchievements = unlocked; // перезаписываем обратно чистый список
+                // Жёсткая санация перед выводом на экран для предотвращения бага "38 / 23 (100%)"
+                sanitizeUnlockedAchievements();
+                const unlocked = data.unlockedAchievements;
 
                 const total = getTotalAchievementsCount();
                 const countUnlocked = unlocked.length;
@@ -3745,6 +3838,8 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
             if (data.selectedTheme) {
                 setTheme(data.selectedTheme);
             }
+            // Проводим автоматическое оздоровление базы на входе в хаб
+            sanitizeUnlockedAchievements();
             checkAchievements();
             showPage('home');
         };
