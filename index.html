@@ -130,7 +130,7 @@
 </head>
 <body class="flex flex-col md:flex-row min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-950 via-black to-black">
 
-    <nav class="w-full md:w-64 p-4 md:p-8 flex flex-col gap-4 md:gap-6 border-b md:border-b-0 md:border-r border-white/5 shrink-0 bg-black/40 backdrop-blur-md">
+    <nav class="w-full md:w-64 p-4 md:p-8 flex flex-col gap-4 md:gap-6 border-b md:border-b-0 md:border-r border-white/5 shrink-0 bg-black/40 backdrop-blur-md z-30">
         <div class="flex items-center justify-between md:flex-col md:items-start md:gap-6 w-full">
             <h1 class="text-xl md:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400 italic tracking-wider select-none shrink-0">MIRVEL HUB</h1>
             
@@ -150,7 +150,7 @@
             <button onclick="showPage('wishlists')" id="nav-wishlists" class="nav-btn text-left py-2.5 px-4 rounded-2xl hover:bg-white/5 transition-all duration-300 flex items-center gap-3 shrink-0">🎁 <span>Желаемое</span></button>
             <button onclick="showPage('goals')" id="nav-goals" class="nav-btn text-left py-2.5 px-4 rounded-2xl hover:bg-white/5 transition-all duration-300 flex items-center gap-3 shrink-0">🎯 <span>Цели</span></button>
             <button onclick="showPage('analytics')" id="nav-analytics" class="nav-btn text-left py-2.5 px-4 rounded-2xl hover:bg-white/5 transition-all duration-300 flex items-center gap-3 shrink-0">📊 <span>Статистика</span></button>
-            <button onclick="showPage('achievements')" id="nav-achievements" class="nav-btn text-left py-2.5 px-4 rounded-2xl hover:bg-white/5 transition-all duration-300 flex items-center gap-3 shrink-0">🏆 <span>Награды</span></button>
+            <button onclick="showPage('achievements')" id="nav-achievements" class="nav-btn text-left py-2.5 px-4 rounded-2xl hover:bg-white/5 transition-all duration-300 flex items-center gap-3 shrink-0">🏆 <span>Достижения</span></button>
             <button onclick="showPage('profile')" id="nav-profile" class="nav-btn text-left py-2.5 px-4 rounded-2xl hover:bg-white/5 transition-all duration-300 flex items-center gap-3 shrink-0">👤 <span>Настройки</span></button>
         </div>
         
@@ -199,7 +199,6 @@
                 </div>
             </div>
 
-            <!-- Grid: Оптимизирована адаптивность колонок под 6 элементов -->
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-5 mb-10">
                 <div class="glass p-6 rounded-3xl"><p class="text-gray-500 text-xs uppercase font-bold tracking-wider">Муз. Коллекция 💿</p><h3 class="text-xl md:text-2xl font-black mt-2 text-purple-400 truncate" id="stat-music-col-val">0 ₴</h3></div>
                 <div class="glass p-6 rounded-3xl"><p class="text-gray-500 text-xs uppercase font-bold tracking-wider">Коллекция вещей 📦</p><h3 class="text-xl md:text-2xl font-black mt-2 text-teal-400 truncate" id="stat-stuff-col-val">0 ₴</h3></div>
@@ -287,31 +286,36 @@
             </div>
         </section>
 
-        <!-- СТРАНИЦА: АНАЛИТИКА -->
+        <!-- СТРАНИЦА: АНАЛИТИКА (Улучшено) -->
         <section id="analytics" class="hidden fade-in transition-all duration-500 transform translate-y-0">
             <div class="mb-8">
-                <h2 class="text-4xl font-bold">Аналитика коллекции 📊</h2>
-                <p class="text-gray-500">Глубокие инсайты, статистика трат и форматы ваших предметов.</p>
+                <h2 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400">Аналитика коллекции 📊</h2>
+                <p class="text-gray-400 text-sm mt-1">Интерактивный анализ стоимости, физических размеров, временных эпох и ваших музыкальных предпочтений.</p>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
+                <!-- Стоимость по категориям -->
                 <div class="glass p-6 rounded-3xl lg:col-span-2 space-y-6">
-                    <h3 class="text-lg font-black text-gray-200">Распределение бюджета по категориям</h3>
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-lg font-black text-white">Распределение бюджета по категориям</h3>
+                        <span class="text-xs text-gray-400">Автообновление</span>
+                    </div>
                     <div id="analytics-categories" class="space-y-4"></div>
                 </div>
 
-                <div class="glass p-6 rounded-3xl flex flex-col justify-between">
-                    <h3 class="text-lg font-black text-gray-200 mb-4">Соотношение CD и Винила</h3>
+                <!-- CD vs Винил -->
+                <div class="glass p-6 rounded-3xl flex flex-col justify-between relative overflow-hidden">
+                    <h3 class="text-lg font-black text-white mb-4">Соотношение носителей</h3>
                     <div class="flex-grow flex flex-col justify-center items-center relative">
                         <div class="relative w-36 h-36 rounded-full flex items-center justify-center border-4 border-white/5 bg-black/40">
                             <div class="text-center">
-                                <span class="text-gray-500 text-xs block uppercase">Носители</span>
-                                <span id="analytics-total-music" class="text-2xl font-black text-white">0</span>
+                                <span class="text-gray-500 text-[10px] block uppercase font-bold tracking-wider">Всего штук</span>
+                                <span id="analytics-total-music" class="text-3xl font-black text-white">0</span>
                             </div>
                         </div>
                         <div class="w-full mt-6 space-y-2">
                             <div class="flex justify-between text-xs text-purple-300">
-                                <span class="flex items-center gap-1.5">💿 Компакт-диски (CD)</span>
+                                <span class="flex items-center gap-1.5">💿 CD компакт-диски</span>
                                 <span id="analytics-cd-pct" class="font-bold">0%</span>
                             </div>
                             <div class="flex justify-between text-xs text-cyan-400">
@@ -323,14 +327,44 @@
                 </div>
             </div>
 
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
+                <!-- Временная лента: Десятилетия выхода ваших релизов -->
+                <div class="glass p-6 rounded-3xl lg:col-span-2 space-y-4">
+                    <h3 class="text-lg font-black text-white">🕰️ Музыкальные эпохи в коллекции</h3>
+                    <p class="text-xs text-gray-500">Динамическое распределение релизов по годам их оригинального выхода.</p>
+                    <div id="analytics-decades-chart" class="flex items-end justify-between h-48 pt-6 px-4 gap-2">
+                        <!-- Динамически заполняется -->
+                    </div>
+                </div>
+
+                <!-- Физический калькулятор полки -->
+                <div class="glass p-6 rounded-3xl flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-lg font-black text-white mb-2">📦 Физический объем</h3>
+                        <p class="text-xs text-gray-400">Приблизительный размер и вес вашей физической фонотеки для расчета площади хранения.</p>
+                    </div>
+                    <div class="space-y-4 my-4">
+                        <div class="bg-white/5 p-3 rounded-2xl flex justify-between items-center">
+                            <span class="text-xs text-gray-400">Ширина полок (длина):</span>
+                            <span id="shelf-width-est" class="text-sm font-black text-cyan-400">0 см</span>
+                        </div>
+                        <div class="bg-white/5 p-3 rounded-2xl flex justify-between items-center">
+                            <span class="text-xs text-gray-400">Приблизительный вес:</span>
+                            <span id="shelf-weight-est" class="text-sm font-black text-purple-400">0 кг</span>
+                        </div>
+                    </div>
+                    <p class="text-[10px] text-gray-500 italic">Расчет основан на стандартах: толщина винила в конверте ~4мм (весит 230г), CD бокса ~10мм (весит 100г).</p>
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="glass p-6 rounded-3xl space-y-4">
-                    <h3 class="text-lg font-black text-gray-200">💎 Топ самых дорогих приобретений</h3>
+                    <h3 class="text-lg font-black text-gray-200">💎 Самые дорогие приобретения</h3>
                     <div id="analytics-top-expensive" class="space-y-3"></div>
                 </div>
 
                 <div class="glass p-6 rounded-3xl space-y-4">
-                    <h3 class="text-lg font-black text-gray-200">🎧 Часто прослушиваемые альбомы</h3>
+                    <h3 class="text-lg font-black text-gray-200">🎧 Топ прослушиваний (Лидеры проигрывателя)</h3>
                     <div id="analytics-top-played" class="space-y-3"></div>
                 </div>
             </div>
@@ -341,7 +375,7 @@
             <div class="flex justify-between items-center mb-8">
                 <div>
                     <h2 class="text-4xl font-bold">Коллекционные достижения 🏆</h2>
-                    <p class="text-gray-500">Выполняйте условия, чтобы разблокировать редкие награды и увеличивать опыт (XP)!</p>
+                    <p class="text-gray-500">Выполняйте условия в хабе, чтобы открывать редкие медали и зарабатывать ценный XP!</p>
                 </div>
             </div>
             
@@ -360,7 +394,7 @@
 
         <!-- СТРАНИЦА: CD КОЛЛЕКЦИЯ -->
         <section id="cds" class="hidden fade-in transition-all duration-500 transform translate-y-0">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <div class="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6 w-full md:w-auto">
                     <div>
                         <h2 class="text-4xl font-bold">CD Коллекция</h2>
@@ -368,29 +402,61 @@
                     </div>
                     <input type="text" id="search-cds" oninput="updateUI()" placeholder="🔍 Быстрый поиск..." class="bg-white/5 p-3 px-4 rounded-xl border border-white/10 text-white text-sm focus:outline-none focus:border-purple-500/50 w-full md:w-64">
                 </div>
-                <button onclick="openModal('cds')" class="w-full md:w-auto bg-white text-black px-8 py-3 rounded-2xl font-bold hover:scale-105 transition-all shrink-0">+ Новый CD</button>
+                <div class="flex gap-3 w-full md:w-auto shrink-0">
+                    <button onclick="toggleViewMode('cds')" class="bg-white/5 border border-white/10 hover:bg-white/10 text-white p-3 rounded-xl text-sm font-bold transition-all" title="Сменить вид отображения">
+                        🖼️ Вид
+                    </button>
+                    <button onclick="openModal('cds')" class="flex-grow md:flex-grow-0 bg-white text-black px-8 py-3 rounded-2xl font-bold hover:scale-105 transition-all">+ Новый CD</button>
+                </div>
             </div>
+
+            <!-- Панель сортировки -->
+            <div class="flex flex-wrap gap-2 items-center mb-6 bg-white/5 p-3 rounded-2xl border border-white/5">
+                <span class="text-xs text-gray-500 uppercase font-black tracking-widest mr-2">Сортировать по:</span>
+                <button onclick="setSortMode('cds', 'title')" id="sort-cds-title" class="text-xs px-3 py-1.5 rounded-lg border border-white/10 bg-white/5">Алфавиту 🔤</button>
+                <button onclick="setSortMode('cds', 'price_desc')" id="sort-cds-price_desc" class="text-xs px-3 py-1.5 rounded-lg border border-white/10 bg-white/5">Сначала дорогие 💸</button>
+                <button onclick="setSortMode('cds', 'price_asc')" id="sort-cds-price_asc" class="text-xs px-3 py-1.5 rounded-lg border border-white/10 bg-white/5">Сначала дешевые 🪙</button>
+                <button onclick="setSortMode('cds', 'rating')" id="sort-cds-rating" class="text-xs px-3 py-1.5 rounded-lg border border-white/10 bg-white/5">Оценке ⭐</button>
+                <button onclick="setSortMode('cds', 'playCount')" id="sort-cds-playCount" class="text-xs px-3 py-1.5 rounded-lg border border-white/10 bg-white/5">Прослушиваниям 🎧</button>
+            </div>
+
             <div id="cd-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10 overflow-visible p-2"></div>
         </section>
         
         <!-- СТРАНИЦА: ВИНИЛ -->
         <section id="vinyls" class="hidden fade-in transition-all duration-500 transform translate-y-0">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <div class="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6 w-full md:w-auto">
                     <div>
-                        <h2 class="text-4xl font-bold">Винил</h2>
+                        <h2 class="text-4xl font-bold">Виниловая полка 💽</h2>
                         <p class="text-gray-500">Сумма: <span id="total-vinyls">0</span> ₴ | Предметов: <span id="count-vinyls">0</span></p>
                     </div>
                     <input type="text" id="search-vinyls" oninput="updateUI()" placeholder="🔍 Быстрый поиск..." class="bg-white/5 p-3 px-4 rounded-xl border border-white/10 text-white text-sm focus:outline-none focus:border-purple-500/50 w-full md:w-64">
                 </div>
-                <button onclick="openModal('vinyls')" class="w-full md:w-auto bg-white text-black px-8 py-3 rounded-2xl font-bold hover:scale-105 transition-all shrink-0">+ Новая пластинка</button>
+                <div class="flex gap-3 w-full md:w-auto shrink-0">
+                    <button onclick="toggleViewMode('vinyls')" class="bg-white/5 border border-white/10 hover:bg-white/10 text-white p-3 rounded-xl text-sm font-bold transition-all" title="Сменить вид отображения">
+                        🖼️ Вид
+                    </button>
+                    <button onclick="openModal('vinyls')" class="flex-grow md:flex-grow-0 bg-white text-black px-8 py-3 rounded-2xl font-bold hover:scale-105 transition-all">+ Новая пластинка</button>
+                </div>
             </div>
+
+            <!-- Панель сортировки винила -->
+            <div class="flex flex-wrap gap-2 items-center mb-6 bg-white/5 p-3 rounded-2xl border border-white/5">
+                <span class="text-xs text-gray-500 uppercase font-black tracking-widest mr-2">Сортировать по:</span>
+                <button onclick="setSortMode('vinyls', 'title')" id="sort-vinyls-title" class="text-xs px-3 py-1.5 rounded-lg border border-white/10 bg-white/5">Алфавиту 🔤</button>
+                <button onclick="setSortMode('vinyls', 'price_desc')" id="sort-vinyls-price_desc" class="text-xs px-3 py-1.5 rounded-lg border border-white/10 bg-white/5">Сначала дорогие 💸</button>
+                <button onclick="setSortMode('vinyls', 'price_asc')" id="sort-vinyls-price_asc" class="text-xs px-3 py-1.5 rounded-lg border border-white/10 bg-white/5">Сначала дешевые 🪙</button>
+                <button onclick="setSortMode('vinyls', 'rating')" id="sort-vinyls-rating" class="text-xs px-3 py-1.5 rounded-lg border border-white/10 bg-white/5">Оценке ⭐</button>
+                <button onclick="setSortMode('vinyls', 'playCount')" id="sort-vinyls-playCount" class="text-xs px-3 py-1.5 rounded-lg border border-white/10 bg-white/5">Прослушиваниям 🎧</button>
+            </div>
+
             <div id="vinyl-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10 overflow-visible p-2"></div>
         </section>
 
         <!-- СТРАНИЦА: МЕРЧ И ВЕЩИ -->
         <section id="stuff" class="hidden fade-in transition-all duration-500 transform translate-y-0">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <div class="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6 w-full md:w-auto">
                     <div>
                         <h2 class="text-4xl font-bold">Мерч и Вещи 📦</h2>
@@ -400,15 +466,24 @@
                 </div>
                 <button onclick="openModal('stuff')" class="w-full md:w-auto bg-white text-black px-8 py-3 rounded-2xl font-bold hover:scale-105 transition-all shrink-0">+ Новый предмет</button>
             </div>
+
+            <!-- Панель сортировки вещей -->
+            <div class="flex flex-wrap gap-2 items-center mb-6 bg-white/5 p-3 rounded-2xl border border-white/5">
+                <span class="text-xs text-gray-500 uppercase font-black tracking-widest mr-2">Сортировать по:</span>
+                <button onclick="setSortMode('stuff', 'title')" id="sort-stuff-title" class="text-xs px-3 py-1.5 rounded-lg border border-white/10 bg-white/5">Названию 🔤</button>
+                <button onclick="setSortMode('stuff', 'price_desc')" id="sort-stuff-price_desc" class="text-xs px-3 py-1.5 rounded-lg border border-white/10 bg-white/5">Сначала дорогие 💸</button>
+                <button onclick="setSortMode('stuff', 'price_asc')" id="sort-stuff-price_asc" class="text-xs px-3 py-1.5 rounded-lg border border-white/10 bg-white/5">Сначала дешевые 🪙</button>
+            </div>
+
             <div id="stuff-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10 overflow-visible p-2"></div>
         </section>
         
         <!-- СТРАНИЦА: ЖЕЛАЕМОЕ -->
         <section id="wishlists" class="hidden fade-in transition-all duration-500 transform translate-y-0">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <div class="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6 w-full md:w-auto">
                     <div>
-                        <h2 class="text-4xl font-bold">Желаемое</h2>
+                        <h2 class="text-4xl font-bold">Лист Желаний 🎁</h2>
                         <p class="text-gray-500">Сумма: <span id="total-wishlists">0</span> ₴ | Предметов: <span id="count-wishlists">0</span></p>
                     </div>
                     <input type="text" id="search-wishlists" oninput="updateUI()" placeholder="🔍 Быстрый поиск..." class="bg-white/5 p-3 px-4 rounded-xl border border-white/10 text-white text-sm focus:outline-none focus:border-purple-500/50 w-full md:w-64">
@@ -416,6 +491,25 @@
                 <div class="flex gap-2 w-full md:w-auto shrink-0">
                     <button onclick="openTagsManager()" class="flex-1 md:flex-none bg-white/10 text-white px-8 py-3 rounded-2xl font-bold hover:scale-105 transition-all text-sm">Тэги</button>
                     <button onclick="openModal('wishlists')" class="flex-1 md:flex-none bg-white text-black px-8 py-3 rounded-2xl font-bold hover:scale-105 transition-all text-sm">+ Добавить</button>
+                </div>
+            </div>
+
+            <!-- Интерактивный Хобби-Бюджет Планировщик -->
+            <div class="glass p-5 rounded-3xl mb-6 border border-white/5">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h4 class="text-sm font-black text-white">💰 Планировщик бюджета на хобби</h4>
+                        <p class="text-[11px] text-gray-400 mt-1">Определите ваш ежемесячный лимит на покупки, чтобы узнать скорость выполнения хотелок.</p>
+                    </div>
+                    <div class="flex items-center gap-4 flex-grow max-w-md">
+                        <span class="text-xs text-gray-500">Ежемесячно:</span>
+                        <input type="range" id="hobby-budget-slider" min="500" max="15000" step="500" value="2500" oninput="updateHobbyBudget()" class="flex-grow accent-purple-500 h-1 rounded-lg cursor-pointer bg-white/10">
+                        <span id="hobby-budget-display" class="font-mono text-cyan-400 font-bold text-sm shrink-0">2500 ₴</span>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-white/5 text-xs text-gray-400">
+                    <div>Время на закрытие всего списка: <span id="wishlist-completion-time" class="text-white font-bold font-mono">0 мес.</span></div>
+                    <div class="md:text-right">Приблизительное количество вещей в месяц: <span id="items-per-month-est" class="text-purple-300 font-bold font-mono">0 шт.</span></div>
                 </div>
             </div>
             
@@ -442,7 +536,7 @@
             <div class="flex justify-between items-center mb-8">
                 <div>
                     <h2 class="text-4xl font-bold">Коллекционные цели 🎯</h2>
-                    <p class="text-gray-500">Планируй и отмечай купленные альбомы на CD и Виниле</p>
+                    <p class="text-gray-500">Планируйте и отмечайте покупку альбомов на CD и Виниле</p>
                 </div>
             </div>
             
@@ -530,6 +624,7 @@
         </section>
     </main>
 
+    <!-- Основная модалка редактирования (с полем физического расположения) -->
     <div id="modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
         <div class="glass p-8 rounded-3xl w-full max-w-[450px] space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto border border-white/10">
             <h2 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400">Редактор релиза</h2>
@@ -552,6 +647,12 @@
                 <div class="grid grid-cols-2 gap-3">
                     <input id="item-price" type="number" placeholder="Цена (₴)" class="w-full bg-white/5 p-3.5 rounded-xl border border-white/10 text-white focus:outline-none focus:border-purple-500/50 text-sm">
                     <input id="item-where-bought" placeholder="Магазин / Покупка" class="w-full bg-white/5 p-3.5 rounded-xl border border-white/10 text-white focus:outline-none focus:border-purple-500/50 text-sm">
+                </div>
+
+                <!-- Физическое место хранения (Новая функция!) -->
+                <div>
+                    <label class="text-[10px] text-cyan-400 font-bold block uppercase tracking-wider mb-1">📍 Расположение (Шкаф, полка №, коробка и т.д.)</label>
+                    <input id="item-storage-location" placeholder="Например: Полка над столом, ряд 2" class="w-full bg-cyan-950/20 p-3.5 rounded-xl border border-cyan-500/20 text-white focus:outline-none focus:border-cyan-500/50 text-sm">
                 </div>
 
                 <div id="music-fields-container" class="space-y-3">
@@ -624,6 +725,7 @@
         </div>
     </div>
 
+    <!-- Модалка переноса из Wishlist -->
     <div id="buy-confirm-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
         <div class="glass p-8 rounded-3xl w-full max-w-sm space-y-4 border border-white/10 shadow-2xl">
             <h3 class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400">📥 Куплено! Перенести в коллекцию</h3>
@@ -850,6 +952,7 @@
         </div>
     </div>
     
+    <!-- Floating vinyl player cozy triggers -->
     <div class="fixed bottom-8 right-8 flex flex-col items-end gap-3 z-40">
         <button id="crackle-btn" onclick="toggleCozyAtmosphere()" class="w-14 h-14 bg-[#0a0a10] border border-white/10 hover:border-cyan-500/50 text-white rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 active:scale-95" title="Включить уютную атмосферу">
             <div id="vinyl-icon-player" class="text-2xl transition-transform duration-[1500ms]">💽</div>
@@ -869,6 +972,7 @@
             { id: 5, author: "Kanye West", textOriginal: "My greatest pain in life is that I will never be able to see myself perform live.", textTranslation: "Моя самая большая боль в жизни заключается в том, что я никогда не смогу увидеть свое собственное живое выступление.", song: "" }
         ];
 
+        // Default structures
         const defaults = { 
             cds: [], 
             vinyls: [], 
@@ -891,13 +995,30 @@
             quotes: defaultQuotes,
             quoteLanguage: 'ru',
             currentQuoteId: 1,
-            cozyAtmosphereMode: 'vinyl' 
+            cozyAtmosphereMode: 'vinyl',
+            hobbyBudget: 2500,
+            // Сортировка по умолчанию
+            sortMode: {
+                cds: 'title',
+                vinyls: 'title',
+                stuff: 'title',
+                wishlists: 'priority'
+            },
+            // Режимы отображения (grid / covers)
+            viewMode: {
+                cds: 'grid',
+                vinyls: 'grid'
+            }
         };
 
         let data = JSON.parse(localStorage.getItem('mirvel_data')) || { ...defaults };
         data = { ...defaults, ...data };
         
+        // Safety Fallbacks
         if (!data.stuff) data.stuff = [];
+        if (!data.sortMode) data.sortMode = { ...defaults.sortMode };
+        if (!data.viewMode) data.viewMode = { ...defaults.viewMode };
+        if (!data.hobbyBudget) data.hobbyBudget = 2500;
         if (!data.quotes || data.quotes.length === 0) {
             data.quotes = [...defaultQuotes];
             data.currentQuoteId = 1;
@@ -945,7 +1066,6 @@
 
             if (mode === 'vinyl' || mode === 'vinyl_pure' || mode === 'vinyl_old') {
                 const crackleSource = audioCtx.createBufferSource();
-                
                 let density = mode === 'vinyl_old' ? 0.00045 : 0.00018;
                 let crackleVol = mode === 'vinyl_old' ? 0.35 : 0.22;
                 
@@ -1705,18 +1825,21 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
                 
                 const stars = "⭐".repeat(item.rating || 0);
                 back.innerHTML = `
-                    <div class="space-y-1.5 min-w-0 flex-1">
-                        <p class="text-[9px] uppercase font-bold text-cyan-400 truncate">${item.artist || 'Разные исполнители'}</p>
-                        <h4 class="font-black text-sm text-white truncate">${item.title}</h4>
-                        <div class="text-yellow-400 text-xs mt-0.5">${stars || 'Без оценки'}</div>
+                    <div class="space-y-1.5 min-w-0 flex-1 flex flex-col justify-between h-full">
+                        <div>
+                            <p class="text-[9px] uppercase font-bold text-cyan-400 truncate">${item.artist || 'Разные исполнители'}</p>
+                            <h4 class="font-black text-sm text-white truncate">${item.title}</h4>
+                            <div class="text-yellow-400 text-xs mt-0.5">${stars || 'Без оценки'}</div>
+                        </div>
                         <div class="text-[10px] text-gray-500 font-medium space-y-0.5 pt-1">
                             ${item.year ? `<div>📅 Год: <span class="text-gray-300 font-bold">${item.year}</span></div>` : ''}
                             ${item.label ? `<div>🏷️ Лейбл: <span class="text-gray-300 font-bold">${item.label}</span></div>` : ''}
                             ${item.condition ? `<div>🎨 Состояние: <span class="text-cyan-400 font-bold">${item.condition}</span></div>` : ''}
                             ${item.whereBought ? `<div>🏪 Куплено: <span class="text-purple-300 font-bold">${item.whereBought}</span></div>` : ''}
+                            ${item.storageLocation ? `<div class="text-cyan-400">📍 Полка: <span class="font-bold text-white">${item.storageLocation}</span></div>` : ''}
                         </div>
-                        <p class="text-[11px] text-gray-400 italic line-clamp-4 mt-2 border-t border-white/5 pt-1.5 leading-relaxed">
-                            ${item.note ? `💬 ${item.note}` : 'Нет рецензии к этому релизу.'}
+                        <p class="text-[11px] text-gray-400 italic line-clamp-3 mt-1 border-t border-white/5 pt-1 leading-relaxed">
+                            ${item.note ? `💬 ${item.note}` : 'Нет рецензии.'}
                         </p>
                     </div>
                 `;
@@ -1824,6 +1947,7 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
                 artist: wishItem.artist || '',
                 price: price,
                 whereBought: where || 'Перенос из Желаемого',
+                storageLocation: wishItem.storageLocation || '',
                 year: wishItem.year || '',
                 label: wishItem.label || '',
                 condition: wishItem.condition || 'NM',
@@ -1903,6 +2027,52 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
 
             addXP(10, "прослушивание альбома 🎧");
         };
+
+        window.toggleViewMode = (type) => {
+            const current = data.viewMode[type] || 'grid';
+            data.viewMode[type] = (current === 'grid') ? 'covers' : 'grid';
+            save();
+            showToast(`Изменен вид на: <strong>${data.viewMode[type] === 'covers' ? 'Только обложки' : 'Подробный список'}</strong> 🖼️`);
+        };
+
+        window.setSortMode = (type, mode) => {
+            if (!data.sortMode) data.sortMode = {};
+            data.sortMode[type] = mode;
+            save();
+            showToast(`Сортировка обновлена! 📊`);
+        };
+
+        window.updateHobbyBudget = () => {
+            const slider = document.getElementById('hobby-budget-slider');
+            const display = document.getElementById('hobby-budget-display');
+            if (slider && display) {
+                data.hobbyBudget = parseInt(slider.value);
+                display.innerText = `${data.hobbyBudget} ₴`;
+                updateHobbyBudgetPlanner();
+            }
+        };
+
+        function updateHobbyBudgetPlanner() {
+            const timeEl = document.getElementById('wishlist-completion-time');
+            const itemsEl = document.getElementById('items-per-month-est');
+            if (!timeEl || !itemsEl) return;
+
+            const wishVal = (data.wishlists || []).reduce((s, i) => s + i.price, 0);
+            const budget = data.hobbyBudget || 2500;
+
+            if (wishVal === 0) {
+                timeEl.innerText = "0 мес.";
+                itemsEl.innerText = "0 шт.";
+                return;
+            }
+
+            const months = (wishVal / budget).toFixed(1);
+            timeEl.innerText = `${months} мес.`;
+
+            const averageItemPrice = wishVal / (data.wishlists.length || 1);
+            const itemsPerMonth = (budget / (averageItemPrice || 1)).toFixed(1);
+            itemsEl.innerText = `~${itemsPerMonth} шт.`;
+        }
 
         window.toggleCategoryFields = () => {
             const category = document.getElementById('item-category').value;
@@ -2081,6 +2251,7 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
                 document.getElementById('item-artist').value = item.artist || '';
                 document.getElementById('item-price').value = item.price;
                 document.getElementById('item-where-bought').value = item.whereBought || '';
+                document.getElementById('item-storage-location').value = item.storageLocation || '';
                 
                 document.getElementById('item-year').value = item.year || '';
                 document.getElementById('item-label').value = item.label || '';
@@ -2112,6 +2283,7 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
                 document.getElementById('item-artist').value = '';
                 document.getElementById('item-price').value = '';
                 document.getElementById('item-where-bought').value = '';
+                document.getElementById('item-storage-location').value = '';
                 
                 document.getElementById('item-year').value = '';
                 document.getElementById('item-label').value = '';
@@ -2141,6 +2313,7 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
             const artist = document.getElementById('item-artist').value.trim();
             const price = parseFloat(document.getElementById('item-price').value) || 0;
             const whereBought = document.getElementById('item-where-bought').value.trim();
+            const storageLocation = document.getElementById('item-storage-location').value.trim();
             
             const year = parseInt(document.getElementById('item-year').value) || '';
             const label = document.getElementById('item-label').value.trim();
@@ -2165,14 +2338,14 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
             if(idStr) {
                 const item = data[type].find(x => x.id === parseInt(idStr));
                 Object.assign(item, { 
-                    category, title, artist, price, whereBought, year, label, condition, formatDetails, 
+                    category, title, artist, price, whereBought, storageLocation, year, label, condition, formatDetails, 
                     size, style, brand, priority, url, isGift, isCustom, rating, 
                     tags: [...tempTags], img: window.tempImg || item.img 
                 });
                 save(); closeModal('modal');
             } else {
                 data[type].push({ 
-                    id: Date.now(), category, title, artist, price, whereBought, year, label, condition, formatDetails, 
+                    id: Date.now(), category, title, artist, price, whereBought, storageLocation, year, label, condition, formatDetails, 
                     size, style, brand, priority, url, isGift, isCustom, rating, 
                     playCount: 0, lastPlayed: '',
                     tags: [...tempTags], img: window.tempImg, imgPos: 'center', note: '' 
@@ -2445,6 +2618,46 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
             const vinylPctEl = document.getElementById('analytics-vinyl-pct');
             if (vinylPctEl) vinylPctEl.innerText = `${vinylPct}% (${data.vinyls?.length || 0} шт.)`;
 
+            // Улучшенные показатели ширины/веса полок
+            const totalCds = data.cds?.length || 0;
+            const totalVinyls = data.vinyls?.length || 0;
+            const shelfWidth = (totalCds * 1.0) + (totalVinyls * 0.4); // CD ~ 1см, винил ~ 0.4см
+            const totalWeight = (totalCds * 0.1) + (totalVinyls * 0.23); // CD ~ 100г, винил ~ 230г
+
+            document.getElementById('shelf-width-est').innerText = `${shelfWidth.toFixed(1)} см`;
+            document.getElementById('shelf-weight-est').innerText = `${totalWeight.toFixed(1)} кг`;
+
+            // Анализ десятилетий выхода релизов
+            const decades = {};
+            [...(data.cds || []), ...(data.vinyls || [])].forEach(i => {
+                const year = parseInt(i.year);
+                if (year && year > 1900 && year < 2100) {
+                    const decade = Math.floor(year / 10) * 10;
+                    decades[decade] = (decades[decade] || 0) + 1;
+                }
+            });
+
+            const maxDecadeCount = Math.max(...Object.values(decades), 1);
+            const sortedDecades = Object.keys(decades).sort();
+            const decadesChartContainer = document.getElementById('analytics-decades-chart');
+            if (decadesChartContainer) {
+                if (sortedDecades.length === 0) {
+                    decadesChartContainer.innerHTML = `<p class="text-gray-500 text-xs italic w-full text-center py-10">Добавьте года релизов в коллекцию для построения графика...</p>`;
+                } else {
+                    decadesChartContainer.innerHTML = sortedDecades.map(dec => {
+                        const val = decades[dec];
+                        const pctHeight = Math.max(10, Math.round((val / maxDecadeCount) * 100));
+                        return `
+                            <div class="flex-grow flex flex-col items-center group relative h-full justify-end">
+                                <span class="absolute -top-6 text-[10px] font-bold text-cyan-400 opacity-0 group-hover:opacity-100 transition duration-300">${val} шт.</span>
+                                <div class="w-8 bg-gradient-to-t from-purple-600 to-cyan-400 rounded-t-lg transition-all duration-1000" style="height: ${pctHeight}%"></div>
+                                <span class="text-[10px] text-gray-400 mt-2 font-bold font-mono">${dec.toString().substring(2)}s</span>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+
             const allAcquisitions = [...(data.cds || []), ...(data.vinyls || []), ...(data.stuff || [])];
             const topExpensive = [...allAcquisitions].sort((a, b) => b.price - a.price).slice(0, 5);
             
@@ -2537,6 +2750,15 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
             document.getElementById('count-stuff').innerText = data.stuff.length;
             document.getElementById('total-wishlists').innerText = wishVal;
             document.getElementById('count-wishlists').innerText = data.wishlists.length;
+
+            // Бюджет и планировщик
+            const budgetSlider = document.getElementById('hobby-budget-slider');
+            const budgetDisplay = document.getElementById('hobby-budget-display');
+            if (budgetSlider && budgetDisplay) {
+                budgetSlider.value = data.hobbyBudget || 2500;
+                budgetDisplay.innerText = `${data.hobbyBudget || 2500} ₴`;
+            }
+            updateHobbyBudgetPlanner();
 
             renderAnalyticsTab();
 
@@ -2708,6 +2930,8 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
 
             const renderGrid = (key, id) => {
                 let items = data[key] || [];
+                
+                // Фильтрация
                 if(key === 'wishlists' && currentFilter) {
                     if (['music', 'clothing', 'gear', 'other'].includes(currentFilter)) {
                         items = items.filter(i => i.category === currentFilter);
@@ -2724,273 +2948,358 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
                     );
                 }
 
+                // Логика Сортировки
+                const activeSort = (data.sortMode && data.sortMode[key]) || 'title';
+                
+                // Стили подсветки активной кнопки сортировки
+                ['title', 'price_desc', 'price_asc', 'rating', 'playCount'].forEach(sOpt => {
+                    const btn = document.getElementById(`sort-${key}-${sOpt}`);
+                    if (btn) {
+                        if (activeSort === sOpt) {
+                            btn.className = "text-xs px-3 py-1.5 rounded-lg border border-purple-500 bg-purple-500/20 text-white font-bold";
+                        } else {
+                            btn.className = "text-xs px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-gray-400 hover:text-white";
+                        }
+                    }
+                });
+
+                items.sort((a, b) => {
+                    if (activeSort === 'title') {
+                        return (a.title || '').localeCompare(b.title || '');
+                    } else if (activeSort === 'price_desc') {
+                        return (b.price || 0) - (a.price || 0);
+                    } else if (activeSort === 'price_asc') {
+                        return (a.price || 0) - (b.price || 0);
+                    } else if (activeSort === 'rating') {
+                        return (b.rating || 0) - (a.rating || 0);
+                    } else if (activeSort === 'playCount') {
+                        return (b.playCount || 0) - (a.playCount || 0);
+                    }
+                    return 0;
+                });
+
                 const gridEl = document.getElementById(id);
                 gridEl.innerHTML = '';
+
+                const isCoversMode = data.viewMode && data.viewMode[key] === 'covers';
+                
+                // Настройка сетки для разных видов
+                if (isCoversMode) {
+                    gridEl.className = "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4 overflow-visible p-2";
+                } else {
+                    gridEl.className = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10 overflow-visible p-2";
+                }
+
                 items.forEach(i => {
-                    const wrap = document.createElement('div');
-                    wrap.className = "release-container relative w-full min-h-[220px] overflow-visible mb-6 group";
-                    wrap.setAttribute('data-play-id', i.id);
-
-                    const disc = document.createElement('div');
-                    disc.className = "media-disc absolute left-4 top-4 w-36 h-36 rounded-full flex items-center justify-center pointer-events-none z-0 shadow-2xl spin-slow";
-                    
-                    const itemCat = i.category || 'music';
-
-                    if (key === 'cds' || (key === 'wishlists' && itemCat === 'music' && !i.formatDetails?.toLowerCase().includes('винил'))) {
-                        disc.className += " bg-gradient-to-tr from-zinc-850 via-zinc-200 to-zinc-650 border-4 border-zinc-900";
-                        disc.innerHTML = `
-                            <div class="w-12 h-12 rounded-full bg-zinc-900 border border-white/20 flex items-center justify-center">
-                                <div class="w-4 h-4 rounded-full bg-black"></div>
-                            </div>
-                        `;
-                    } else if (key === 'vinyls' || (key === 'wishlists' && itemCat === 'music' && i.formatDetails?.toLowerCase().includes('винил'))) {
-                        disc.className += " bg-zinc-950 border-4 border-zinc-900";
-                        disc.innerHTML = `
-                            <div class="w-14 h-14 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center">
-                                <div class="w-4 h-4 rounded-full bg-black"></div>
-                            </div>
-                        `;
-                    } else if (itemCat === 'clothing') {
-                        disc.className += " bg-teal-900 border-2 border-teal-500/30 flex items-center justify-center";
-                        disc.innerHTML = `<span class="text-3xl">👕</span>`;
-                    } else if (itemCat === 'gear') {
-                        disc.className += " bg-amber-900 border-2 border-amber-500/30 flex items-center justify-center";
-                        disc.innerHTML = `<span class="text-3xl">🔌</span>`;
-                    } else {
-                        disc.className += " bg-zinc-900 border-2 border-white/10";
-                        disc.innerHTML = `<span class="text-xs text-gray-500">Wish</span>`;
-                    }
-
-                    const card = document.createElement('div');
-                    card.className = "release-card glass p-4 rounded-3xl relative z-10 w-full h-full hover:border-[var(--theme-btn)] transition-all duration-300 flex flex-col justify-between overflow-hidden min-h-[200px]";
-                    
-                    const headerRow = document.createElement('div');
-                    headerRow.className = "flex gap-4 items-start";
-
-                    const imgContainer = document.createElement('div');
-                    imgContainer.className = "w-24 h-24 bg-white/5 rounded-2xl overflow-hidden shrink-0 border border-white/5 relative";
-                    if (i.img) {
-                        const img = document.createElement('img');
-                        img.src = i.img;
-                        img.className = "w-full h-full object-cover object-center";
-                        imgContainer.appendChild(img);
-                    } else {
-                        const noPhoto = document.createElement('div');
-                        noPhoto.className = "h-full flex items-center justify-center opacity-30 text-[10px]";
-                        noPhoto.innerText = "Без фото";
-                        imgContainer.appendChild(noPhoto);
-                    }
-
-                    if (itemCat === 'music' && i.rating > 0) {
-                        const ratingBadge = document.createElement('div');
-                        ratingBadge.className = "absolute bottom-1 right-1 bg-black/75 px-1.5 py-0.5 rounded text-[9px] text-yellow-400 font-bold border border-yellow-500/20";
-                        ratingBadge.innerText = `⭐ ${i.rating}`;
-                        imgContainer.appendChild(ratingBadge);
-                    }
-
-                    const infoContainer = document.createElement('div');
-                    infoContainer.className = "flex-grow min-w-0";
-
-                    if (i.artist) {
-                        const artistEl = document.createElement('p');
-                        artistEl.className = "text-[10px] uppercase font-bold text-purple-400 truncate";
-                        artistEl.innerText = i.artist;
-                        infoContainer.appendChild(artistEl);
-                    }
-
-                    const titleEl = document.createElement('h3');
-                    titleEl.className = i.artist ? "font-bold text-sm truncate text-white mt-0.5" : "font-black text-base truncate text-white mt-2 leading-tight";
-                    titleEl.title = i.title;
-                    titleEl.innerText = i.title + (i.isGift ? ' 🎁' : '') + (i.isCustom ? ' ✨' : '');
-                    infoContainer.appendChild(titleEl);
-
-                    const priceEl = document.createElement('p');
-                    priceEl.className = "text-cyan-400 font-mono text-sm mt-1 font-bold";
-                    priceEl.innerText = `${i.price} ₴`;
-                    infoContainer.appendChild(priceEl);
-
-                    if (i.whereBought) {
-                        const boughtEl = document.createElement('p');
-                        boughtEl.className = "text-[10px] text-purple-300 font-medium truncate mt-0.5";
-                        boughtEl.innerText = (key === 'wishlists' ? `🏪 Где: ${i.whereBought}` : `🏪 Куплено в: ${i.whereBought}`);
-                        infoContainer.appendChild(boughtEl);
-                    }
-
-                    const metaDetails = document.createElement('div');
-                    metaDetails.className = "text-[10px] text-gray-500 mt-2 space-y-0.5 font-medium";
-
-                    if (itemCat === 'music') {
-                        if (i.year || i.label || i.condition || i.formatDetails || i.priority) {
-                            let metaString = '';
-                            if (i.year) metaString += `📅 ${i.year} `;
-                            if (i.label) metaString += `• 🏷️ ${i.label}`;
-                            
-                            if (metaString) {
-                                const mainMeta = document.createElement('div');
-                                mainMeta.className = "truncate text-gray-400";
-                                mainMeta.innerText = metaString;
-                                metaDetails.appendChild(mainMeta);
-                            }
-
-                            if (i.formatDetails) {
-                                const fmtDetails = document.createElement('div');
-                                fmtDetails.className = "truncate text-purple-300";
-                                fmtDetails.innerText = `🎨 ${i.formatDetails}`;
-                                metaDetails.appendChild(fmtDetails);
-                            }
-
-                            if (i.condition) {
-                                const condDetails = document.createElement('span');
-                                condDetails.className = "inline-block bg-cyan-950/40 text-cyan-400 border border-cyan-500/20 px-1.5 py-0.5 rounded text-[8px] font-bold mt-1";
-                                condDetails.innerText = `Состояние: ${i.condition}`;
-                                metaDetails.appendChild(condDetails);
-                            }
-                        }
-                    } else if (itemCat === 'clothing') {
-                        if (i.size || i.style) {
-                            const clothDetails = document.createElement('div');
-                            clothDetails.className = "text-teal-400 font-semibold";
-                            clothDetails.innerText = `👕 Размер: ${i.size || 'Не указан'} ${i.style ? `(${i.style})` : ''}`;
-                            metaDetails.appendChild(clothDetails);
-                        }
-                    } else if (itemCat === 'gear') {
-                        if (i.brand) {
-                            const gearDetails = document.createElement('div');
-                            gearDetails.className = "text-amber-400 font-semibold truncate";
-                            gearDetails.innerText = `🔌 Девайс: ${i.brand}`;
-                            metaDetails.appendChild(gearDetails);
-                        }
-                    }
-
-                    if (key === 'wishlists' && i.priority) {
-                        const prioDetails = document.createElement('span');
-                        prioDetails.className = "inline-block bg-white/5 border border-white/10 px-1.5 py-0.5 rounded text-[8px] font-bold mt-1 text-yellow-400";
-                        prioDetails.innerText = i.priority;
-                        metaDetails.appendChild(prioDetails);
-                    }
-
-                    infoContainer.appendChild(metaDetails);
-
-                    if (i.url) {
-                        const linkEl = document.createElement('a');
-                        linkEl.href = i.url;
-                        linkEl.target = "_blank";
-                        linkEl.className = "text-[10px] text-blue-400 hover:underline inline-block mt-2 font-bold";
-                        linkEl.innerText = "🔗 Посмотреть на сайте";
-                        infoContainer.appendChild(linkEl);
-                    }
-
-                    headerRow.appendChild(imgContainer);
-                    headerRow.appendChild(infoContainer);
-                    card.appendChild(headerRow);
-
-                    const footerContainer = document.createElement('div');
-                    footerContainer.className = "mt-3 space-y-1.5";
-
-                    const badgesRow = document.createElement('div');
-                    badgesRow.className = "flex flex-wrap gap-1 items-center";
-
-                    if (key === 'wishlists' || key === 'stuff') {
-                        const catBadge = document.createElement('span');
-                        catBadge.className = "px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider";
-                        if (itemCat === 'music') {
-                            catBadge.className += " bg-purple-500/20 text-purple-300 border border-purple-500/20";
-                            catBadge.innerText = "💿 Музыка";
-                        } else if (itemCat === 'clothing') {
-                            catBadge.className += " bg-teal-500/20 text-teal-300 border border-teal-500/20";
-                            catBadge.innerText = "👕 Одежда";
-                        } else if (itemCat === 'gear') {
-                            catBadge.className += " bg-amber-500/20 text-amber-300 border border-amber-500/20";
-                            catBadge.innerText = "🔌 Техника";
+                    if (isCoversMode) {
+                        const coverWrap = document.createElement('div');
+                        coverWrap.className = "relative aspect-square group rounded-2xl overflow-hidden glass border border-white/10 cursor-pointer hover:border-[var(--theme-btn)] hover:scale-105 transition-all duration-300";
+                        coverWrap.title = `${i.artist || 'Разные'} - ${i.title}`;
+                        
+                        if (i.img) {
+                            coverWrap.innerHTML = `<img src="${i.img}" class="w-full h-full object-cover">`;
                         } else {
-                            catBadge.className += " bg-gray-500/20 text-gray-300 border border-gray-500/20";
-                            catBadge.innerText = "🎁 Другое";
+                            coverWrap.innerHTML = `
+                                <div class="w-full h-full bg-gradient-to-tr from-purple-900/40 to-cyan-900/40 flex flex-col items-center justify-center text-center p-2">
+                                    <span class="text-2xl">${key === 'cds' ? '💿' : '💽'}</span>
+                                    <span class="text-[9px] text-gray-400 truncate w-full mt-1">${i.artist || ''}</span>
+                                    <span class="text-[10px] text-white font-black truncate w-full mt-0.5">${i.title}</span>
+                                </div>
+                            `;
                         }
-                        badgesRow.appendChild(catBadge);
-                    }
 
-                    if (i.tags && i.tags.length > 0) {
-                        i.tags.forEach(t => {
-                            const tagSpan = document.createElement('span');
-                            tagSpan.className = "px-1.5 py-0.5 rounded text-[8px]";
-                            tagSpan.style.backgroundColor = t.color;
-                            tagSpan.innerText = t.text;
-                            badgesRow.appendChild(tagSpan);
-                        });
-                    }
-                    footerContainer.appendChild(badgesRow);
-
-                    if (key !== 'wishlists' && key !== 'stuff' && itemCat === 'music') {
-                        const listenerRow = document.createElement('div');
-                        listenerRow.className = "flex justify-between items-center bg-white/5 p-2 rounded-2xl border border-white/5 text-[10px] text-gray-400 font-medium";
+                        // Тонкий полупрозрачный оверлей с кнопками
+                        const overlay = document.createElement('div');
+                        overlay.className = "absolute inset-0 bg-black/80 flex flex-col justify-between p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 text-[9px]";
                         
-                        const statsDiv = document.createElement('div');
-                        statsDiv.className = "space-y-0.5";
-                        
-                        statsDiv.innerHTML = `
-                            <div>Прослушано: <span class="text-purple-300 font-black font-mono">${i.playCount || 0}</span> раз(а)</div>
-                            ${i.lastPlayed ? `<div class="text-[9px] text-gray-500">Последний: ${i.lastPlayed}</div>` : ''}
+                        overlay.innerHTML = `
+                            <div class="truncate">
+                                <p class="text-[8px] font-bold text-purple-400 truncate uppercase">${i.artist || 'Разные'}</p>
+                                <p class="font-black text-white truncate leading-tight">${i.title}</p>
+                                <p class="text-cyan-400 font-mono font-bold mt-0.5">${i.price} ₴</p>
+                            </div>
+                            <div class="flex gap-1 justify-end">
+                                <button onclick="event.stopPropagation(); logPlay('${key}', ${i.id})" class="bg-purple-600 hover:bg-purple-500 text-white rounded p-1" title="Скробблинг">🎧</button>
+                                <button onclick="event.stopPropagation(); openModal('${key}', ${i.id})" class="bg-white/10 hover:bg-white/25 text-white rounded p-1">✏️</button>
+                            </div>
                         `;
-                        const playBtn = document.createElement('button');
-                        playBtn.className = "bg-purple-600/30 hover:bg-purple-600/70 border border-purple-500/30 text-purple-200 px-2.5 py-1 rounded-xl transition font-black flex items-center gap-1 active:scale-95";
-                        playBtn.innerHTML = "🎧 Скробблинг";
-                        playBtn.onclick = (e) => { e.stopPropagation(); logPlay(key, i.id); };
+                        coverWrap.appendChild(overlay);
+                        gridEl.appendChild(coverWrap);
+
+                    } else {
+                        const wrap = document.createElement('div');
+                        wrap.className = "release-container relative w-full min-h-[220px] overflow-visible mb-6 group";
+                        wrap.setAttribute('data-play-id', i.id);
+
+                        const disc = document.createElement('div');
+                        disc.className = "media-disc absolute left-4 top-4 w-36 h-36 rounded-full flex items-center justify-center pointer-events-none z-0 shadow-2xl spin-slow";
                         
-                        listenerRow.appendChild(statsDiv);
-                        listenerRow.appendChild(playBtn);
-                        footerContainer.appendChild(listenerRow);
+                        const itemCat = i.category || 'music';
+
+                        if (key === 'cds' || (key === 'wishlists' && itemCat === 'music' && !i.formatDetails?.toLowerCase().includes('винил'))) {
+                            disc.className += " bg-gradient-to-tr from-zinc-850 via-zinc-200 to-zinc-650 border-4 border-zinc-900";
+                            disc.innerHTML = `
+                                <div class="w-12 h-12 rounded-full bg-zinc-900 border border-white/20 flex items-center justify-center">
+                                    <div class="w-4 h-4 rounded-full bg-black"></div>
+                                </div>
+                            `;
+                        } else if (key === 'vinyls' || (key === 'wishlists' && itemCat === 'music' && i.formatDetails?.toLowerCase().includes('винил'))) {
+                            disc.className += " bg-zinc-950 border-4 border-zinc-900";
+                            disc.innerHTML = `
+                                <div class="w-14 h-14 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center">
+                                    <div class="w-4 h-4 rounded-full bg-black"></div>
+                                </div>
+                            `;
+                        } else if (itemCat === 'clothing') {
+                            disc.className += " bg-teal-900 border-2 border-teal-500/30 flex items-center justify-center";
+                            disc.innerHTML = `<span class="text-3xl">👕</span>`;
+                        } else if (itemCat === 'gear') {
+                            disc.className += " bg-amber-900 border-2 border-amber-500/30 flex items-center justify-center";
+                            disc.innerHTML = `<span class="text-3xl">🔌</span>`;
+                        } else {
+                            disc.className += " bg-zinc-900 border-2 border-white/10";
+                            disc.innerHTML = `<span class="text-xs text-gray-500">Wish</span>`;
+                        }
+
+                        const card = document.createElement('div');
+                        card.className = "release-card glass p-4 rounded-3xl relative z-10 w-full h-full hover:border-[var(--theme-btn)] transition-all duration-300 flex flex-col justify-between overflow-hidden min-h-[200px]";
+                        
+                        const headerRow = document.createElement('div');
+                        headerRow.className = "flex gap-4 items-start";
+
+                        const imgContainer = document.createElement('div');
+                        imgContainer.className = "w-24 h-24 bg-white/5 rounded-2xl overflow-hidden shrink-0 border border-white/5 relative";
+                        if (i.img) {
+                            const img = document.createElement('img');
+                            img.src = i.img;
+                            img.className = "w-full h-full object-cover object-center";
+                            imgContainer.appendChild(img);
+                        } else {
+                            const noPhoto = document.createElement('div');
+                            noPhoto.className = "h-full flex items-center justify-center opacity-30 text-[10px]";
+                            noPhoto.innerText = "Без фото";
+                            imgContainer.appendChild(noPhoto);
+                        }
+
+                        if (itemCat === 'music' && i.rating > 0) {
+                            const ratingBadge = document.createElement('div');
+                            ratingBadge.className = "absolute bottom-1 right-1 bg-black/75 px-1.5 py-0.5 rounded text-[9px] text-yellow-400 font-bold border border-yellow-500/20";
+                            ratingBadge.innerText = `⭐ ${i.rating}`;
+                            imgContainer.appendChild(ratingBadge);
+                        }
+
+                        const infoContainer = document.createElement('div');
+                        infoContainer.className = "flex-grow min-w-0";
+
+                        if (i.artist) {
+                            const artistEl = document.createElement('p');
+                            artistEl.className = "text-[10px] uppercase font-bold text-purple-400 truncate";
+                            artistEl.innerText = i.artist;
+                            infoContainer.appendChild(artistEl);
+                        }
+
+                        const titleEl = document.createElement('h3');
+                        titleEl.className = i.artist ? "font-bold text-sm truncate text-white mt-0.5" : "font-black text-base truncate text-white mt-2 leading-tight";
+                        titleEl.title = i.title;
+                        titleEl.innerText = i.title + (i.isGift ? ' 🎁' : '') + (i.isCustom ? ' ✨' : '');
+                        infoContainer.appendChild(titleEl);
+
+                        const priceEl = document.createElement('p');
+                        priceEl.className = "text-cyan-400 font-mono text-sm mt-1 font-bold";
+                        priceEl.innerText = `${i.price} ₴`;
+                        infoContainer.appendChild(priceEl);
+
+                        if (i.whereBought) {
+                            const boughtEl = document.createElement('p');
+                            boughtEl.className = "text-[10px] text-purple-300 font-medium truncate mt-0.5";
+                            boughtEl.innerText = (key === 'wishlists' ? `🏪 Где: ${i.whereBought}` : `🏪 Куплено в: ${i.whereBought}`);
+                            infoContainer.appendChild(boughtEl);
+                        }
+
+                        const metaDetails = document.createElement('div');
+                        metaDetails.className = "text-[10px] text-gray-500 mt-2 space-y-0.5 font-medium";
+
+                        if (itemCat === 'music') {
+                            if (i.year || i.label || i.condition || i.formatDetails || i.priority) {
+                                let metaString = '';
+                                if (i.year) metaString += `📅 ${i.year} `;
+                                if (i.label) metaString += `• 🏷️ ${i.label}`;
+                                
+                                if (metaString) {
+                                    const mainMeta = document.createElement('div');
+                                    mainMeta.className = "truncate text-gray-400";
+                                    mainMeta.innerText = metaString;
+                                    metaDetails.appendChild(mainMeta);
+                                }
+
+                                if (i.formatDetails) {
+                                    const fmtDetails = document.createElement('div');
+                                    fmtDetails.className = "truncate text-purple-300";
+                                    fmtDetails.innerText = `🎨 ${i.formatDetails}`;
+                                    metaDetails.appendChild(fmtDetails);
+                                }
+
+                                if (i.condition) {
+                                    const condDetails = document.createElement('span');
+                                    condDetails.className = "inline-block bg-cyan-950/40 text-cyan-400 border border-cyan-500/20 px-1.5 py-0.5 rounded text-[8px] font-bold mt-1";
+                                    condDetails.innerText = `Состояние: ${i.condition}`;
+                                    metaDetails.appendChild(condDetails);
+                                }
+                            }
+                        } else if (itemCat === 'clothing') {
+                            if (i.size || i.style) {
+                                const clothDetails = document.createElement('div');
+                                clothDetails.className = "text-teal-400 font-semibold";
+                                clothDetails.innerText = `👕 Размер: ${i.size || 'Не указан'} ${i.style ? `(${i.style})` : ''}`;
+                                metaDetails.appendChild(clothDetails);
+                            }
+                        } else if (itemCat === 'gear') {
+                            if (i.brand) {
+                                const gearDetails = document.createElement('div');
+                                gearDetails.className = "text-amber-400 font-semibold truncate";
+                                gearDetails.innerText = `🔌 Девайс: ${i.brand}`;
+                                metaDetails.appendChild(gearDetails);
+                            }
+                        }
+
+                        // Physical locator view
+                        if (i.storageLocation) {
+                            const shelfDetails = document.createElement('div');
+                            shelfDetails.className = "text-cyan-400 font-black truncate mt-1 text-[9px] uppercase tracking-wider bg-cyan-950/20 px-2 py-0.5 rounded border border-cyan-500/10";
+                            shelfDetails.innerText = `📍 Полка: ${i.storageLocation}`;
+                            metaDetails.appendChild(shelfDetails);
+                        }
+
+                        if (key === 'wishlists' && i.priority) {
+                            const prioDetails = document.createElement('span');
+                            prioDetails.className = "inline-block bg-white/5 border border-white/10 px-1.5 py-0.5 rounded text-[8px] font-bold mt-1 text-yellow-400";
+                            prioDetails.innerText = i.priority;
+                            metaDetails.appendChild(prioDetails);
+                        }
+
+                        infoContainer.appendChild(metaDetails);
+
+                        if (i.url) {
+                            const linkEl = document.createElement('a');
+                            linkEl.href = i.url;
+                            linkEl.target = "_blank";
+                            linkEl.className = "text-[10px] text-blue-400 hover:underline inline-block mt-2 font-bold";
+                            linkEl.innerText = "🔗 Посмотреть на сайте";
+                            infoContainer.appendChild(linkEl);
+                        }
+
+                        headerRow.appendChild(imgContainer);
+                        headerRow.appendChild(infoContainer);
+                        card.appendChild(headerRow);
+
+                        const footerContainer = document.createElement('div');
+                        footerContainer.className = "mt-3 space-y-1.5";
+
+                        const badgesRow = document.createElement('div');
+                        badgesRow.className = "flex flex-wrap gap-1 items-center";
+
+                        if (key === 'wishlists' || key === 'stuff') {
+                            const catBadge = document.createElement('span');
+                            catBadge.className = "px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider";
+                            if (itemCat === 'music') {
+                                catBadge.className += " bg-purple-500/20 text-purple-300 border border-purple-500/20";
+                                catBadge.innerText = "💿 Музыка";
+                            } else if (itemCat === 'clothing') {
+                                catBadge.className += " bg-teal-500/20 text-teal-300 border border-teal-500/20";
+                                catBadge.innerText = "👕 Одежда";
+                            } else if (itemCat === 'gear') {
+                                catBadge.className += " bg-amber-500/20 text-amber-300 border border-amber-500/20";
+                                catBadge.innerText = "🔌 Техника";
+                            } else {
+                                catBadge.className += " bg-gray-500/20 text-gray-300 border border-gray-500/20";
+                                catBadge.innerText = "🎁 Другое";
+                            }
+                            badgesRow.appendChild(catBadge);
+                        }
+
+                        if (i.tags && i.tags.length > 0) {
+                            i.tags.forEach(t => {
+                                const tagSpan = document.createElement('span');
+                                tagSpan.className = "px-1.5 py-0.5 rounded text-[8px]";
+                                tagSpan.style.backgroundColor = t.color;
+                                tagSpan.innerText = t.text;
+                                badgesRow.appendChild(tagSpan);
+                            });
+                        }
+                        footerContainer.appendChild(badgesRow);
+
+                        if (key !== 'wishlists' && key !== 'stuff' && itemCat === 'music') {
+                            const listenerRow = document.createElement('div');
+                            listenerRow.className = "flex justify-between items-center bg-white/5 p-2 rounded-2xl border border-white/5 text-[10px] text-gray-400 font-medium";
+                            
+                            const statsDiv = document.createElement('div');
+                            statsDiv.className = "space-y-0.5";
+                            
+                            statsDiv.innerHTML = `
+                                <div>Прослушано: <span class="text-purple-300 font-black font-mono">${i.playCount || 0}</span> раз(а)</div>
+                                ${i.lastPlayed ? `<div class="text-[9px] text-gray-500">Последний: ${i.lastPlayed}</div>` : ''}
+                            `;
+                            const playBtn = document.createElement('button');
+                            playBtn.className = "bg-purple-600/30 hover:bg-purple-600/70 border border-purple-500/30 text-purple-200 px-2.5 py-1 rounded-xl transition font-black flex items-center gap-1 active:scale-95";
+                            playBtn.innerHTML = "🎧 Скробблинг";
+                            playBtn.onclick = (e) => { e.stopPropagation(); logPlay(key, i.id); };
+                            
+                            listenerRow.appendChild(statsDiv);
+                            listenerRow.appendChild(playBtn);
+                            footerContainer.appendChild(listenerRow);
+                        }
+
+                        if (key === 'wishlists') {
+                            const buyMoveBtn = document.createElement('button');
+                            buyMoveBtn.className = "w-full bg-green-600/20 hover:bg-green-600/40 border border-green-500/30 text-green-300 text-xs py-2 rounded-xl transition-all font-bold mt-1 flex items-center justify-center gap-1.5 active:scale-95";
+                            buyMoveBtn.innerHTML = "📥 В коллекцию (Куплено)";
+                            buyMoveBtn.onclick = (e) => { e.stopPropagation(); openPurchaseMoveModal(i.id); };
+                            footerContainer.appendChild(buyMoveBtn);
+                        }
+
+                        if (i.note) {
+                            const notePreview = document.createElement('div');
+                            notePreview.className = "text-[11px] text-gray-400 italic bg-white/5 p-2 rounded-xl border border-white/5 line-clamp-2 mt-1 leading-relaxed relative overflow-hidden";
+                            notePreview.innerText = `💬 ${i.note}`;
+                            footerContainer.appendChild(notePreview);
+                        }
+
+                        card.appendChild(footerContainer);
+
+                        const actionsContainer = document.createElement('div');
+                        actionsContainer.className = "absolute right-3 top-3 flex gap-1 opacity-0 group-hover:opacity-100 transition duration-350 z-20";
+
+                        const openNoteBtn = document.createElement('button');
+                        openNoteBtn.className = "bg-black/80 hover:bg-black p-1.5 rounded-xl text-xs border border-white/10";
+                        openNoteBtn.title = "Рецензия";
+                        openNoteBtn.innerText = "💬";
+                        openNoteBtn.onclick = (e) => { e.stopPropagation(); openNote(key, i.id); };
+
+                        const editBtn = document.createElement('button');
+                        editBtn.className = "bg-black/80 hover:bg-black p-1.5 rounded-xl text-xs border border-white/10";
+                        editBtn.title = "Редактировать";
+                        editBtn.innerText = "✏️";
+                        editBtn.onclick = (e) => { e.stopPropagation(); openModal(key, i.id); };
+
+                        const delBtn = document.createElement('button');
+                        delBtn.className = "bg-red-950/80 hover:bg-red-900 p-1.5 rounded-xl text-red-400 text-xs border border-red-500/25";
+                        delBtn.title = "Удалить";
+                        delBtn.innerText = "✕";
+                        delBtn.onclick = (e) => {
+                            e.stopPropagation();
+                            data[key] = data[key].filter(x => x.id !== i.id);
+                            save();
+                        };
+
+                        actionsContainer.appendChild(openNoteBtn);
+                        actionsContainer.appendChild(editBtn);
+                        actionsContainer.appendChild(delBtn);
+                        card.appendChild(actionsContainer);
+
+                        wrap.appendChild(disc);
+                        wrap.appendChild(card);
+                        gridEl.appendChild(wrap);
                     }
-
-                    if (key === 'wishlists') {
-                        const buyMoveBtn = document.createElement('button');
-                        buyMoveBtn.className = "w-full bg-green-600/20 hover:bg-green-600/40 border border-green-500/30 text-green-300 text-xs py-2 rounded-xl transition-all font-bold mt-1 flex items-center justify-center gap-1.5 active:scale-95";
-                        buyMoveBtn.innerHTML = "📥 В коллекцию (Куплено)";
-                        buyMoveBtn.onclick = (e) => { e.stopPropagation(); openPurchaseMoveModal(i.id); };
-                        footerContainer.appendChild(buyMoveBtn);
-                    }
-
-                    if (i.note) {
-                        const notePreview = document.createElement('div');
-                        notePreview.className = "text-[11px] text-gray-400 italic bg-white/5 p-2 rounded-xl border border-white/5 line-clamp-2 mt-1 leading-relaxed relative overflow-hidden";
-                        notePreview.innerText = `💬 ${i.note}`;
-                        footerContainer.appendChild(notePreview);
-                    }
-
-                    card.appendChild(footerContainer);
-
-                    const actionsContainer = document.createElement('div');
-                    actionsContainer.className = "absolute right-3 top-3 flex gap-1 opacity-0 group-hover:opacity-100 transition duration-350 z-20";
-
-                    const openNoteBtn = document.createElement('button');
-                    openNoteBtn.className = "bg-black/80 hover:bg-black p-1.5 rounded-xl text-xs border border-white/10";
-                    openNoteBtn.title = "Рецензия";
-                    openNoteBtn.innerText = "💬";
-                    openNoteBtn.onclick = (e) => { e.stopPropagation(); openNote(key, i.id); };
-
-                    const editBtn = document.createElement('button');
-                    editBtn.className = "bg-black/80 hover:bg-black p-1.5 rounded-xl text-xs border border-white/10";
-                    editBtn.title = "Редактировать";
-                    editBtn.innerText = "✏️";
-                    editBtn.onclick = (e) => { e.stopPropagation(); openModal(key, i.id); };
-
-                    const delBtn = document.createElement('button');
-                    delBtn.className = "bg-red-950/80 hover:bg-red-900 p-1.5 rounded-xl text-red-400 text-xs border border-red-500/25";
-                    delBtn.title = "Удалить";
-                    delBtn.innerText = "✕";
-                    delBtn.onclick = (e) => {
-                        e.stopPropagation();
-                        data[key] = data[key].filter(x => x.id !== i.id);
-                        save();
-                    };
-
-                    actionsContainer.appendChild(openNoteBtn);
-                    actionsContainer.appendChild(editBtn);
-                    actionsContainer.appendChild(delBtn);
-                    card.appendChild(actionsContainer);
-
-                    wrap.appendChild(disc);
-                    wrap.appendChild(card);
-                    gridEl.appendChild(wrap);
                 });
             };
             
