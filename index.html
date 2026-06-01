@@ -598,7 +598,12 @@
                 </button>
             </div>
 
-            <div id="goals-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
+            <div class="mb-4 flex items-center gap-3">
+<select id="goals-author-filter" onchange="updateUI()" class="bg-white/5 p-2 rounded-xl border border-white/10 text-white text-sm">
+<option value="">Все авторы</option>
+</select>
+</div>
+<div id="goals-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
         </section>
 
         <!-- СТРАНИЦА: НАСТРОЙКИ -->
@@ -2707,7 +2712,9 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
                     tags: [...tempTags], img: window.tempImg, imgPos: 'center', note: '' 
                 });
                 closeModal('modal');
-                addXP(50, "новый предмет в коллекции ✨");
+                if (currentType !== 'wishlists') {
+                    addXP(50, "новый предмет в коллекции ✨");
+                }
             }
         };
     </script>
@@ -3670,7 +3677,15 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
             const goalsGrid = document.getElementById('goals-grid');
             if(goalsGrid) {
                 goalsGrid.innerHTML = '';
-                const goalsList = data.goals || [];
+                let goalsList = [...(data.goals || [])];
+                const goalsFilter = document.getElementById('goals-author-filter');
+                if (goalsFilter) {
+                    const authors = [...new Set(goalsList.map(g => g.artist).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+                    const currentVal = goalsFilter.value;
+                    goalsFilter.innerHTML = '<option value="">Все авторы</option>' + authors.map(a=>`<option value="${a}">${a}</option>`).join('');
+                    goalsFilter.value = currentVal;
+                    if (currentVal) goalsList = goalsList.filter(g => g.artist === currentVal);
+                }
                 if(goalsList.length === 0) {
                     goalsGrid.innerHTML = `
                         <div class="col-span-full py-12 text-center glass rounded-3xl border border-white/5">
@@ -3846,3 +3861,4 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
     </script>
 </body>
 </html>
+
