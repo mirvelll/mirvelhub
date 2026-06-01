@@ -701,6 +701,18 @@
                     <input id="item-where-bought" placeholder="Магазин / Покупка" class="w-full bg-white/5 p-3.5 rounded-xl border border-white/10 text-white focus:outline-none focus:border-purple-500/50 text-sm">
                 </div>
 
+                <!-- Физическое место хранения -->
+                <div>
+                    <label class="text-[10px] text-cyan-400 font-bold block uppercase tracking-wider mb-1">📍 Расположение (Шкаф, полка №, коробка и т.д.)</label>
+                    <input id="item-storage-location" placeholder="Например: Полка над столом, ряд 2" class="w-full bg-cyan-950/20 p-3.5 rounded-xl border border-cyan-500/20 text-white focus:outline-none focus:border-cyan-500/50 text-sm">
+                </div>
+
+                <div id="music-fields-container" class="space-y-3">
+                    <div class="grid grid-cols-2 gap-3">
+                        <input id="item-year" type="number" placeholder="Год (напр. 2007)" class="w-full bg-white/5 p-3.5 rounded-xl border border-white/10 text-white focus:outline-none focus:border-purple-500/50 text-sm">
+                        <input id="item-label" placeholder="Лейбл (напр. Warp)" class="w-full bg-white/5 p-3.5 rounded-xl border border-white/10 text-white focus:outline-none focus:border-purple-500/50 text-sm">
+                    </div>
+
                     <div class="grid grid-cols-2 gap-3">
                         <select id="item-condition" class="w-full bg-[#0d0d14] p-3.5 rounded-xl border border-white/10 text-gray-300 focus:outline-none focus:border-purple-500/50 text-sm">
                             <option value="">Состояние носителя</option>
@@ -1485,6 +1497,7 @@
                 return decades.size >= 3;
             }},
             { id: 'rating_critic', title: 'Строгий критик', desc: 'Поставить оценку 5 звёзд как минимум 5 вашим релизам', icon: '🌟', xp: 60, cond: d => [...(d.cds || []), ...(d.vinyls || [])].filter(i => (i.rating || 0) === 5).length >= 5 },
+            { id: 'perfectionist', title: 'Перфекционист', desc: 'Указать физическое расположение (полку/шкаф) как минимум для 5 предметов', icon: '📍', xp: 70, cond: d => [...(d.cds || []), ...(d.vinyls || []), ...(d.stuff || [])].filter(i => (i.storageLocation || '').trim().length > 0).length >= 5 },
             { id: 'budget_master', title: 'Инвестор в хобби', desc: 'Настроить планировщик бюджета в Wishlist на сумму более 5000 ₴', icon: '📈', xp: 40, cond: d => (d.hobbyBudget || 0) > 5000 },
             { id: 'social_collector', title: 'Цифровой меломан', desc: 'Добавить ссылки на маркетплейсы/источники (URL) как минимум к 3 релизам или желаниям', icon: '🌐', xp: 50, cond: d => [...(d.cds || []), ...(d.vinyls || []), ...(d.stuff || []), ...(d.wishlists || [])].filter(i => (i.url || '').trim().length > 0).length >= 3 },
             { id: 'high_fidelity', title: 'Hi-Fi Аудиофил', desc: 'Добавить хотя бы одно устройство в категорию аудиотехники/девайсов (gear)', icon: '🔌', xp: 60, cond: d => (d.stuff || []).some(i => i.category === 'gear') }
