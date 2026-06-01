@@ -615,7 +615,7 @@
                 <button type="button" onclick="document.getElementById('item-img').click()" class="w-full bg-cyan-600 hover:bg-cyan-500 py-3.5 rounded-xl font-bold text-white transition-all duration-300 shadow-md flex items-center justify-center gap-2 text-sm">
                     📷 Выбрать обложку релиза
                 </button>
-                <input type="file" id="item-img" accept="image/*" class="hidden" onchange="document.getElementById('item-img-status').innerText = 'Выбран файл: ' + this.files[0].name; document.getElementById('item-img-status').classList.remove('hidden')">
+                <input type="file" id="item-img" accept="image/*" class="hidden" onchange="document.getElementById('item-img-status').innerText = 'Обработка...'; document.getElementById('item-img-status').classList.remove('hidden'); processImage(event, 'item')">
                 <p id="item-img-status" class="text-[11px] text-gray-400 text-center italic mt-1 hidden"></p>
             </div>
 
@@ -2051,7 +2051,10 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
                     else if (target === 'banner') { data.bannerImg = base64; }
                     else if (target === 'fav-artist') { data.favArtist.img = base64; }
                     else if (target === 'fav-album') { data.favAlbum.img = base64; }
-                    else { window.tempImg = base64; }
+                    else { 
+                        window.tempImg = base64; 
+                        document.getElementById('item-img-status').innerText = 'Изображение готово! ✨';
+                    }
                     save(); updateUI();
                 };
                 img.src = event.target.result;
