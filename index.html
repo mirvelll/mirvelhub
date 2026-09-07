@@ -165,9 +165,9 @@
             <button onclick="showPage('home')" id="nav-home" class="nav-btn text-left py-2.5 px-4 rounded-2xl hover:bg-white/5 transition-all duration-300 flex items-center gap-3 shrink-0">🏠 <span>Главная</span></button>
             <button onclick="showPage('cds')" id="nav-cds" class="nav-btn text-left py-2.5 px-4 rounded-2xl hover:bg-white/5 transition-all duration-300 flex items-center gap-3 shrink-0">💿 <span>CD</span></button>
             <button onclick="showPage('vinyls')" id="nav-vinyls" class="nav-btn text-left py-2.5 px-4 rounded-2xl hover:bg-white/5 transition-all duration-300 flex items-center gap-3 shrink-0">💽 <span>Винил</span></button>
+            <button onclick="showPage('games')" id="nav-games" class="nav-btn text-left py-2.5 px-4 rounded-2xl hover:bg-white/5 transition-all duration-300 flex items-center gap-3 shrink-0">🎮 <span>Игры</span></button>
             <button onclick="showPage('stuff')" id="nav-stuff" class="nav-btn text-left py-2.5 px-4 rounded-2xl hover:bg-white/5 transition-all duration-300 flex items-center gap-3 shrink-0">📦 <span>Вещи</span></button>
             <button onclick="showPage('wishlists')" id="nav-wishlists" class="nav-btn text-left py-2.5 px-4 rounded-2xl hover:bg-white/5 transition-all duration-300 flex items-center gap-3 shrink-0">🎁 <span>Желаемое</span></button>
-            <button onclick="showPage('goals')" id="nav-goals" class="nav-btn text-left py-2.5 px-4 rounded-2xl hover:bg-white/5 transition-all duration-300 flex items-center gap-3 shrink-0">🎯 <span>Цели</span></button>
             <button onclick="showPage('analytics')" id="nav-analytics" class="nav-btn text-left py-2.5 px-4 rounded-2xl hover:bg-white/5 transition-all duration-300 flex items-center gap-3 shrink-0">📊 <span>Статистика</span></button>
             <button onclick="showPage('achievements')" id="nav-achievements" class="nav-btn text-left py-2.5 px-4 rounded-2xl hover:bg-white/5 transition-all duration-300 flex items-center gap-3 shrink-0">🏆 <span>Достижения</span></button>
             <button onclick="showPage('profile')" id="nav-profile" class="nav-btn text-left py-2.5 px-4 rounded-2xl hover:bg-white/5 transition-all duration-300 flex items-center gap-3 shrink-0">👤 <span>Настройки</span></button>
@@ -218,16 +218,17 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-5 mb-10">
-                <div class="glass p-6 rounded-3xl"><p class="text-gray-500 text-xs uppercase font-bold tracking-wider">Муз. Коллекция 💿</p><h3 class="text-xl md:text-2xl font-black mt-2 text-purple-400 truncate" id="stat-music-col-val">0 ₴</h3></div>
+            <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-5 mb-10">
+                <div class="glass p-6 rounded-3xl"><p class="text-gray-500 text-xs uppercase font-bold tracking-wider">Муз. коллекция 💿</p><h3 class="text-xl md:text-2xl font-black mt-2 text-purple-400 truncate" id="stat-music-col-val">0 ₴</h3></div>
+                <div class="glass p-6 rounded-3xl"><p class="text-gray-500 text-xs uppercase font-bold tracking-wider">Игровая коллекция 🎮</p><h3 class="text-xl md:text-2xl font-black mt-2 text-cyan-400 truncate" id="stat-games-col-val">0 ₴</h3></div>
                 <div class="glass p-6 rounded-3xl"><p class="text-gray-500 text-xs uppercase font-bold tracking-wider">Коллекция вещей 📦</p><h3 class="text-xl md:text-2xl font-black mt-2 text-teal-400 truncate" id="stat-stuff-col-val">0 ₴</h3></div>
-                <div class="glass p-6 rounded-3xl"><p class="text-gray-500 text-xs uppercase font-bold tracking-wider">Желаемое</p><h3 class="text-xl md:text-2xl font-black mt-2 text-cyan-400 truncate" id="stat-wish-val">0 ₴</h3></div>
+                <div class="glass p-6 rounded-3xl"><p class="text-gray-500 text-xs uppercase font-bold tracking-wider">Желаемое 🎁</p><h3 class="text-xl md:text-2xl font-black mt-2 text-cyan-400 truncate" id="stat-wish-val">0 ₴</h3></div>
                 <div class="glass p-6 rounded-3xl"><p class="text-gray-500 text-xs uppercase font-bold tracking-wider">Всего предметов</p><h3 class="text-xl md:text-2xl font-black mt-2 text-white truncate" id="stat-count-val">0</h3></div>
-                <div class="glass p-6 rounded-3xl"><p class="text-gray-500 text-xs uppercase font-bold tracking-wider">Ср. Оценка ⭐</p><h3 class="text-xl md:text-2xl font-black mt-2 text-yellow-400 truncate" id="stat-avg-rating">0.0</h3></div>
-                <div class="glass p-6 rounded-3xl relative overflow-hidden group col-span-2 md:col-span-1">
-                    <p class="text-gray-500 text-xs uppercase font-bold tracking-wider">Самый дорогой релиз 💎</p>
-                    <h3 class="text-sm font-black mt-2 text-yellow-400 truncate" id="stat-most-expensive">Нет релизов</h3>
-                </div>
+                <div class="glass p-6 rounded-3xl"><p class="text-gray-500 text-xs uppercase font-bold tracking-wider">Ср. оценка ⭐</p><h3 class="text-xl md:text-2xl font-black mt-2 text-yellow-400 truncate" id="stat-avg-rating">0.0</h3></div>
+                <div class="glass p-6 rounded-3xl"><p class="text-gray-500 text-xs uppercase font-bold tracking-wider">Общая стоимость 💰</p><h3 class="text-xl md:text-2xl font-black mt-2 text-green-400 truncate" id="stat-total-value">0 ₴</h3></div>
+                <div class="glass p-6 rounded-3xl"><p class="text-gray-500 text-xs uppercase font-bold tracking-wider">Прослушиваний 🎧</p><h3 class="text-xl md:text-2xl font-black mt-2 text-purple-300 truncate" id="stat-total-plays">0</h3></div>
+                <div class="glass p-6 rounded-3xl"><p class="text-gray-500 text-xs uppercase font-bold tracking-wider">Оценено ⭐</p><h3 class="text-xl md:text-2xl font-black mt-2 text-yellow-300 truncate" id="stat-rated-count">0</h3></div>
+                <div class="glass p-6 rounded-3xl relative overflow-hidden group"><p class="text-gray-500 text-xs uppercase font-bold tracking-wider">Самый дорогой 💎</p><h3 class="text-sm font-black mt-2 text-yellow-400 truncate" id="stat-most-expensive">Нет релизов</h3></div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
@@ -489,6 +490,55 @@
             <div id="vinyl-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10 overflow-visible p-2"></div>
         </section>
 
+
+        <!-- СТРАНИЦА: ИГРОВЫЕ ДИСКИ -->
+        <section id="games" class="hidden fade-in transition-all duration-500 transform translate-y-0">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                <div class="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6 w-full md:w-auto">
+                    <div>
+                        <h2 class="text-4xl font-bold">Игровая коллекция 🎮</h2>
+                        <p class="text-gray-500">Сумма: <span id="total-games">0</span> ₴ | Дисков: <span id="count-games">0</span></p>
+                    </div>
+                    <input type="text" id="search-games" oninput="updateUI()" placeholder="🔍 Игра, платформа, издатель..." class="bg-white/5 p-3 px-4 rounded-xl border border-white/10 text-white text-sm focus:outline-none focus:border-purple-500/50 w-full md:w-72">
+                </div>
+                <div class="flex gap-3 w-full md:w-auto shrink-0">
+                    <button onclick="toggleGameView()" id="game-view-btn" class="bg-white/5 border border-white/10 hover:bg-white/10 text-white p-3 rounded-xl text-sm font-bold transition-all">🖼️ Вид</button>
+                    <button onclick="openGameModal()" class="flex-grow md:flex-grow-0 bg-white text-black px-8 py-3 rounded-2xl font-bold hover:scale-105 transition-all">+ Новый диск</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="glass p-5 rounded-2xl">
+                    <p class="text-gray-500 text-[10px] uppercase font-black tracking-wider">PS / Xbox / Nintendo</p>
+                    <p id="games-platform-count" class="text-2xl font-black text-purple-400 mt-1">0</p>
+                </div>
+                <div class="glass p-5 rounded-2xl">
+                    <p class="text-gray-500 text-[10px] uppercase font-black tracking-wider">В коллекции</p>
+                    <p id="games-owned-count" class="text-2xl font-black text-cyan-400 mt-1">0</p>
+                </div>
+                <div class="glass p-5 rounded-2xl">
+                    <p class="text-gray-500 text-[10px] uppercase font-black tracking-wider">Средняя оценка</p>
+                    <p id="games-avg-rating" class="text-2xl font-black text-yellow-400 mt-1">0.0</p>
+                </div>
+                <div class="glass p-5 rounded-2xl">
+                    <p class="text-gray-500 text-[10px] uppercase font-black tracking-wider">Последнее поколение</p>
+                    <p id="games-latest-platform" class="text-sm font-black text-white mt-2 truncate">—</p>
+                </div>
+            </div>
+
+            <div id="game-platform-filters" class="flex flex-wrap gap-2 mb-6 bg-white/5 p-3 rounded-2xl border border-white/5"></div>
+
+            <div class="flex flex-wrap gap-2 items-center mb-6 bg-white/5 p-3 rounded-2xl border border-white/5">
+                <span class="text-xs text-gray-500 uppercase font-black tracking-widest mr-2">Сортировать:</span>
+                <button onclick="setGameSort('title')" id="game-sort-title" class="text-xs px-3 py-1.5 rounded-lg border border-white/10 bg-white/5">Алфавиту 🔤</button>
+                <button onclick="setGameSort('price_desc')" id="game-sort-price_desc" class="text-xs px-3 py-1.5 rounded-lg border border-white/10 bg-white/5">Дорогие 💸</button>
+                <button onclick="setGameSort('year_desc')" id="game-sort-year_desc" class="text-xs px-3 py-1.5 rounded-lg border border-white/10 bg-white/5">Новее 📅</button>
+                <button onclick="setGameSort('rating')" id="game-sort-rating" class="text-xs px-3 py-1.5 rounded-lg border border-white/10 bg-white/5">Оценке ⭐</button>
+            </div>
+
+            <div id="games-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 overflow-visible p-2"></div>
+        </section>
+
         <!-- СТРАНИЦА: МЕРЧ И ВЕЩИ -->
         <section id="stuff" class="hidden fade-in transition-all duration-500 transform translate-y-0">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
@@ -575,37 +625,6 @@
             <div id="wishlist-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10 overflow-visible p-2"></div>
         </section>
 
-        <!-- СТРАНИЦА: КОЛЛЕКЦИОННЫЕ ЦЕЛИ -->
-        <section id="goals" class="hidden fade-in transition-all duration-500 transform translate-y-0">
-            <div class="flex justify-between items-center mb-8">
-                <div>
-                    <h2 class="text-4xl font-bold">Коллекционные цели 🎯</h2>
-                    <p class="text-gray-500">Планируйте и отмечайте покупку альбомов на CD и Виниле</p>
-                </div>
-            </div>
-            
-            <div class="glass p-6 rounded-3xl mb-10 flex flex-col md:flex-row gap-4 items-end">
-                <div class="w-full md:flex-1">
-                    <label class="text-xs text-gray-400 block mb-1.5 font-bold uppercase tracking-wider">Исполнитель</label>
-                    <input id="goal-artist" placeholder="Например: Tyler, The Creator" class="w-full bg-white/5 p-4 rounded-2xl border border-white/10 text-white text-sm focus:outline-none focus:border-purple-500/50">
-                </div>
-                <div class="w-full md:flex-1">
-                    <label class="text-xs text-gray-400 block mb-1.5 font-bold uppercase tracking-wider">Альбом</label>
-                    <input id="goal-album" placeholder="Например: IGOR" class="w-full bg-white/5 p-4 rounded-2xl border border-white/10 text-white text-sm focus:outline-none focus:border-purple-500/50">
-                </div>
-                <button onclick="addArtistGoal()" class="w-full md:w-auto bg-white text-black px-8 py-4 rounded-2xl font-bold hover:scale-105 transition-all text-sm shrink-0 btn-neon">
-                    Добавить цель
-                </button>
-            </div>
-
-            <div class="mb-4 flex items-center gap-3">
-<select id="goals-author-filter" onchange="updateUI()" class="bg-white/5 p-2 rounded-xl border border-white/10 text-white text-sm">
-<option value="">Все авторы</option>
-</select>
-</div>
-<div id="goals-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
-        </section>
-
         <!-- СТРАНИЦА: НАСТРОЙКИ -->
         <section id="profile" class="hidden fade-in transition-all duration-500 transform translate-y-0">
             <h2 class="text-4xl font-bold mb-10">Настройки хаба</h2>
@@ -681,7 +700,72 @@
         </section>
     </main>
 
-    <!-- Основная модалка редактирования (с полем физического расположения) -->
+
+    <!-- Модалка игрового диска -->
+    <div id="game-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[55] p-4">
+        <div class="glass p-8 rounded-3xl w-full max-w-[500px] space-y-4 shadow-2xl max-h-[92vh] overflow-y-auto border border-white/10">
+            <div class="flex items-center justify-between">
+                <h2 id="game-modal-title" class="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400">Игровой диск 🎮</h2>
+                <button onclick="closeModal('game-modal')" class="text-gray-400 hover:text-white text-xl">✕</button>
+            </div>
+            <input type="hidden" id="game-edit-id">
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-[10px] text-gray-400 font-bold block uppercase mb-1">Платформа</label>
+                    <select id="game-platform" class="w-full bg-[#0d0d14] p-3.5 rounded-xl border border-white/10 text-white text-sm">
+                        <option>PlayStation 1</option><option>PlayStation 2</option><option>PlayStation 3</option>
+                        <option>PlayStation 4</option><option>PlayStation 5</option><option>Xbox</option>
+                        <option>Xbox 360</option><option>Xbox One</option><option>Xbox Series</option>
+                        <option>Nintendo GameCube</option><option>Nintendo Wii</option><option>Nintendo Wii U</option>
+                        <option>Nintendo Switch</option><option>PC CD/DVD</option><option>Другое</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[10px] text-gray-400 font-bold block uppercase mb-1">Регион</label>
+                    <select id="game-region" class="w-full bg-[#0d0d14] p-3.5 rounded-xl border border-white/10 text-white text-sm">
+                        <option value="">Не указан</option><option>PAL</option><option>NTSC-U</option><option>NTSC-J</option><option>NTSC</option><option>Region Free</option>
+                    </select>
+                </div>
+            </div>
+
+            <input id="game-title" placeholder="Название игры *" class="w-full bg-white/5 p-3.5 rounded-xl border border-white/10 text-white text-sm focus:outline-none focus:border-purple-500/50">
+            <div class="grid grid-cols-2 gap-3">
+                <input id="game-developer" placeholder="Разработчик" class="w-full bg-white/5 p-3.5 rounded-xl border border-white/10 text-white text-sm">
+                <input id="game-publisher" placeholder="Издатель" class="w-full bg-white/5 p-3.5 rounded-xl border border-white/10 text-white text-sm">
+            </div>
+            <div class="grid grid-cols-3 gap-3">
+                <input id="game-year" type="number" placeholder="Год" class="w-full bg-white/5 p-3.5 rounded-xl border border-white/10 text-white text-sm">
+                <input id="game-price" type="number" min="0" placeholder="Цена ₴" class="w-full bg-white/5 p-3.5 rounded-xl border border-white/10 text-white text-sm">
+                <select id="game-condition" class="w-full bg-[#0d0d14] p-3.5 rounded-xl border border-white/10 text-white text-sm">
+                    <option value="">Состояние</option><option>M</option><option>NM</option><option>VG+</option><option>VG</option><option>G</option>
+                </select>
+            </div>
+            <input id="game-edition" placeholder="Издание / комплектация (Standard, Platinum, Greatest Hits...)" class="w-full bg-white/5 p-3.5 rounded-xl border border-white/10 text-white text-sm">
+<input id="game-url" placeholder="🔗 Ссылка на страницу / Discogs / marketplace" class="w-full bg-white/5 p-3.5 rounded-xl border border-white/10 text-white text-sm">
+
+            <div>
+                <label class="text-[10px] text-gray-400 font-bold block uppercase tracking-wider mb-1">Твоя оценка ⭐</label>
+                <div id="game-rating-stars" class="flex gap-2 text-2xl justify-center">
+                    <button type="button" onclick="setGameRating(1)" class="game-star text-gray-600">★</button>
+                    <button type="button" onclick="setGameRating(2)" class="game-star text-gray-600">★</button>
+                    <button type="button" onclick="setGameRating(3)" class="game-star text-gray-600">★</button>
+                    <button type="button" onclick="setGameRating(4)" class="game-star text-gray-600">★</button>
+                    <button type="button" onclick="setGameRating(5)" class="game-star text-gray-600">★</button>
+                </div>
+                <input type="hidden" id="game-rating" value="0">
+            </div>
+
+            <label class="flex items-center gap-2 text-sm text-gray-300"><input type="checkbox" id="game-digital" class="accent-purple-500"> Это не диск / цифровая версия</label>
+            <button onclick="document.getElementById('game-img').click()" class="w-full bg-cyan-600 hover:bg-cyan-500 py-3 rounded-xl font-bold text-white">📷 Обложка</button>
+            <input type="file" id="game-img" accept="image/*" class="hidden" onchange="processImage(event, 'game')">            <p id="game-img-status" class="text-center text-xs text-cyan-300 hidden">Обложка готова! ✨</p>
+            <p id="game-img-status" class="text-center text-xs text-cyan-300 hidden">Обложка готова! ✨</p>
+            <button onclick="saveGameItem()" class="w-full bg-purple-600 hover:bg-purple-500 py-3.5 rounded-xl font-bold">Сохранить игру</button>
+            <button onclick="closeModal('game-modal')" class="w-full bg-white/10 hover:bg-white/15 py-3.5 rounded-xl">Отмена</button>
+        </div>
+    </div>
+
+    <!-- Основная модалка редактирования -->
     <div id="modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
         <div class="glass p-8 rounded-3xl w-full max-w-[450px] space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto border border-white/10">
             <h2 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400">Редактор релиза</h2>
@@ -705,14 +789,7 @@
                     <input id="item-price" type="number" placeholder="Цена (₴)" class="w-full bg-white/5 p-3.5 rounded-xl border border-white/10 text-white focus:outline-none focus:border-purple-500/50 text-sm">
                     <input id="item-where-bought" placeholder="Магазин / Покупка" class="w-full bg-white/5 p-3.5 rounded-xl border border-white/10 text-white focus:outline-none focus:border-purple-500/50 text-sm">
                 </div>
-
-                <!-- Физическое место хранения -->
-                <div>
-                    <label class="text-[10px] text-cyan-400 font-bold block uppercase tracking-wider mb-1">📍 Расположение (Шкаф, полка №, коробка и т.д.)</label>
-                    <input id="item-storage-location" placeholder="Например: Полка над столом, ряд 2" class="w-full bg-cyan-950/20 p-3.5 rounded-xl border border-cyan-500/20 text-white focus:outline-none focus:border-cyan-500/50 text-sm">
-                </div>
-
-                <div id="music-fields-container" class="space-y-3">
+<div id="music-fields-container" class="space-y-3">
                     <div class="grid grid-cols-2 gap-3">
                         <input id="item-year" type="number" placeholder="Год (напр. 2007)" class="w-full bg-white/5 p-3.5 rounded-xl border border-white/10 text-white focus:outline-none focus:border-purple-500/50 text-sm">
                         <input id="item-label" placeholder="Лейбл (напр. Warp)" class="w-full bg-white/5 p-3.5 rounded-xl border border-white/10 text-white focus:outline-none focus:border-purple-500/50 text-sm">
@@ -1068,10 +1145,10 @@
         // Default structures
         const defaults = { 
             cds: [], 
-            vinyls: [], 
+            vinyls: [],
+            games: [], 
             stuff: [], 
-            wishlists: [], 
-            goals: [], 
+            wishlists: [],  
             availableTags: [], 
             name: 'Коллекционер', 
             description: '', 
@@ -1099,7 +1176,8 @@
             viewMode: {
                 cds: 'grid',
                 vinyls: 'grid'
-            }
+            },
+            gameViewMode: 'grid'
         };
 
         let data = JSON.parse(localStorage.getItem('mirvel_data')) || { ...defaults };
@@ -1107,8 +1185,10 @@
         
         // Safety Fallbacks
         if (!data.stuff) data.stuff = [];
+        if (!Array.isArray(data.games)) data.games = [];
         if (!data.sortMode) data.sortMode = { ...defaults.sortMode };
         if (!data.viewMode) data.viewMode = { ...defaults.viewMode };
+        if (!data.gameViewMode) data.gameViewMode = 'grid';
         if (!data.hobbyBudget) data.hobbyBudget = 2500;
         if (!data.quotes || data.quotes.length === 0) {
             data.quotes = [...defaultQuotes];
@@ -1502,7 +1582,6 @@
                 return decades.size >= 3;
             }},
             { id: 'rating_critic', title: 'Строгий критик', desc: 'Поставить оценку 5 звёзд как минимум 5 вашим релизам', icon: '🌟', xp: 60, cond: d => [...(d.cds || []), ...(d.vinyls || [])].filter(i => (i.rating || 0) === 5).length >= 5 },
-            { id: 'perfectionist', title: 'Перфекционист', desc: 'Указать физическое расположение (полку/шкаф) как минимум для 5 предметов', icon: '📍', xp: 70, cond: d => [...(d.cds || []), ...(d.vinyls || []), ...(d.stuff || [])].filter(i => (i.storageLocation || '').trim().length > 0).length >= 5 },
             { id: 'budget_master', title: 'Инвестор в хобби', desc: 'Настроить планировщик бюджета в Wishlist на сумму более 5000 ₴', icon: '📈', xp: 40, cond: d => (d.hobbyBudget || 0) > 5000 },
             { id: 'social_collector', title: 'Цифровой меломан', desc: 'Добавить ссылки на маркетплейсы/источники (URL) как минимум к 3 релизам или желаниям', icon: '🌐', xp: 50, cond: d => [...(d.cds || []), ...(d.vinyls || []), ...(d.stuff || []), ...(d.wishlists || [])].filter(i => (i.url || '').trim().length > 0).length >= 3 },
             { id: 'high_fidelity', title: 'Hi-Fi Аудиофил', desc: 'Добавить хотя бы одно устройство в категорию аудиотехники/девайсов (gear)', icon: '🔌', xp: 60, cond: d => (d.stuff || []).some(i => i.category === 'gear') }
@@ -1746,8 +1825,7 @@
                 artist: artist || 'Неизвестный исполнитель',
                 price: price,
                 whereBought: 'Быстрое добавление ⚡',
-                storageLocation: '',
-                year: '',
+year: '',
                 label: '',
                 condition: 'NM',
                 formatDetails: targetKey === 'cds' ? 'CD диск' : 'Виниловая пластинка',
@@ -2139,7 +2217,6 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
                             ${item.label ? `<div>🏷️ Лейбл: <span class="text-gray-300 font-bold">${item.label}</span></div>` : ''}
                             ${item.condition ? `<div>🎨 Состояние: <span class="text-cyan-400 font-bold">${item.condition}</span></div>` : ''}
                             ${item.whereBought ? `<div>🏪 Куплено: <span class="text-purple-300 font-bold">${item.whereBought}</span></div>` : ''}
-                            ${item.storageLocation ? `<div class="text-cyan-400">📍 Место: <span class="font-bold text-white">${item.storageLocation}</span></div>` : ''}
                         </div>
                         <p class="text-[11px] text-gray-400 italic line-clamp-3 mt-1 border-t border-white/5 pt-1 leading-relaxed">
                             ${item.note ? `💬 ${item.note}` : 'Нет рецензии.'}
@@ -2250,8 +2327,7 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
                 artist: wishItem.artist || '',
                 price: price,
                 whereBought: where || 'Перенос из Желаемого',
-                storageLocation: wishItem.storageLocation || '',
-                year: wishItem.year || '',
+year: wishItem.year || '',
                 label: wishItem.label || '',
                 condition: wishItem.condition || 'NM',
                 formatDetails: wishItem.formatDetails || (targetFormat === 'vinyls' ? 'Черный винил' : 'Standart CD'),
@@ -2543,8 +2619,8 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
                     if (!Array.isArray(data.cds)) data.cds = [];
                     if (!Array.isArray(data.vinyls)) data.vinyls = [];
                     if (!Array.isArray(data.stuff)) data.stuff = [];
+                    if (!Array.isArray(data.games)) data.games = [];
                     if (!Array.isArray(data.wishlists)) data.wishlists = [];
-                    if (!Array.isArray(data.goals)) data.goals = [];
                     if (!Array.isArray(data.availableTags)) data.availableTags = [];
                     if (!Array.isArray(data.quotes)) data.quotes = [...defaultQuotes];
                     if (!Array.isArray(data.quickNotes)) data.quickNotes = [];
@@ -2552,6 +2628,7 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
                     if (!Array.isArray(data.musicSites)) data.musicSites = [...defaultSites];
                     
                     data.xp = Number(data.xp) || 0;
+                    if (!data.gameViewMode) data.gameViewMode = 'grid';
                     
                     // Санируем дубликаты при импорте сторонних данных
                     data.unlockedAchievements = [...new Set(data.unlockedAchievements)];
@@ -2582,6 +2659,11 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
                     else if (target === 'banner') { data.bannerImg = base64; }
                     else if (target === 'fav-artist') { data.favArtist.img = base64; }
                     else if (target === 'fav-album') { data.favAlbum.img = base64; }
+                    else if (target === 'game') {
+                        window.tempGameImg = base64;
+                        const gameImgStatus = document.getElementById('game-img-status');
+                        if (gameImgStatus) { gameImgStatus.innerText = 'Обложка готова! ✨'; gameImgStatus.classList.remove('hidden'); }
+                    }
                     else { 
                         window.tempImg = base64; 
                         document.getElementById('item-img-status').innerText = 'Изображение готово! ✨';
@@ -2593,7 +2675,217 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
             reader.readAsDataURL(file);
         }
 
-        window.openModal = (type, id = null) => {
+        
+        // =========================
+        // Игровая коллекция
+        // =========================
+        let gamePlatformFilter = '';
+        let gameSortMode = 'title';
+
+        const GAME_PLATFORM_GROUPS = [
+            'PlayStation 1','PlayStation 2','PlayStation 3','PlayStation 4','PlayStation 5',
+            'Xbox','Xbox 360','Xbox One','Xbox Series',
+            'Nintendo GameCube','Nintendo Wii','Nintendo Wii U','Nintendo Switch','PC CD/DVD','Другое'
+        ];
+
+        window.openGameModal = (id = null) => {
+            document.getElementById('game-edit-id').value = id || '';
+            document.getElementById('game-modal-title').innerText = id ? 'Редактировать игру 🎮' : 'Игровой диск 🎮';
+            window.tempGameImg = '';
+            const gameImgStatus = document.getElementById('game-img-status');
+            if (gameImgStatus) { gameImgStatus.classList.add('hidden'); gameImgStatus.innerText = ''; }
+
+            const fields = ['game-title','game-developer','game-publisher','game-year','game-price','game-edition','game-url'];
+            fields.forEach(id => document.getElementById(id).value = '');
+            document.getElementById('game-platform').value = 'PlayStation 2';
+            document.getElementById('game-region').value = '';
+            document.getElementById('game-condition').value = '';
+            document.getElementById('game-rating').value = 0;
+            document.getElementById('game-digital').checked = false;
+            setGameRating(0);
+
+            if (id) {
+                const item = data.games.find(x => x.id === Number(id));
+                if (!item) return;
+                document.getElementById('game-platform').value = item.platform || 'PlayStation 2';
+                document.getElementById('game-region').value = item.region || '';
+                document.getElementById('game-title').value = item.title || '';
+                document.getElementById('game-developer').value = item.developer || '';
+                document.getElementById('game-publisher').value = item.publisher || '';
+                document.getElementById('game-year').value = item.year || '';
+                document.getElementById('game-price').value = item.price || 0;
+                document.getElementById('game-condition').value = item.condition || '';
+                document.getElementById('game-edition').value = item.edition || '';
+document.getElementById('game-url').value = item.url || '';
+                document.getElementById('game-rating').value = item.rating || 0;
+                document.getElementById('game-digital').checked = !!item.digital;
+                setGameRating(item.rating || 0);
+            }
+            document.getElementById('game-modal').classList.remove('hidden');
+        };
+
+        window.setGameRating = (value) => {
+            document.getElementById('game-rating').value = value;
+            document.querySelectorAll('.game-star').forEach((s, i) => {
+                s.className = `game-star ${i < value ? 'text-yellow-400' : 'text-gray-600'} hover:scale-110 transition`;
+            });
+        };
+
+        window.saveGameItem = () => {
+            const id = Number(document.getElementById('game-edit-id').value) || null;
+            const item = {
+                id: id || Date.now(),
+                platform: document.getElementById('game-platform').value,
+                region: document.getElementById('game-region').value,
+                title: document.getElementById('game-title').value.trim(),
+                developer: document.getElementById('game-developer').value.trim(),
+                publisher: document.getElementById('game-publisher').value.trim(),
+                year: parseInt(document.getElementById('game-year').value) || '',
+                price: Math.max(0, parseFloat(document.getElementById('game-price').value) || 0),
+                condition: document.getElementById('game-condition').value,
+                edition: document.getElementById('game-edition').value.trim(),
+url: document.getElementById('game-url').value.trim(),
+                rating: parseInt(document.getElementById('game-rating').value) || 0,
+                digital: document.getElementById('game-digital').checked,
+                img: window.tempGameImg || ''
+            };
+            if (!item.title) {
+                showToast('Название игры обязательно к заполнению!');
+                return;
+            }
+            if (id) {
+                const index = data.games.findIndex(x => x.id === id);
+                if (index >= 0) {
+                    item.img = window.tempGameImg || data.games[index].img || '';
+                    data.games[index] = {...data.games[index], ...item};
+                }
+            } else {
+                data.games.push(item);
+            }
+            save();
+            closeModal('game-modal');
+            showToast(id ? 'Игра обновлена 🎮' : 'Игра добавлена в коллекцию 🎮');
+        };
+
+        window.deleteGame = (id) => {
+            data.games = (data.games || []).filter(x => x.id !== id);
+            save();
+            showToast('Игра удалена');
+        };
+
+        window.setGamePlatformFilter = (platform) => {
+            gamePlatformFilter = platform || '';
+            updateUI();
+        };
+
+        window.setGameSort = (mode) => {
+            gameSortMode = mode;
+            updateUI();
+        };
+
+        window.toggleGameView = () => {
+            data.gameViewMode = data.gameViewMode === 'covers' ? 'grid' : 'covers';
+            save();
+        };
+
+        function renderGames() {
+            const grid = document.getElementById('games-grid');
+            if (!grid) return;
+            let items = [...(data.games || [])];
+            const q = (document.getElementById('search-games')?.value || '').toLowerCase().trim();
+
+            if (gamePlatformFilter) items = items.filter(i => i.platform === gamePlatformFilter);
+            if (q) items = items.filter(i =>
+                [i.title, i.platform, i.developer, i.publisher, i.edition, i.region, i.year]
+                .some(v => String(v || '').toLowerCase().includes(q))
+            );
+
+            items.sort((a,b) => {
+                if (gameSortMode === 'price_desc') return (b.price||0)-(a.price||0);
+                if (gameSortMode === 'year_desc') return (b.year||0)-(a.year||0);
+                if (gameSortMode === 'rating') return (b.rating||0)-(a.rating||0);
+                return (a.title||'').localeCompare(b.title||'', 'ru');
+            });
+
+            const platformCounts = {};
+            (data.games || []).forEach(i => platformCounts[i.platform] = (platformCounts[i.platform] || 0) + 1);
+            const filterBar = document.getElementById('game-platform-filters');
+            if (filterBar) {
+                filterBar.innerHTML = '';
+                const allBtn = document.createElement('button');
+                allBtn.className = `px-3 py-1.5 rounded-full text-xs font-bold border ${!gamePlatformFilter ? 'border-purple-500 bg-purple-500/20 text-white' : 'border-white/10 bg-white/5 text-gray-400'}`;
+                allBtn.innerText = `Все (${data.games.length})`;
+                allBtn.onclick = () => setGamePlatformFilter('');
+                filterBar.appendChild(allBtn);
+                Object.entries(platformCounts).sort().forEach(([platform,count]) => {
+                    const btn = document.createElement('button');
+                    btn.className = `px-3 py-1.5 rounded-full text-xs font-bold border ${gamePlatformFilter===platform ? 'border-cyan-500 bg-cyan-500/20 text-white' : 'border-white/10 bg-white/5 text-gray-400'}`;
+                    btn.innerText = `${platform} (${count})`;
+                    btn.onclick = () => setGamePlatformFilter(platform);
+                    filterBar.appendChild(btn);
+                });
+            }
+
+            ['title','price_desc','year_desc','rating'].forEach(m => {
+                const b = document.getElementById(`game-sort-${m}`);
+                if (b) b.className = `text-xs px-3 py-1.5 rounded-lg border ${gameSortMode===m ? 'border-purple-500 bg-purple-500/20 text-white font-bold' : 'border-white/10 bg-white/5 text-gray-400'}`;
+            });
+
+            const isCovers = data.gameViewMode === 'covers';
+            grid.className = isCovers
+                ? 'grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4 p-2'
+                : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-2';
+            grid.innerHTML = '';
+
+            if (!items.length) {
+                grid.innerHTML = `<div class="col-span-full glass rounded-3xl p-12 text-center text-gray-500 italic">Пока нет подходящих игр. Самое время добавить первый диск 🎮</div>`;
+                return;
+            }
+
+            items.forEach(i => {
+                const card = document.createElement('div');
+                if (isCovers) {
+                    card.className = 'relative aspect-square group rounded-2xl overflow-hidden glass border border-white/10 hover:border-[var(--theme-btn)] hover:scale-105 transition-all';
+                    card.innerHTML = i.img
+                        ? `<img src="${i.img}" class="w-full h-full object-cover">`
+                        : `<div class="w-full h-full flex flex-col items-center justify-center bg-gradient-to-tr from-purple-900/40 to-cyan-900/40 p-2 text-center"><span class="text-3xl">🎮</span><span class="text-[9px] text-cyan-300 mt-2 truncate w-full">${i.platform}</span><span class="text-[10px] font-black truncate w-full">${i.title}</span></div>`;
+                    const overlay=document.createElement('div');
+                    overlay.className='absolute inset-0 bg-black/85 opacity-0 group-hover:opacity-100 transition-opacity p-2 flex flex-col justify-between text-[9px]';
+                    overlay.innerHTML=`<div><p class="text-cyan-400 font-bold">${i.platform}</p><p class="font-black truncate">${i.title}</p><p>${i.price} ₴</p></div><div class="flex gap-1 justify-end"><button class="bg-white/10 rounded p-1">✏️</button><button class="bg-red-500/20 text-red-300 rounded p-1">✕</button></div>`;
+                    overlay.children[1].children[0].onclick=(e)=>{e.stopPropagation();openGameModal(i.id)};
+                    overlay.children[1].children[1].onclick=(e)=>{e.stopPropagation();deleteGame(i.id)};
+                    card.appendChild(overlay);
+                } else {
+                    card.className='glass p-4 rounded-3xl relative group border border-white/5 hover:border-[var(--theme-btn)] transition-all';
+                    const img=i.img ? `<img src="${i.img}" class="w-24 h-24 rounded-2xl object-cover border border-white/10 shrink-0">` : `<div class="w-24 h-24 rounded-2xl bg-gradient-to-tr from-purple-900/40 to-cyan-900/40 flex items-center justify-center text-3xl shrink-0">🎮</div>`;
+                    card.innerHTML=`
+                        <div class="flex gap-4">
+                            ${img}
+                            <div class="min-w-0 flex-1">
+                                <p class="text-[10px] uppercase font-black text-cyan-400">${i.platform || 'Другое'}${i.region ? ' • '+i.region : ''}</p>
+                                <h3 class="font-black text-white text-base truncate mt-1" title="${i.title}">${i.title}</h3>
+                                <p class="text-purple-300 text-xs mt-1">${i.price || 0} ₴</p>
+                                <p class="text-[10px] text-gray-500 mt-1 truncate">${i.developer || 'Разработчик не указан'}${i.publisher ? ' • '+i.publisher : ''}</p>
+                            </div>
+                        </div>
+                        <div class="mt-3 pt-3 border-t border-white/5 text-[10px] text-gray-400 space-y-1">
+                            ${i.year ? `<div>📅 ${i.year}${i.edition ? ' • '+i.edition : ''}</div>` : (i.edition ? `<div>💿 ${i.edition}</div>` : '')}
+                            ${i.condition ? `<span class="inline-block bg-cyan-950/40 text-cyan-400 border border-cyan-500/20 px-1.5 py-0.5 rounded">Состояние: ${i.condition}</span>` : ''}
+                            <div class="text-yellow-400">${i.rating ? '⭐ '.repeat(i.rating) : 'Без оценки'}</div>
+                        </div>
+                        <div class="absolute right-3 top-3 flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                            <button class="bg-black/80 p-1.5 rounded-xl border border-white/10">✏️</button>
+                            <button class="bg-red-950/80 text-red-300 p-1.5 rounded-xl border border-red-500/20">✕</button>
+                        </div>`;
+                    const buttons=card.querySelectorAll('button');
+                    buttons[0].onclick=()=>openGameModal(i.id);
+                    buttons[1].onclick=()=>deleteGame(i.id);
+                }
+                grid.appendChild(card);
+            });
+        }
+
+window.openModal = (type, id = null) => {
             document.getElementById('edit-type').value = type; document.getElementById('edit-id').value = id || '';
             document.getElementById('item-url').classList.toggle('hidden', type !== 'wishlists');
             document.getElementById('gift-container').classList.toggle('hidden', type === 'wishlists');
@@ -2612,9 +2904,7 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
                 document.getElementById('item-artist').value = item.artist || '';
                 document.getElementById('item-price').value = item.price;
                 document.getElementById('item-where-bought').value = item.whereBought || '';
-                document.getElementById('item-storage-location').value = item.storageLocation || '';
-                
-                document.getElementById('item-year').value = item.year || '';
+document.getElementById('item-year').value = item.year || '';
                 document.getElementById('item-label').value = item.label || '';
                 document.getElementById('item-condition').value = item.condition || '';
                 document.getElementById('item-format-details').value = item.formatDetails || '';
@@ -2644,9 +2934,7 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
                 document.getElementById('item-artist').value = '';
                 document.getElementById('item-price').value = '';
                 document.getElementById('item-where-bought').value = '';
-                document.getElementById('item-storage-location').value = '';
-                
-                document.getElementById('item-year').value = '';
+document.getElementById('item-year').value = '';
                 document.getElementById('item-label').value = '';
                 document.getElementById('item-condition').value = '';
                 document.getElementById('item-format-details').value = '';
@@ -2674,9 +2962,7 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
             const artist = document.getElementById('item-artist').value.trim();
             const price = parseFloat(document.getElementById('item-price').value) || 0;
             const whereBought = document.getElementById('item-where-bought').value.trim();
-            const storageLocation = document.getElementById('item-storage-location').value.trim();
-            
-            const year = parseInt(document.getElementById('item-year').value) || '';
+const year = parseInt(document.getElementById('item-year').value) || '';
             const label = document.getElementById('item-label').value.trim();
             const condition = document.getElementById('item-condition').value;
             const formatDetails = document.getElementById('item-format-details').value.trim();
@@ -2698,20 +2984,27 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
 
             if(idStr) {
                 const item = data[type].find(x => x.id === parseInt(idStr));
+                if (!item) {
+                    showToast('Не удалось найти этот предмет.');
+                    return;
+                }
                 Object.assign(item, { 
-                    category, title, artist, price, whereBought, storageLocation, year, label, condition, formatDetails, 
+                    category, title, artist, price, whereBought,
+year, label, condition, formatDetails, 
                     size, style, brand, priority, url, isGift, isCustom, rating, 
                     tags: [...tempTags], img: window.tempImg || item.img 
                 });
                 save(); closeModal('modal');
             } else {
                 data[type].push({ 
-                    id: Date.now(), category, title, artist, price, whereBought, storageLocation, year, label, condition, formatDetails, 
+                    id: Date.now(), category, title, artist, price, whereBought,
+year, label, condition, formatDetails, 
                     size, style, brand, priority, url, isGift, isCustom, rating, 
                     playCount: 0, lastPlayed: '',
                     tags: [...tempTags], img: window.tempImg, imgPos: 'center', note: '' 
                 });
                 closeModal('modal');
+                save();
                 if (currentType !== 'wishlists') {
                     addXP(50, "новый предмет в коллекции ✨");
                 }
@@ -2720,44 +3013,6 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
     </script>
 
     <script>
-        window.addArtistGoal = () => {
-            const artist = document.getElementById('goal-artist').value.trim();
-            const album = document.getElementById('goal-album').value.trim();
-            if(!artist || !album) {
-                showToast("Заполните все поля цели!");
-                return;
-            }
-            if(!data.goals) data.goals = [];
-            data.goals.push({ id: Date.now(), artist, album, hasCd: false, hasVinyl: false });
-            document.getElementById('goal-artist').value = '';
-            document.getElementById('goal-album').value = '';
-            
-            addXP(15, "постановка коллекционной цели 🎯");
-        };
-
-        window.toggleGoalProp = (id, prop) => {
-            if(!data.goals) return;
-            const goal = data.goals.find(g => g.id === id);
-            if(goal) {
-                const wasCompleted = goal.hasCd || goal.hasVinyl;
-                goal[prop] = !goal[prop];
-                const isCompletedNow = goal.hasCd || goal.hasVinyl;
-                
-                save();
-                if (isCompletedNow && !wasCompleted) {
-                    addXP(100, "выполнение коллекционной цели 🎯");
-                } else {
-                    showToast("Статус цели обновлен");
-                }
-            }
-        };
-
-        window.deleteGoal = (id) => {
-            data.goals = (data.goals || []).filter(g => g.id !== id);
-            save();
-            showToast("Цель удалена");
-        };
-
         window.openMusicSiteModal = () => {
             document.getElementById('site-name').value = '';
             document.getElementById('site-url').value = '';
@@ -3067,10 +3322,15 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
 
     <script>
         function updateUI() {
-            const cdsVal = (data.cds || []).reduce((s, i) => s + i.price, 0);
-            const vinylsVal = (data.vinyls || []).reduce((s, i) => s + i.price, 0);
-            const stuffVal = (data.stuff || []).reduce((s, i) => s + i.price, 0);
-            const wishVal = (data.wishlists || []).reduce((s, i) => s + i.price, 0);
+            const cdsVal = (data.cds || []).reduce((s, i) => s + (Number(i.price) || 0), 0);
+            const vinylsVal = (data.vinyls || []).reduce((s, i) => s + (Number(i.price) || 0), 0);
+            const stuffVal = (data.stuff || []).reduce((s, i) => s + (Number(i.price) || 0), 0);
+            const wishVal = (data.wishlists || []).reduce((s, i) => s + (Number(i.price) || 0), 0);
+            const gamesVal = (data.games || []).reduce((s, i) => s + (Number(i.price) || 0), 0);
+            const collectionItems = [...(data.cds || []), ...(data.vinyls || []), ...(data.games || []), ...(data.stuff || [])];
+            const totalCollectionValue = collectionItems.reduce((s, i) => s + (Number(i.price) || 0), 0);
+            const totalPlays = [...(data.cds || []), ...(data.vinyls || [])].reduce((s, i) => s + (Number(i.playCount) || 0), 0);
+            const ratedCount = [...(data.cds || []), ...(data.vinyls || []), ...(data.games || [])].filter(i => (Number(i.rating) || 0) > 0).length;
             
             document.getElementById('display-name').innerText = data.name || 'Коллекционер';
             document.getElementById('display-desc').innerText = data.description || '';
@@ -3096,14 +3356,19 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
 
             document.getElementById('stat-music-col-val').innerText = (cdsVal + vinylsVal) + ' ₴';
             document.getElementById('stat-stuff-col-val').innerText = stuffVal + ' ₴';
+            const gamesStatEl = document.getElementById('stat-games-col-val');
+            if (gamesStatEl) gamesStatEl.innerText = gamesVal + ' ₴';
             document.getElementById('stat-wish-val').innerText = wishVal + ' ₴';
-            document.getElementById('stat-count-val').innerText = (data.cds?.length || 0) + (data.vinyls?.length || 0) + (data.stuff?.length || 0);
+            document.getElementById('stat-count-val').innerText = (data.cds?.length || 0) + (data.vinyls?.length || 0) + (data.games?.length || 0) + (data.stuff?.length || 0);
             
             const allRatedItems = [...(data.cds || []), ...(data.vinyls || [])].filter(i => (i.rating || 0) > 0);
             const averageRating = allRatedItems.length > 0 
                 ? (allRatedItems.reduce((acc, i) => acc + i.rating, 0) / allRatedItems.length).toFixed(1) 
                 : '0.0';
             document.getElementById('stat-avg-rating').innerText = averageRating;
+            document.getElementById('stat-total-value').innerText = totalCollectionValue + ' ₴';
+            document.getElementById('stat-total-plays').innerText = totalPlays;
+            document.getElementById('stat-rated-count').innerText = ratedCount;
 
             document.getElementById('total-cds').innerText = cdsVal;
             document.getElementById('count-cds').innerText = data.cds.length;
@@ -3111,6 +3376,21 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
             document.getElementById('count-vinyls').innerText = data.vinyls.length;
             document.getElementById('total-stuff').innerText = stuffVal;
             document.getElementById('count-stuff').innerText = data.stuff.length;
+            const totalGamesEl = document.getElementById('total-games');
+            const countGamesEl = document.getElementById('count-games');
+            if (totalGamesEl) totalGamesEl.innerText = gamesVal;
+            if (countGamesEl) countGamesEl.innerText = data.games.length;
+            const gameRatings = data.games.filter(i => (i.rating || 0) > 0);
+            const gameAvgEl = document.getElementById('games-avg-rating');
+            if (gameAvgEl) gameAvgEl.innerText = gameRatings.length ? (gameRatings.reduce((s,i)=>s+(i.rating||0),0)/gameRatings.length).toFixed(1) : '0.0';
+            const gamePlatformCountEl = document.getElementById('games-platform-count');
+            if (gamePlatformCountEl) gamePlatformCountEl.innerText = new Set(data.games.map(i=>i.platform).filter(Boolean)).size;
+            const latestPlatformEl = document.getElementById('games-latest-platform');
+            if (latestPlatformEl) {
+                const latest = [...data.games].sort((a,b)=>(b.year||0)-(a.year||0))[0];
+                latestPlatformEl.innerText = latest?.platform || '—';
+            }
+
             document.getElementById('total-wishlists').innerText = wishVal;
             document.getElementById('count-wishlists').innerText = data.wishlists.length;
 
@@ -3522,16 +3802,7 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
                                 metaDetails.appendChild(gearDetails);
                             }
                         }
-
-                        // Physical locator view
-                        if (i.storageLocation) {
-                            const shelfDetails = document.createElement('div');
-                            shelfDetails.className = "text-cyan-400 font-black truncate mt-1 text-[9px] uppercase tracking-wider bg-cyan-950/20 px-2 py-0.5 rounded border border-cyan-500/10";
-                            shelfDetails.innerText = `📍 Место: ${i.storageLocation}`;
-                            metaDetails.appendChild(shelfDetails);
-                        }
-
-                        if (key === 'wishlists' && i.priority) {
+if (key === 'wishlists' && i.priority) {
                             // Кликабельный приоритет
                             const prioDetails = document.createElement('button');
                             prioDetails.className = "inline-block bg-white/5 border border-white/10 hover:border-purple-500/50 hover:bg-white/10 px-2 py-1 rounded-xl text-[8px] font-bold mt-1 text-yellow-400 transition-all active:scale-95";
@@ -3671,92 +3942,9 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
             renderGrid('vinyls', 'vinyl-grid'); 
             renderGrid('stuff', 'stuff-grid');
             renderGrid('wishlists', 'wishlist-grid');
+            renderGames();
             renderQuickNotes();
             updateQuoteUI();
-
-            const goalsGrid = document.getElementById('goals-grid');
-            if(goalsGrid) {
-                goalsGrid.innerHTML = '';
-                let goalsList = [...(data.goals || [])];
-                const goalsFilter = document.getElementById('goals-author-filter');
-                if (goalsFilter) {
-                    const authors = [...new Set(goalsList.map(g => g.artist).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
-                    const currentVal = goalsFilter.value;
-                    goalsFilter.innerHTML = '<option value="">Все авторы</option>' + authors.map(a=>`<option value="${a}">${a}</option>`).join('');
-                    goalsFilter.value = currentVal;
-                    if (currentVal) goalsList = goalsList.filter(g => g.artist === currentVal);
-                }
-                if(goalsList.length === 0) {
-                    goalsGrid.innerHTML = `
-                        <div class="col-span-full py-12 text-center glass rounded-3xl border border-white/5">
-                            <p class="text-gray-400 italic text-sm">У вас пока нет активных коллекционных целей. Добавьте их выше! 🎯</p>
-                        </div>
-                    `;
-                } else {
-                    goalsList.forEach(g => {
-                        const card = document.createElement('div');
-                        card.className = "glass p-6 rounded-3xl relative group border border-white/5 hover:border-[var(--theme-btn)] transition-all duration-300";
-                        
-                        const title = document.createElement('h4');
-                        title.className = "font-black text-lg text-white truncate";
-                        title.innerText = g.album;
-                        
-                        const artist = document.createElement('p');
-                        artist.className = "text-purple-300 text-sm italic mb-4 truncate";
-                        artist.innerText = g.artist;
-                        
-                        const divider = document.createElement('div');
-                        divider.className = "space-y-3 pt-3 border-t border-white/5";
-                        
-                        const labelCd = document.createElement('label');
-                        labelCd.className = "flex items-center gap-3 cursor-pointer select-none text-sm text-gray-300";
-                        
-                        const inputCd = document.createElement('input');
-                        inputCd.type = "checkbox";
-                        inputCd.checked = g.hasCd;
-                        inputCd.className = "w-4 h-4 rounded accent-purple-500";
-                        inputCd.onchange = () => toggleGoalProp(g.id, 'hasCd');
-                        
-                        const spanCd = document.createElement('span');
-                        spanCd.className = `${g.hasCd ? 'line-through text-gray-500' : 'text-gray-200'} flex items-center gap-1.5 transition-all`;
-                        spanCd.innerText = `CD ${g.hasCd ? '✅' : ''}`;
-                        
-                        labelCd.appendChild(inputCd);
-                        labelCd.appendChild(spanCd);
-                        
-                        const labelVinyl = document.createElement('label');
-                        labelVinyl.className = "flex items-center gap-3 cursor-pointer select-none text-sm text-gray-300";
-                        
-                        const inputVinyl = document.createElement('input');
-                        inputVinyl.type = "checkbox";
-                        inputVinyl.checked = g.hasVinyl;
-                        inputVinyl.className = "w-4 h-4 rounded accent-cyan-500";
-                        inputVinyl.onchange = () => toggleGoalProp(g.id, 'hasVinyl');
-                        
-                        const spanVinyl = document.createElement('span');
-                        spanVinyl.className = `${g.hasVinyl ? 'line-through text-gray-500' : 'text-gray-200'} flex items-center gap-1.5 transition-all`;
-                        spanVinyl.innerText = `Виниле ${g.hasVinyl ? '✅' : ''}`;
-                        
-                        labelVinyl.appendChild(inputVinyl);
-                        labelVinyl.appendChild(spanVinyl);
-                        
-                        divider.appendChild(labelCd);
-                        divider.appendChild(labelVinyl);
-                        
-                        const delBtn = document.createElement('button');
-                        delBtn.className = "absolute top-4 right-4 bg-red-500/10 text-red-400 p-2 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/30";
-                        delBtn.innerText = "✕";
-                        delBtn.onclick = () => deleteGoal(g.id);
-                        
-                        card.appendChild(title);
-                        card.appendChild(artist);
-                        card.appendChild(divider);
-                        card.appendChild(delBtn);
-                        
-                        goalsGrid.appendChild(card);
-                    });
-                }
-            }
 
             const avatar = document.getElementById('main-avatar');
             if(data.avatar) { avatar.src = data.avatar; avatar.classList.remove('hidden'); }
@@ -3861,4 +4049,3 @@ Output strictly as a raw valid JSON array, without markdown backticks block form
     </script>
 </body>
 </html>
-
