@@ -1,0 +1,158 @@
+/* =========================================================
+   MIRVEL HUB — settings.css (подключать ПОСЛЕ hub2.css)
+   Обновлённый дизайн страницы «Настройки» (#profile).
+   Только CSS: разметка и тексты не меняются, поэтому
+   переводы (RU / EN / UA) и весь JS работают как раньше.
+   ========================================================= */
+
+/* ---------- Заголовок страницы ---------- */
+#profile > h2 {
+    font-family: var(--font-display);
+    font-size: clamp(1.7rem, 4vw, 2.5rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 36px;
+}
+#profile > h2::after {
+    content: ''; display: block; width: 64px; height: 4px; margin-top: 14px; border-radius: 999px;
+    background: linear-gradient(90deg, var(--theme-btn), #06b6d4);
+    box-shadow: 0 0 18px rgba(var(--theme-rgb), 0.55);
+}
+
+/* ---------- Сетка и карточки ---------- */
+#profile > .grid { gap: 24px; align-items: start; }
+#profile > .grid > div.space-y-6 { display: flex; flex-direction: column; gap: 24px; }
+#profile > .grid > div.space-y-6 > * { margin: 0; }
+
+#profile .glass {
+    position: relative; overflow: hidden;
+    border-radius: 26px;
+    animation: popIn 0.45s var(--ease-out) both;
+}
+/* светящаяся «кромка» сверху в цвет темы */
+#profile .glass::before {
+    content: ''; position: absolute; left: 22px; right: 22px; top: 0; height: 1px; pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgba(var(--theme-rgb), 0.75), transparent);
+}
+#profile > .grid > div.space-y-6 > .glass:nth-child(2) { animation-delay: 0.06s; }
+#profile > .grid > div.space-y-6 > .glass:nth-child(3) { animation-delay: 0.12s; }
+#profile > .grid > div.space-y-6 > .glass:nth-child(4) { animation-delay: 0.18s; }
+#profile > .grid > div.space-y-6 > .glass:nth-child(5) { animation-delay: 0.24s; }
+#profile > .grid > div.space-y-6 > .glass:nth-child(6) { animation-delay: 0.30s; }
+
+/* заголовки карточек */
+#profile .glass > h3 {
+    font-family: var(--font-display); font-size: 1.02rem; font-weight: 800; letter-spacing: -0.01em;
+    padding-bottom: 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+#profile > .grid > .glass:first-child > h3::before { content: '👤 '; }
+
+/* ---------- Подписи и поля ---------- */
+#profile label.uppercase {
+    font-size: 10px; letter-spacing: 0.12em; font-weight: 800; color: #9ca3af;
+}
+#profile input:not([type="checkbox"]):not([type="file"]):not([type="range"]),
+#profile textarea {
+    border-radius: 14px;
+    background-color: rgba(255, 255, 255, 0.04);
+    transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
+}
+#profile input:not([type="checkbox"]):not([type="file"]):not([type="range"]):hover,
+#profile textarea:hover { background-color: rgba(255, 255, 255, 0.07); }
+#profile ::placeholder { color: #6b7280; }
+
+/* ---------- Кнопки (нулевая специфичность — не мешает точечным правилам ниже) ---------- */
+#profile :where(.glass button) {
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s, transform 0.2s var(--ease-out), box-shadow 0.2s, filter 0.2s;
+}
+#profile :where(.glass button):hover { transform: translateY(-1px); }
+#profile :where(.glass button):active { transform: scale(0.98); }
+
+/* Аватар / Баннер */
+#profile button[onclick*="avatar-input"],
+#profile button[onclick*="banner-input"] {
+    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 6px 18px rgba(0, 0, 0, 0.3);
+}
+#profile button[onclick*="avatar-input"]::before { content: '🧑‍🎤 '; }
+#profile button[onclick*="banner-input"]::before { content: '🖼️ '; }
+
+/* «Сохранить изменения» — главная кнопка */
+#profile button.bg-green-600 {
+    background-image: linear-gradient(135deg, var(--theme-btn), #06b6d4);
+    border: 0; box-shadow: 0 10px 28px rgba(var(--theme-rgb), 0.35);
+}
+#profile button.bg-green-600:hover { filter: brightness(1.1); box-shadow: 0 14px 34px rgba(var(--theme-rgb), 0.5); }
+
+/* Блок аудита опыта */
+#profile .border-t > .rounded-2xl {
+    border-radius: 18px; border-left: 3px solid #22d3ee;
+    background-image: linear-gradient(90deg, rgba(34, 211, 238, 0.09), transparent 70%);
+}
+
+/* Загрузка фото артиста / альбома — «зона загрузки» */
+#profile button.py-2.rounded-lg {
+    padding: 13px 12px; border-radius: 14px; border-style: dashed; border-color: rgba(255, 255, 255, 0.2);
+    color: #9ca3af; font-weight: 700;
+}
+#profile button.py-2.rounded-lg:hover {
+    color: #fff; border-color: rgba(var(--theme-rgb), 0.7); background-color: rgba(var(--theme-rgb), 0.1);
+}
+#profile button.py-2.rounded-lg::before { content: '📷 '; }
+
+/* ---------- Атмосфера проигрывателя ---------- */
+#profile [id^="atm-btn-"] {
+    position: relative; text-align: left; padding: 13px 34px 13px 14px;
+    border-radius: 16px; font-size: 12px; transform: none; box-shadow: none;
+}
+#profile [id^="atm-btn-"]:hover { transform: translateY(-2px); }
+/* кружок-индикатор выбора */
+#profile [id^="atm-btn-"]::after {
+    content: ''; position: absolute; right: 13px; top: 50%; width: 10px; height: 10px; margin-top: -5px; border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.25); transition: all 0.25s var(--ease-out);
+}
+/* выбранный режим (JS ставит ему ring-2) */
+#profile [id^="atm-btn-"].ring-2 {
+    transform: none;
+    border-color: rgba(var(--theme-rgb), 0.85);
+    background-color: rgba(var(--theme-rgb), 0.18);
+    box-shadow: 0 0 0 1px rgba(var(--theme-rgb), 0.35), 0 10px 26px rgba(var(--theme-rgb), 0.25);
+}
+#profile [id^="atm-btn-"].ring-2::after {
+    border-color: var(--theme-btn); background: var(--theme-btn); box-shadow: 0 0 10px var(--theme-btn);
+}
+
+/* ---------- Хранилище ---------- */
+#profile .meter { height: 10px; background: rgba(255, 255, 255, 0.07); }
+#profile .meter-fill { box-shadow: 0 0 14px rgba(var(--theme-rgb), 0.55); }
+#profile .meter-fill.is-warn { box-shadow: 0 0 14px rgba(239, 68, 68, 0.55); }
+#profile button.text-red-300 { border-style: dashed; }
+#profile button.text-red-300:hover { box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12); }
+
+/* ---------- Интерфейс: язык и переключатель скробблинга ---------- */
+#ui-card .hx-seg { gap: 8px; }
+#ui-card .hx-seg button { flex: 1; padding: 9px 10px; }
+
+/* чекбокс «Скробблинг» → переключатель (без лишней разметки) */
+#opt-scrobble {
+    -webkit-appearance: none; appearance: none; flex-shrink: 0; cursor: pointer;
+    width: 42px; height: 24px; margin-top: 1px; border-radius: 999px;
+    background-color: rgba(255, 255, 255, 0.12);
+    background-image: radial-gradient(circle closest-side, #fff 98%, transparent 100%);
+    background-repeat: no-repeat; background-size: 18px 18px; background-position: 3px 50%;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    transition: background-color 0.25s, background-position 0.25s var(--ease-out), box-shadow 0.25s;
+}
+#opt-scrobble:checked {
+    background-color: var(--theme-btn); background-position: 21px 50%;
+    box-shadow: 0 0 14px rgba(var(--theme-rgb), 0.5);
+}
+#opt-scrobble:focus-visible { outline: 2px solid var(--theme-btn); outline-offset: 2px; }
+
+/* ---------- Телефоны ---------- */
+@media (max-width: 640px) {
+    #profile .glass.p-8 { padding: 20px; }
+    #profile > h2 { margin-bottom: 26px; }
+}
+
+@media print { #profile .glass::before { display: none; } }
