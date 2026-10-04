@@ -1,0 +1,62 @@
+/* =========================================================
+   MIRVEL HUB — wishlist.css (подключать последним)
+   Обновлённый дизайн страницы «Желаемое»: бюджет, фильтры, теги, карточки
+   ========================================================= */
+
+/* ---------- Шапка ---------- */
+#wishlists > div:first-child h2 { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.02em; font-size: clamp(1.7rem, 4vw, 2.5rem); }
+#wishlists > div:first-child h2::after { content: ''; display: block; width: 56px; height: 4px; margin-top: 12px; border-radius: 999px; background: linear-gradient(90deg, var(--theme-btn), #06b6d4); box-shadow: 0 0 16px rgba(var(--theme-rgb), 0.5); }
+#wishlists > div:first-child button { border-radius: 14px !important; padding: 11px 20px !important; font-size: 13px; border: 1px solid rgba(255, 255, 255, 0.1); }
+#wishlists > div:first-child button[onclick*="openModal"] { background: linear-gradient(135deg, var(--theme-btn), #06b6d4) !important; color: #fff !important; border: 0; box-shadow: 0 8px 22px rgba(var(--theme-rgb), 0.35); }
+
+/* ---------- Панели ---------- */
+#wishlists .wl-budget, #wishlists #filter-bar { position: relative; overflow: hidden; border-radius: 26px; padding: 22px; margin-bottom: 22px; }
+#wishlists .wl-budget::before, #wishlists #filter-bar::before { content: ''; position: absolute; left: 22px; right: 22px; top: 0; height: 1px; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(var(--theme-rgb), 0.7), transparent); }
+
+/* ---------- Планировщик бюджета ---------- */
+.wl-budget h4 { font-family: var(--font-display); font-size: 0.95rem !important; font-weight: 800; letter-spacing: -0.01em; }
+.wl-budget > div:first-child > div:last-child { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.07); padding: 12px 16px; border-radius: 18px; }
+#hobby-budget-display { font-size: 1.15rem !important; min-width: 78px; text-align: right; color: #fff !important; }
+.wl-budget input[type="range"] { -webkit-appearance: none; appearance: none; height: 6px !important; border-radius: 999px; background: rgba(255, 255, 255, 0.12); outline: none; }
+.wl-budget input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #fff; border: 4px solid var(--theme-btn); box-shadow: 0 0 14px rgba(var(--theme-rgb), 0.7); transition: transform 0.2s; }
+.wl-budget input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.18); }
+.wl-budget input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 4px solid var(--theme-btn); }
+.wl-budget > .grid:not(:last-child) { border-top: 0 !important; padding-top: 0 !important; gap: 12px; }
+.wl-budget > .grid:not(:last-child) > div { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 18px; padding: 12px 16px; text-align: left !important; }
+.wl-budget > .grid:not(:last-child) span { display: block; margin-top: 3px; font-size: 1.35rem; font-family: var(--font-display); }
+.wl-budget > div:last-child { border-top: 0 !important; padding-top: 0 !important; }
+.wl-budget > div:last-child > p { color: #9ca3af !important; font-size: 10px !important; letter-spacing: 0.12em; }
+#category-budget-breakdown > .glass { border-radius: 18px; padding: 14px; background-color: rgba(255, 255, 255, 0.035); }
+
+/* ---------- Фильтры ---------- */
+#filter-bar > .w-full { display: none; }
+#filter-bar { gap: 14px; }
+#filter-bar > div > span { font-size: 10px !important; letter-spacing: 0.12em; font-weight: 800; color: #6b7280 !important; min-width: 78px; }
+#filter-bar button:not(.wl-tag) { padding: 6px 14px !important; border-radius: 999px; font-size: 12px !important; font-weight: 700; color: #9ca3af; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.05); }
+#filter-bar button:not(.wl-tag):hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
+#filter-bar button.ring-1:not(.wl-tag) { color: #fff; border-color: rgba(var(--theme-rgb), 0.8); background: rgba(var(--theme-rgb), 0.25); box-shadow: none; }
+
+/* ---------- Теги (фильтр, карточки, окна тегов) ---------- */
+.wl-tag { --tc: #8b5cf6; display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px !important; border-radius: 999px !important; font-size: 11px !important; font-weight: 700; color: #fff; cursor: default;
+    background: color-mix(in srgb, var(--tc) 20%, transparent) !important; border: 1px solid color-mix(in srgb, var(--tc) 55%, transparent) !important; }
+.wl-tag::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--tc); box-shadow: 0 0 8px var(--tc); flex-shrink: 0; }
+button.wl-tag { cursor: pointer; transition: background-color 0.2s, transform 0.2s var(--ease-out); }
+button.wl-tag:hover { background: color-mix(in srgb, var(--tc) 34%, transparent) !important; transform: translateY(-1px); }
+button.wl-tag.ring-2 { background: color-mix(in srgb, var(--tc) 38%, transparent) !important; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85); transform: none; }
+#wishlist-grid .wl-tag { padding: 2px 8px !important; font-size: 9.5px !important; }
+#wishlist-grid .wl-tag::before { width: 5px; height: 5px; }
+
+/* ---------- Карточки ---------- */
+#wishlist-grid { gap: 20px !important; padding: 0 !important; }
+#wishlist-grid .release-card { border-radius: 24px; padding: 18px; background-image: linear-gradient(160deg, rgba(var(--theme-rgb), 0.07), transparent 55%); }
+#wishlist-grid .release-card > div:first-child { gap: 16px; }
+#wishlist-grid .release-card h3 { font-size: 15px; }
+#wishlist-grid .release-card [class*="bg-green-600/20"] { padding: 10px; border-radius: 14px; font-size: 12px; margin-top: 8px; color: #6ee7b7; background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(6, 182, 212, 0.14)); border-color: rgba(52, 211, 153, 0.35); }
+#wishlist-grid .release-card [class*="bg-green-600/20"]:hover { filter: brightness(1.2); }
+#wishlist-grid .release-card button[title="Нажмите, чтобы изменить"] { padding: 3px 10px; border-radius: 999px; font-size: 10px; }
+#wishlist-grid .release-card > .mt-3 { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+
+/* ---------- Панель сортировки (создаётся в 17-convenience.js) ---------- */
+#wishlists #filter-bar + div { border-radius: 26px; padding: 14px 22px; margin-bottom: 22px; background: rgba(255, 255, 255, 0.03); border-color: rgba(255, 255, 255, 0.07); gap: 8px; }
+#wishlists #filter-bar + div > span { font-size: 10px; letter-spacing: 0.12em; color: #6b7280; margin-right: 10px; }
+#wishlists #filter-bar + div button { border-radius: 999px; padding: 6px 14px; font-size: 12px; font-weight: 700; }
