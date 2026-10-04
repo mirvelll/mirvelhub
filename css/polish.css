@@ -1,0 +1,142 @@
+/* =========================================================
+   MIRVEL HUB — polish.css (подключать ПОСЛЕ style.css)
+   Обновление внешнего вида + стили новых функций
+   ========================================================= */
+
+/* ---------- Поверхности ---------- */
+.glass { background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0) 45%); }
+main .glass:not(.no-hover):hover {
+    border-color: rgba(var(--theme-rgb), 0.3);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.06), 0 16px 44px rgba(0, 0, 0, 0.38);
+}
+
+/* Имя на главной — display-шрифт, не ломает длинные имена */
+#display-name {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: clamp(1.7rem, 4.2vw, 2.7rem);
+    letter-spacing: -0.02em;
+    overflow-wrap: anywhere;
+}
+
+/* Навигация: активная иконка «светится» цветом темы */
+.nav-btn.is-active .nav-ico { filter: drop-shadow(0 0 6px rgba(var(--theme-rgb), 0.75)); }
+
+/* Карточки релизов: мягче углы, обложка чуть приподнята */
+.release-card { border-radius: 20px; }
+.release-card img { transition: transform 0.5s var(--ease-out); }
+.release-card:hover img { transform: scale(1.04); }
+
+/* Заголовки страниц */
+main section > div > h2, main section > header h2 { font-family: var(--font-display); letter-spacing: -0.01em; }
+
+/* ---------- Пластинка дня ---------- */
+.potd {
+    display: flex; align-items: center; gap: 22px;
+    padding: 20px 26px; margin-bottom: 40px; border-radius: 26px;
+    position: relative; overflow: hidden;
+}
+.potd::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(120% 140% at 0% 50%, rgba(var(--theme-rgb), 0.16), transparent 60%);
+}
+.potd-art { position: relative; width: 150px; height: 112px; flex-shrink: 0; }
+.potd-sleeve {
+    position: absolute; left: 0; top: 4px; z-index: 1;
+    width: 104px; height: 104px; border-radius: 10px; overflow: hidden;
+    display: flex; align-items: center; justify-content: center; font-size: 2.6rem;
+    background: linear-gradient(135deg, rgba(var(--theme-rgb), 0.4), rgba(6, 182, 212, 0.25));
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.6);
+}
+.potd-sleeve img { width: 100%; height: 100%; object-fit: cover; }
+.potd-disc {
+    position: absolute; left: 6px; top: 6px; width: 100px; height: 100px; border-radius: 50%;
+    background: repeating-radial-gradient(circle, #09090d 0 2px, #1a1a23 2px 3px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+    transform: translateX(34px);
+    transition: transform 0.7s var(--ease-out);
+}
+.potd-disc::after {
+    content: ''; position: absolute; inset: 34%; border-radius: 50%;
+    background: var(--theme-btn); box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.4);
+}
+.potd:hover .potd-disc { transform: translateX(46px) rotate(120deg); }
+
+.potd-btn {
+    padding: 9px 16px; border-radius: 14px; font-size: 13px; font-weight: 700; color: #e5e7eb;
+    background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: background-color 0.2s, transform 0.2s var(--ease-out);
+}
+.potd-btn:hover { background: rgba(255, 255, 255, 0.13); }
+.potd-btn:active { transform: scale(0.97); }
+.potd-btn.is-primary { background: var(--theme-btn); border-color: transparent; color: #fff; }
+.potd-btn.is-primary:hover { filter: brightness(1.12); }
+@media (max-width: 520px) {
+    .potd { flex-direction: column; align-items: flex-start; }
+}
+
+/* ---------- Быстрое добавление ---------- */
+.fab-add {
+    width: 56px; height: 56px; border-radius: 999px; font-size: 26px; line-height: 1; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--theme-btn); border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 10px 28px rgba(var(--theme-rgb), 0.45);
+    transition: transform 0.25s var(--ease-out), box-shadow 0.25s;
+}
+.fab-add:hover { transform: scale(1.08) rotate(90deg); box-shadow: 0 12px 34px rgba(var(--theme-rgb), 0.6); }
+
+.qa-chip {
+    padding: 7px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; color: #9ca3af;
+    background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+.qa-chip:hover { color: #fff; background: rgba(255, 255, 255, 0.09); }
+.qa-chip.is-on { color: #fff; background: rgba(var(--theme-rgb), 0.28); border-color: rgba(var(--theme-rgb), 0.7); }
+
+.qa-row {
+    display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 12px;
+    font-size: 13px; color: #d1d5db; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.05);
+}
+.qa-row.is-error { color: #fca5a5; border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.08); }
+.qa-dup {
+    flex-shrink: 0; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+    color: #fbbf24; background: rgba(251, 191, 36, 0.12); border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+@media print { .fab-add, .potd { display: none !important; } }
+
+/* ---------- Плеер «Слушать» ---------- */
+.listen-btn {
+    position: absolute; right: 8px; bottom: 8px; z-index: 20;
+    width: 38px; height: 38px; border-radius: 999px; font-size: 14px; color: #fff;
+    background: var(--theme-btn); border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+    opacity: 0; transform: scale(0.85);
+    transition: opacity 0.2s, transform 0.25s var(--ease-out);
+}
+.release-container:hover .listen-btn, .listen-btn:focus-visible { opacity: 1; transform: none; }
+@media (hover: none) { .listen-btn { opacity: 1; transform: none; } }
+
+.listen-dock {
+    position: fixed; left: 16px; bottom: 16px; z-index: 45;
+    width: min(380px, calc(100vw - 32px)); border-radius: 22px; overflow: hidden;
+    background: rgba(10, 10, 18, 0.94);
+}
+.listen-dock iframe { border-radius: 12px; display: block; }
+.listen-x { color: #9ca3af; padding: 6px 8px; border-radius: 10px; font-size: 14px; }
+.listen-x:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
+@media print { .listen-dock { display: none !important; } }
+
+/* ---------- Примерная цена ---------- */
+.price-flags { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 8px; font-size: 12px; color: #9ca3af; }
+.price-flags label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.price-flags label:hover { color: #fff; }
+input:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ---------- «Пластинка дня»: подпись формата CD / Vinyl ---------- */
+.potd-fmt {
+    display: inline-flex; align-items: center; gap: 4px; padding: 1px 9px; border-radius: 999px;
+    font-size: 10px; font-weight: 800; letter-spacing: 0.06em; line-height: 1.6; white-space: nowrap; border: 1px solid;
+}
+.potd-fmt.is-cd { color: #22d3ee; background: rgba(34, 211, 238, 0.12); border-color: rgba(34, 211, 238, 0.4); }
+.potd-fmt.is-vinyl { color: #c4b5fd; background: rgba(168, 85, 247, 0.14); border-color: rgba(168, 85, 247, 0.45); }
