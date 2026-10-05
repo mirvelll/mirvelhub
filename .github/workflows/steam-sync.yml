@@ -1,0 +1,32 @@
+name: Steam sync
+
+on:
+  schedule:
+    - cron: '17 3 * * *'      # раз в сутки
+  workflow_dispatch:            # и кнопка «Run workflow» вручную
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Скачать список игр из Steam
+        env:
+          STEAM_API_KEY: ${{ secrets.STEAM_API_KEY }}
+          STEAM_ID: ${{ secrets.STEAM_ID }}
+        run: node scripts/fetch-steam.mjs
+
+      - name: Закоммитить, если что-то изменилось
+        run: |
+          git config user.name "steam-sync[bot]"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/steam-games.json
+          git diff --cached --quiet || (git commit -m "chore: update Steam library" && git push)
