@@ -265,6 +265,35 @@
         c.lineCap = 'butt';
     }
 
+    /* Плашка платформы: логотип + название (на крупных плитках), только логотип — на мелких. Возвращает false, если логотипа нет */
+    function platPill(c, platform, logos, x, y, s, circle, capTop) {
+        const L = window.mhPlatLogo;
+        if (!L) return false;
+        const m = L.meta(platform), im = logos && logos[m.key];
+        if (!im) return false;
+        const fs = Math.max(11, Math.round(s * 0.07)), h = Math.round(fs * 1.9), d = h - 4, pad = Math.round(fs * 0.55);
+        const withText = s >= 130;
+        let txt = '';
+        if (withText) {
+            c.font = `800 ${fs}px ${FONT_U}`;
+            txt = wrap(c, s >= 200 ? m.label : m.code, s * 0.9 - d - pad * 3, 1)[0] || '';
+        }
+        const w = withText ? 2 + d + pad * 0.7 + c.measureText(txt).width + pad * 1.2 : h;
+        const bottom = capTop != null ? capTop - s * 0.02 : y + s - s * 0.05;
+        const bx = circle ? x + s / 2 - w / 2 : x + s * 0.05;
+        const by = circle ? y + s * 0.8 : bottom - h;
+        rrect(c, bx, by, w, h, h / 2); c.fillStyle = 'rgba(0,0,0,0.74)'; c.fill();
+        c.lineWidth = 1.5; c.strokeStyle = m.color; c.globalAlpha = 0.7; c.stroke(); c.globalAlpha = 1;
+        c.imageSmoothingQuality = 'high';
+        c.drawImage(im, bx + 2, by + 2, d, d);
+        if (withText) {
+            c.font = `800 ${fs}px ${FONT_U}`; c.fillStyle = '#fff'; c.textAlign = 'left'; c.textBaseline = 'middle';
+            c.fillText(txt, bx + 2 + d + pad * 0.7, by + h / 2 + 1);
+            c.textBaseline = 'alphabetic';
+        }
+        return true;
+    }
+
     const ROUND = { sq: 0, soft: 0.07, round: 0.2 };
     function drawTile(c, item, im, x, y, s, o) {
         const circle = o.round === 'circle';
@@ -293,6 +322,7 @@
 
         /* названия на плитках (внизу, на тёмной подложке) */
         const captions = o.titles && !circle && s >= 110;
+        let capTop = null;      // верх подложки с названием — плашку платформы ставим над ней
         if (captions) {
             const fs = Math.max(12, Math.round(s * 0.085)), pad = Math.round(s * 0.05);
             c.font = `800 ${fs}px ${FONT_U}`; c.textAlign = 'center'; c.textBaseline = 'alphabetic';
@@ -307,6 +337,7 @@
             const gr = c.createLinearGradient(0, y + s - gh, 0, y + s);
             gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.55, 'rgba(0,0,0,0.6)'); gr.addColorStop(1, 'rgba(0,0,0,0.88)');
             c.fillStyle = gr; c.fillRect(x, y + s - gh, s, gh);
+            capTop = y + s - gh;
             let yy = y + s - pad - total;
             rows.forEach(q => { c.font = `${q.w} ${q.f}px ${FONT_U}`; c.fillStyle = q.col; yy += lh(q.f); c.fillText(q.t, x + s / 2, yy - q.f * 0.22); });
         }
@@ -324,12 +355,15 @@
             if (circle) drawCheck(c, x + s * 0.85, y + s * 0.15, rr);
             else drawCheck(c, x + s - s * 0.05 - rr, y + s * 0.05 + rr, rr);
         }
-        if (o.isGames && o.platformChip && !captions && s >= 130 && item.platform) {
-            const fs = Math.max(12, Math.round(s * 0.075));
-            c.font = `800 ${fs}px ${FONT_U}`;
-            const txt = wrap(c, item.platform, s * 0.8 - fs * 1.1, 1)[0];
-            if (circle) chip(c, txt, x + s / 2, y + s * 0.8, fs, '#c4b5fd', 'center');
-            else chip(c, txt, x + s * 0.05, y + s - fs * 1.7 - s * 0.05, fs, '#c4b5fd', 'left');
+        if (o.isGames && o.platformChip && s >= 70 && item.platform) {
+            const logo = platPill(c, item.platform, o.logos, x, y, s, circle, capTop);
+            if (!logo && s >= 130 && !captions) {          // логотип не загрузился — старая текстовая плашка
+                const fs = Math.max(12, Math.round(s * 0.075));
+                c.font = `800 ${fs}px ${FONT_U}`;
+                const txt = wrap(c, item.platform, s * 0.8 - fs * 1.1, 1)[0];
+                if (circle) chip(c, txt, x + s / 2, y + s * 0.8, fs, '#c4b5fd', 'center');
+                else chip(c, txt, x + s * 0.05, y + s - fs * 1.7 - s * 0.05, fs, '#c4b5fd', 'left');
+            }
         }
         c.textBaseline = 'alphabetic';
     }
@@ -399,6 +433,7 @@
         const light = rgb.split(',').map(v => Math.round((Number(v) || 0) + (255 - (Number(v) || 0)) * 0.55)).join(', ');
         const imgs = await Promise.all(o.items.map(i => loadImg(safeImg(i.img))));
         if (o.bg === 'photo') await ensurePhoto();
+        o.logos = (o.isGames && o.platformChip && window.mhPlatLogo) ? await window.mhPlatLogo.load(o.items.map(i => i.platform || '')) : {};
 
         const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
         const c = cv.getContext('2d');
@@ -649,7 +684,7 @@
                             <div class="space-y-2">
                                 ${chk('sc-titles', 'Названия на плитках')}
                                 ${chk('sc-rating', 'Оценка ★ на плитках')}
-                                ${chk('sc-chip', 'Платформа на плитках (игры)', 'sc-only-games hidden')}
+                                ${chk('sc-chip', 'Логотип платформы на плитках (игры)', 'sc-only-games hidden')}
                                 ${chk('sc-done', 'Отметка ✓ у пройденных (игры)', 'sc-only-games hidden')}
                             </div>
                             <p class="text-[11px] text-gray-500">Значки и названия появляются только на достаточно крупных плитках — на мелких мозаиках они не нужны.</p>

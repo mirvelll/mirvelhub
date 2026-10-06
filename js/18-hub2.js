@@ -297,7 +297,7 @@
     }
 
     /* ---- «Игра дня» рядом с «Пластинкой дня» ---- */
-    let gShift = 0, gCur = null;
+    let gCur = null;
     const GST = { backlog: '🗓 В планах', playing: '▶ В процессе', completed: '✔ Пройдено', online: '🌐 Онлайн', sandbox: '🏖 Песочница', dropped: '⏸ Заброшено', skipped: '💤 Не в планах', app: '🧩 Приложение' };
 
     function dailyRow() {
@@ -311,36 +311,89 @@
         return row;
     }
 
-    function renderGotd() {
+    /* Ротация: «мешок» из перемешанных игр — каждая выпадает по разу, потом мешок мешается заново (без повторов подряд).
+       Скрытые игры (hidden) в ротации не участвуют вообще — даже при включённом фильтре «Показывать скрытые». */
+    const GOTD_MS = 8000;
+    let gBag = [], gTimer = null, gHover = false;
+
+    function gotdPool() {
+        const games = (data.games || []).filter(g => !g.hidden);
+        const open = games.filter(g => !['completed', 'skipped', 'online', 'app'].includes(g.status));
+        return open.length ? open : games;
+    }
+    function gotdNext(pool) {
+        const ids = new Set(pool.map(g => g.id));
+        gBag = gBag.filter(id => ids.has(id));                 // убрали удалённые и скрытые
+        if (!gBag.length) {
+            gBag = pool.map(g => g.id);
+            for (let i = gBag.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [gBag[i], gBag[j]] = [gBag[j], gBag[i]]; }
+            if (gBag.length > 1 && gBag[gBag.length - 1] === gCur) gBag.unshift(gBag.pop());   // не та же игра, что на экране
+        }
+        return gBag.pop();
+    }
+
+    /* таймер следующей смены; пока курсор над виджетом / вкладка скрыта / главная закрыта — ждём */
+    function gotdSchedule() {
+        clearTimeout(gTimer);
+        gTimer = setTimeout(() => {
+            const w = $('gotd-widget');
+            if (!w || gHover || document.hidden || !w.offsetParent || w.contains(document.activeElement)) { if (w) { gotdRestartBar(w); gotdSchedule(); } return; }
+            renderGotd(true);
+        }, GOTD_MS);
+    }
+    function gotdRestartBar(w) { const b = w.querySelector('.gotd-bar'); if (b) { const n = b.cloneNode(); b.replaceWith(n); } }   // только полоска, без повторной анимации текста
+
+    function gotdHTML(g) {
+        const src = imgSrc(g.img);
+        const logo = window.mhPlatLogo ? window.mhPlatLogo.pill(g.platform || 'Другое') : `<span class="text-cyan-300 text-sm">${esc(g.platform || 'Другое')}</span>`;
+        const meta = [g.year ? esc(g.year) : '', GST[g.status] || ''].filter(Boolean).join(' · ');
+        return `<div class="gotd-cover" aria-hidden="true">${src ? `<img src="${esc(src)}" alt="">` : '🎮'}</div>
+            <div class="min-w-0 flex-1 relative">
+                <p class="text-xs text-gray-400">Игра дня</p>
+                <h3 class="font-black text-xl truncate" title="${esc(g.title)}">${esc(g.title)}</h3>
+                <div class="gotd-plat mt-1">${logo}${meta ? `<span class="text-cyan-300 text-sm truncate">${meta}</span>` : ''}</div>
+                <div class="flex gap-2 mt-3 flex-wrap">
+                    <button type="button" class="potd-btn is-primary" onclick="gotdOpen()">📖 Открыть</button>
+                    <button type="button" class="potd-btn" onclick="gotdShuffle()">🔀 Другую</button>
+                </div>
+            </div>
+            <span class="gotd-bar" aria-hidden="true"></span>`;
+    }
+
+    /* advance = true — взять следующую игру из мешка; false — оставить текущую (если она ещё подходит) */
+    function renderGotd(advance) {
         const row = dailyRow(); if (!row) return;
         let el = $('gotd-widget');
-        if (!el) { el = document.createElement('section'); el.id = 'gotd-widget'; el.className = 'glass gotd'; el.setAttribute('aria-label', 'Игра дня'); row.appendChild(el); }
-        const games = [...(data.games || [])].sort((a, b) => a.id - b.id);
-        const open = games.filter(g => !['completed', 'skipped', 'online', 'app'].includes(g.status));
-        const pool = open.length ? open : games;
+        if (!el) {
+            el = document.createElement('section'); el.id = 'gotd-widget'; el.className = 'glass gotd'; el.setAttribute('aria-label', 'Игра дня'); row.appendChild(el);
+            el.addEventListener('mouseenter', () => { gHover = true; el.classList.add('is-paused'); });
+            el.addEventListener('mouseleave', () => { gHover = false; el.classList.remove('is-paused'); gotdRestartBar(el); gotdSchedule(); });
+        }
+        const pool = gotdPool();
         if (!pool.length) {
-            gCur = null;
+            gCur = null; gBag = [];
+            clearTimeout(gTimer); gTimer = null;
             el.innerHTML = `<div class="gotd-cover" aria-hidden="true">🎮</div><div class="min-w-0 flex-1 relative"><h3 class="font-black text-lg">Здесь появится игра дня</h3>
                 <p class="text-gray-400 text-sm mt-1">Добавьте игры — хаб будет предлагать, во что сыграть сегодня.</p>
                 <button type="button" class="potd-btn is-primary mt-3" onclick="openGameModal()">＋ Добавить игру</button></div>`;
             return;
         }
-        const g = pool[(Math.floor(Date.now() / 864e5) * 104729 + gShift) % pool.length];
+        let g = advance ? null : pool.find(x => x.id === gCur);
+        const changed = !g;
+        if (!g) { const id = gotdNext(pool); g = pool.find(x => x.id === id) || pool[0]; }
         gCur = g.id;
-        const src = imgSrc(g.img);
-        el.innerHTML = `<div class="gotd-cover" aria-hidden="true">${src ? `<img src="${esc(src)}" alt="">` : '🎮'}</div>
-            <div class="min-w-0 flex-1 relative">
-                <p class="text-xs text-gray-400">Игра дня</p>
-                <h3 class="font-black text-xl truncate" title="${esc(g.title)}">${esc(g.title)}</h3>
-                <p class="text-cyan-300 text-sm truncate">${esc(g.platform || 'Другое')}${g.year ? ' · ' + esc(g.year) : ''}${GST[g.status] ? ' · ' + GST[g.status] : ''}</p>
-                <div class="flex gap-2 mt-3 flex-wrap">
-                    <button type="button" class="potd-btn is-primary" onclick="gotdOpen()">📖 Открыть</button>
-                    <button type="button" class="potd-btn" onclick="gotdShuffle()">🔀 Другую</button>
-                </div>
-            </div>`;
+        if (!changed && el.dataset.gid === String(g.id) && el.dataset.logo === (window.mhPlatLogo ? '1' : '0')) return;   // ничего не поменялось — не мигаем
+        const paint = () => {
+            el.dataset.gid = String(g.id); el.dataset.logo = window.mhPlatLogo ? '1' : '0';
+            el.innerHTML = gotdHTML(g);
+            el.classList.remove('is-swapping'); void el.offsetWidth; el.classList.add('is-swapping');   // перезапуск анимации появления и полосы таймера
+        };
+        paint();
+        gotdSchedule();
     }
+    window.gotdRender = () => renderGotd(false);
     window.gotdOpen = () => { if (gCur != null) { showPage('games'); window.openGameDetail?.(gCur); } };
-    window.gotdShuffle = () => { gShift++; renderGotd(); };
+    window.gotdShuffle = () => { renderGotd(true); };
 
     /* ---- Избранное ---- */
     const KINDS = {
