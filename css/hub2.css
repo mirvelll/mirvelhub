@@ -216,6 +216,16 @@ button.notes-fab.is-open::after {
 }
 .gotd:hover .gotd-cover { transform: rotate(-4deg) scale(1.05); }
 .gotd-cover img { width: 100%; height: 100%; object-fit: cover; }
+/* ротация «Игры дня»: плавная смена, плашка платформы и полоска до следующей игры */
+.gotd-plat { display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; }
+.gotd.is-swapping > .gotd-cover, .gotd.is-swapping > div.flex-1 { animation: gotd-in 0.45s var(--ease-out, ease-out); }
+@keyframes gotd-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.gotd-bar { position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; transform-origin: left; pointer-events: none;
+    background: linear-gradient(90deg, rgba(6, 182, 212, 0.9), rgba(var(--theme-rgb), 0.9)); opacity: 0.7;
+    animation: gotd-bar 8s linear forwards; }
+.gotd.is-paused .gotd-bar { animation-play-state: paused; }
+@keyframes gotd-bar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@media (prefers-reduced-motion: reduce) { .gotd.is-swapping > .gotd-cover, .gotd.is-swapping > div.flex-1, .gotd-bar { animation: none; } }
 @media (max-width: 520px) { .gotd, .potd { flex-direction: column; align-items: flex-start; } .daily-row { grid-template-columns: 1fr; } }
 @media print { .gotd, .daily-row { display: none !important; } }
 
