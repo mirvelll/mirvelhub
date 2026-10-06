@@ -179,6 +179,12 @@
     .game-hid-badge { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); z-index: 2; white-space: nowrap;
         padding: 2px 8px; border-radius: 999px; font-size: 9px; font-weight: 800; color: #e5e7eb;
         background: rgba(0,0,0,.78); border: 1px solid rgba(255,255,255,.2); }
+    /* ряд кнопок на плитке-обложке: если не влезает — переносится на вторую строку, а не уезжает за край (раньше 🙈 обрезалась) */
+    .game-card .game-ov > div:last-child { flex-wrap: wrap; justify-content: flex-end; gap: 3px; }
+    .game-card .game-ov > div:last-child > button { padding: 3px 6px; min-width: 26px; min-height: 26px; }
+    .game-card .game-ov > div:first-child { min-height: 0; overflow: hidden; }
+    .game-card .game-ov > div:last-child { flex-shrink: 0; position: relative; z-index: 30; }   /* кнопки выше ⭐ избранного */
+    .game-card .game-act { z-index: 30; }
     .mh-undo { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 75;
         display: flex; align-items: center; gap: 12px; max-width: min(92vw, 460px);
         padding: 10px 12px 10px 16px; border-radius: 16px; font-size: 13px; color: #fff;
