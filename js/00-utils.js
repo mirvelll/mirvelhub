@@ -149,6 +149,17 @@ function todayStamp() {
  *  «Бесплатно», «Подарок», «Семья», «Активировано кодом», «В наборе» или «Не помню» (цену не помню) */
 function fmtPrice(item) {
     if (!item) return '0 ₴';
+    // игра из набора (data.gameBundles): цена общая на весь набор, у игры показываем набор
+    if (item.bundleId != null && typeof data !== 'undefined') {
+        const b = (data.gameBundles || []).find(x => x.id === item.bundleId);
+        if (b) {
+            const nm = String(b.name || 'Набор').replace(/[<>&"']/g, '');
+            const kinds = { free: 'Бесплатно', gift: 'Подарок', family: 'Семья', code: 'Активировано кодом' };
+            if (kinds[b.kind]) return `📦 Из набора «${nm}» · ${kinds[b.kind]}`;
+            if (b.unknown || !(Number(b.price) > 0)) return `📦 Из набора «${nm}»`;
+            return `📦 «${nm}» · ${b.approx ? '~' : ''}${Number(b.price)} ₴ за набор`;
+        }
+    }
     if (item.psPlus) return 'PS Plus';
     if (item.priceFree) return 'Бесплатно';
     if (item.priceGift) return 'Подарок';

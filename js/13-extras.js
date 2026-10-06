@@ -55,6 +55,12 @@
     /* «16/17» (получено/всего), по желанию со словом «ачивки / трофеи / достижения» перед числом. Даты вроде 12/05/2024 не трогаем */
     const TROPHY_RE = /(?:(?:ачивк\p{L}*|трофе\p{L}*|достижен\p{L}*|achievements?|trophies)\s*[:\-]?\s*)?(?<![\d\/.])(\d{1,4})\s*\/\s*(\d{1,4})(?![\d\/])(?:\s*(?:ачивк\p{L}*|трофе\p{L}*|достижен\p{L}*|achievements?|trophies))?/iu;
     const PLATINUM_RE = W('платин\\p{L}*|platinum|100%\\s*ачивок');
+    /* Набор: строка «Набор: Название платформа, цена», ниже — игры набора по одной в строке, пустая строка завершает набор */
+    const BUNDLE_RE = /^\s*(?:набор|пак|бандл|комплект|сет|bundle|pack)\s*[:：]\s*(.+?)\s*$/iu;
+    const BULLET_RE = /^\s*(?:[-–—•*+]|\d{1,2}[.)])\s+/;
+    const SET_KINDS = ['free', 'gift', 'family', 'code'];     // как получен весь набор (вместо цены)
+    const SET_KIND_LABEL = { free: '🆓 Бесплатно', gift: '🎁 Подарок', family: '👨‍👩‍👧 Семья', code: '🔑 Кодом' };
+    const setPriceText = b => b.kind ? SET_KIND_LABEL[b.kind] : b.unknown ? 'цена неизвестна' : `${b.approx ? '~' : ''}${b.price} ₴`;
     const KIND_OPTIONS = [['', 'Из текста строки'], ['free', '🆓 Бесплатно'], ['gift', '🎁 Подарок'], ['family', '👨‍👩‍👧 Семья'], ['code', '🔑 Активировано кодом'], ['unknown', 'Не помню'], ['bundle', 'В наборе']];
     const kindFlags = p => ({ priceFree: p.kind === 'free', priceGift: p.kind === 'gift', priceFamily: p.kind === 'family', priceCode: p.kind === 'code', priceUnknown: p.kind === 'unknown', priceBundle: p.kind === 'bundle', psPlus: p.kind === 'psplus' });
     const GAME_STATUSES = [['', 'Без статуса'], ['backlog', '🗓 В планах'], ['playing', '▶ В процессе'], ['completed', '✔ Пройдено'],
@@ -65,12 +71,12 @@
     const PRIORITIES = [['', 'Без приоритета'], ['🔥 Высокий', '🔥 Высокий'], ['⚡ Средний', '⚡ Средний'], ['⏳ Низкий', '⏳ Низкий']];
     const HELP = {
         auto: 'Одна строка — одна позиция: «Исполнитель - Название, цена». «Авто» — это не ИИ, а простой разбор текста прямо в браузере, поэтому работает без интернета и на GitHub Pages. Слова LP, винил, PS2, Switch сами определяют тип. Год — в скобках: (1991). Цена: «650», «~650» (примерная), «бесплатно», «подарок», «не помню», «в наборе».',
-        games: 'Одна строка — одна игра: «Название платформа (год), цена». Платформа, регион и «digital» читаются из текста: «Silent Hill 2 ps2 PAL (2001), 900». Что не указано в строке — берётся из полей выше. Цена: «900», «~900» (примерная). Вместо цены можно написать «бесплатно», «подарок», «семья», «активировано кодом», «не помню» или «в наборе». Часы: «2.1 часа», «10 ч». Ачивки: «16/17» (получено/всего) или «платина».',
+        games: 'Одна строка — одна игра: «Название платформа (год), цена». Платформа, регион и «digital» читаются из текста: «Silent Hill 2 ps2 PAL (2001), 900». Что не указано в строке — берётся из полей выше. Цена: «900», «~900» (примерная). Вместо цены можно написать «бесплатно», «подарок», «семья», «активировано кодом», «не помню» или «в наборе». Часы: «2.1 часа», «10 ч». Ачивки: «16/17» (получено/всего) или «платина». Набор: строка «Набор: Сталкер Трилогия steam, 95», под ней игры набора по одной в строке, пустая строка — конец набора. Цена набора считается один раз; если цены не помнишь — просто не пиши её.',
         other: 'Одна строка — одна позиция: «Исполнитель - Название, цена». Год — в скобках: (1991). Цена: «650», «~650» (примерная), «бесплатно», «подарок», «не помню», «в наборе».'
     };
     const HOLDER = {
         auto: 'Nirvana - Nevermind, 650\nKendrick Lamar - GNX LP, 1800\nSilent Hill 2 ps2, 900',
-        games: 'Silent Hill 2 ps2 PAL (2001), 900, 12/48\nZelda: Tears of the Kingdom switch, ~1800\nHades steam, бесплатно, 2.1 ч, 16/17\nPortal 2 steam, семья, 51/51',
+        games: 'Silent Hill 2 ps2 PAL (2001), 900, 12/48\nZelda: Tears of the Kingdom switch, ~1800\nHades steam, бесплатно, 2.1 ч, 16/17\nPortal 2 steam, семья, 51/51\n\nНабор: Сталкер Трилогия steam, 95\nS.T.A.L.K.E.R.: Shadow of Chernobyl\nS.T.A.L.K.E.R.: Clear Sky\nS.T.A.L.K.E.R.: Call of Pripyat',
         other: 'Nirvana - Nevermind, 650\nRadiohead - OK Computer (1997), ~900\nPink Floyd - The Wall, подарок'
     };
     const OPTS_KEY = 'mirvel_qa_opts';
@@ -80,9 +86,9 @@
     const saveOpts = () => { try { localStorage.setItem(OPTS_KEY, JSON.stringify({ platform: qaOpts.platform, region: qaOpts.region, condition: qaOpts.condition })); } catch (e) {} };
     const SHOP_KEY = 'mirvel_qa_shop';
     let qaMode = 'auto';
-    let lastAdded = [], lastXp = 0;
+    let lastAdded = [], lastBundles = [], lastXp = 0;
 
-    function parseLine(raw, mode) {
+    function parseLine(raw, mode, isSetName) {
         let s = raw.trim();
         if (!s) return null;
         let url = '', price = 0, year = '', approx = false, kind = '', region = '', digital = false, hours = 0, hadPrice = false;
@@ -139,7 +145,15 @@
 
         let type = mode, platform = '';
         if (mode === 'auto' || mode === 'games') {
-            for (const [re, name, sure] of PLATFORMS) {
+            let found = false;
+            if (isSetName) {   // название набора: платформа убирается, только если стоит в конце («… steam»); «PS4 игры» остаётся названием
+                for (const [re, name] of PLATFORMS) {
+                    const endRe = new RegExp(`(?:${re.source})\\s*$`, re.flags);
+                    if (endRe.test(s)) { platform = name; s = s.replace(endRe, ' '); found = true; break; }
+                }
+                if (!found) for (const [re, name] of PLATFORMS) { if (re.test(s)) { platform = name; found = true; break; } }
+            }
+            if (!found) for (const [re, name, sure] of PLATFORMS) {
                 if (mode === 'auto' && !sure) continue;
                 if (re.test(s)) { platform = name; s = s.replace(re, ' '); if (mode === 'auto') type = 'games'; break; }
             }
@@ -203,18 +217,43 @@
         };
     }
 
-    /* Строки → позиции; то, чего нет в строке, берём из полей над ней (только в режиме «Игра») */
+    /* Строки → позиции; то, чего нет в строке, берём из полей над ней (только в режиме «Игра»).
+       Строка «Набор: …» открывает набор: следующие строки до пустой — его игры (цена у них общая, на набор). */
     function parseAll() {
         const useOpts = qaMode === 'games';
-        return document.getElementById('qa-text').value.split('\n').map(l => parseLine(l, qaMode)).filter(Boolean).map(p => {
-            if (p.error) return p;
+        const canBundle = qaMode === 'games' || qaMode === 'auto';
+        const out = [];
+        let cur = null;
+        document.getElementById('qa-text').value.split('\n').forEach(rawLine => {
+            if (!rawLine.trim()) { cur = null; return; }
+            const hm = canBundle ? rawLine.match(BUNDLE_RE) : null;
+            if (hm) {
+                const h = parseLine(hm[1], 'games', true);
+                if (!h || h.error) { out.push({ error: true, raw: rawLine }); cur = null; return; }
+                let kind = h.kind || (!h.hadPrice && useOpts ? qaOpts.kind : '');
+                if (!SET_KINDS.includes(kind)) kind = '';
+                cur = { isBundle: true, type: 'bundle', title: h.title, platform: h.platform, price: kind ? 0 : h.price,
+                        approx: !!h.approx && !kind, kind, unknown: !kind && !(h.price > 0) };
+                out.push(cur);
+                return;
+            }
+            const line = cur ? rawLine.replace(BULLET_RE, '') : rawLine;
+            const p = parseLine(line, cur ? 'games' : qaMode);
+            if (!p) return;
+            if (!p.error && cur) p.bundle = cur;
+            out.push(p);
+        });
+        return out.map(p => {
+            if (p.error || p.isBundle) return p;
             if (p.type === 'games') {
+                if (!p.platform && p.bundle && p.bundle.platform) p.platform = p.bundle.platform;   // платформа набора
                 if (!p.platform) p.platform = (useOpts && qaOpts.platform) || 'Другое';
                 if (useOpts) { p.region = p.region || qaOpts.region; p.status = qaOpts.status; }
                 if (NO_REGION.includes(p.platform)) p.region = '';                       // Steam: региона нет
                 if (useOpts && qaOpts.kind && !p.kind && !p.hadPrice) p.kind = qaOpts.kind;   // «Цена / как получена» из полей выше
                 if (p.kind === 'psplus' && !PS_RE.test(p.platform)) p.kind = '';             // «PS Plus» — только для PlayStation
                 p.digital = p.digital || DIGITAL_PLATFORMS.includes(p.platform) || (useOpts && qaOpts.digital);
+                if (p.bundle) { p.price = 0; p.approx = false; p.kind = ''; }                // цену игры задаёт набор
             } else if (p.type === 'cds' || p.type === 'vinyls') p.condition = qaOpts.condition || 'NM';
             else if (p.type === 'wishlists') p.priority = qaOpts.priority;
             return p;
@@ -308,50 +347,73 @@
 
     function renderPreview() {
         const parsed = parseAll();
-        const ok = parsed.filter(p => !p.error);
+        const ok = parsed.filter(p => !p.error && !p.isBundle);
         document.getElementById('qa-preview').innerHTML = parsed.map(p => {
+            if (p.isBundle) {
+                const n = parsed.filter(x => x.bundle === p).length;
+                return `<div class="qa-row" style="background:rgba(139,92,246,.14)"><span aria-hidden="true">📦</span>
+                    <span class="truncate flex-1">Набор <b>${esc(p.title)}</b>${p.platform ? ' · ' + esc(p.platform) : ''} · ${n ? n + ' игр' : 'пока пусто'}</span>
+                    <span class="font-mono text-cyan-400 shrink-0">${esc(setPriceText(p))}</span></div>`;
+            }
             if (p.error) return `<div class="qa-row is-error">⚠️ Не удалось разобрать: ${esc(p.raw)}</div>`;
             const tags = [p.platform, p.region, p.digital ? '☁️' : '', p.status ? STATUS_LABEL[p.status] : '', p.year, p.hours ? p.hours + ' ч' : '', p.trophy ? (p.trophyTotal ? `🏆 ${p.trophyDone}/${p.trophyTotal}` : '🏆 100%') : ''].filter(Boolean).map(esc).join(' · ');
-            return `<div class="qa-row"><span aria-hidden="true">${ICON[p.type]}</span>
+            return `<div class="qa-row"${p.bundle ? ' style="margin-left:14px"' : ''}><span aria-hidden="true">${ICON[p.type]}</span>
                  <span class="truncate flex-1">${esc(p.artist ? p.artist + ' — ' : '')}<b>${esc(p.title)}</b>${tags ? ' · ' + tags : ''}</span>
                  ${isDuplicate(p) ? '<span class="qa-dup">уже есть</span>' : ''}
-                 <span class="font-mono text-cyan-400 shrink-0">${fmtPrice({ price: p.price, priceApprox: p.approx, ...kindFlags(p) })}</span></div>`;
+                 ${p.bundle ? '<span class="font-mono text-gray-500 shrink-0">в наборе</span>' : `<span class="font-mono text-cyan-400 shrink-0">${fmtPrice({ price: p.price, priceApprox: p.approx, ...kindFlags(p) })}</span>`}</div>`;
         }).join('');
         document.getElementById('qa-submit').textContent = ok.length ? `Добавить (${ok.length})` : 'Добавить';
     }
 
     function submit() {
         const parsed = parseAll().filter(p => !p.error);
-        if (!parsed.length) { showToast('Введите хотя бы одну позицию: «Исполнитель - Название, цена»', 'error'); return; }
+        const games = parsed.filter(p => !p.isBundle);
+        if (!games.length) { showToast('Введите хотя бы одну позицию: «Исполнитель - Название, цена»', 'error'); return; }
         const shop = document.getElementById('qa-shop').value.trim();
         try { localStorage.setItem(SHOP_KEY, shop); } catch (e) {}
 
         const ITEM_XP = typeof XP_RULES !== 'undefined' ? XP_RULES.ITEM : 25;
         const FINISH_XP = typeof XP_RULES !== 'undefined' ? XP_RULES.GAME_FINISHED : 100;
-        lastAdded = []; let xpItems = 0, finished = 0;
+        lastAdded = []; lastBundles = []; let xpItems = 0, finished = 0;
+        const recs = new Map();                       // строка «Набор:» → запись набора в data.gameBundles
         parsed.forEach((p, i) => {
+            if (p.isBundle) return;
             const item = makeItem(p, i, shop);
+            if (p.bundle) {
+                let rec = recs.get(p.bundle);
+                if (!rec) {
+                    rec = { id: Date.now() + 100000 + recs.size, name: p.bundle.title, price: p.bundle.price,
+                            approx: p.bundle.approx, unknown: p.bundle.unknown, kind: p.bundle.kind };
+                    recs.set(p.bundle, rec);
+                    if (!Array.isArray(data.gameBundles)) data.gameBundles = [];
+                    data.gameBundles.push(rec);
+                    lastBundles.push(rec.id);
+                }
+                item.bundleId = rec.id;
+            }
             data[p.type].push(item);
             lastAdded.push({ type: p.type, id: item.id });
             if (p.type === 'games') { if (item.xpFinished) finished++; }   // за добавление игры опыт не даётся — как в обычной форме
             else if (p.type !== 'wishlists') xpItems++;
         });
         lastXp = xpItems * ITEM_XP + finished * FINISH_XP;
+        if (window.syncGameBundles) window.syncGameBundles();           // разложить цену набора по его играм
 
         document.getElementById('qa-text').value = '';
         renderPreview();
         document.getElementById('qa-undo').classList.remove('hidden');
-        if (lastXp) addXP(lastXp, `добавлено: ${parsed.length}`); else save();
-        showToast(`Добавлено позиций: <strong>${parsed.length}</strong>`, 'success');
+        if (lastXp) addXP(lastXp, `добавлено: ${games.length}`); else save();
+        showToast(`Добавлено позиций: <strong>${games.length}</strong>${recs.size ? `, наборов: <strong>${recs.size}</strong>` : ''}`, 'success');
         document.getElementById('qa-text').focus();
     }
 
     function undoLast() {
         if (!lastAdded.length) return;
         lastAdded.forEach(({ type, id }) => { data[type] = data[type].filter(x => x.id !== id); });
+        if (lastBundles.length) data.gameBundles = (data.gameBundles || []).filter(b => !lastBundles.includes(b.id));
         data.xp = Math.max(0, (data.xp || 0) - lastXp);
         showToast(`Отменено: <strong>${lastAdded.length}</strong>`);
-        lastAdded = []; lastXp = 0;
+        lastAdded = []; lastBundles = []; lastXp = 0;
         document.getElementById('qa-undo').classList.add('hidden');
         save();
     }
