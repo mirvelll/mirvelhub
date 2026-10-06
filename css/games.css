@@ -226,3 +226,36 @@
 .st-sandbox { --sc: #fb923c; }
 .st-app { --sc: #2dd4bf; }
 .st-app.st-pill, .gx-status.st-app { border-style: dashed; }
+
+/* ---------- Кнопки на карточках игр: единый вид, подсветка при наведении, без наезда на чипы ---------- */
+.game-card .game-act { gap: 4px; }
+.game-card .game-act > button,
+.game-card .game-ov > div:last-child > button {
+    cursor: pointer; line-height: 1.2;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+.game-card .game-act > button { min-width: 32px; min-height: 32px; display: inline-flex; align-items: center; justify-content: center; }
+.game-card .game-act > button:hover,
+.game-card .game-act > button:focus-visible,
+.game-card .game-ov > div:last-child > button:hover,
+.game-card .game-ov > div:last-child > button:focus-visible {
+    background: rgba(var(--theme-rgb), 0.4);
+    border-color: rgba(var(--theme-rgb), 0.9);
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(var(--theme-rgb), 0.35);
+    outline: none;
+}
+.game-card .game-act > button:active,
+.game-card .game-ov > div:last-child > button:active { transform: translateY(0) scale(0.95); }
+/* удалить — красная подсветка */
+.game-card .game-act > button[data-act="del"]:hover,
+.game-card .game-act > button[data-act="del"]:focus-visible,
+.game-card .game-ov > div:last-child > button[data-act="del"]:hover,
+.game-card .game-ov > div:last-child > button[data-act="del"]:focus-visible {
+    background: rgba(239, 68, 68, 0.45); border-color: rgba(248, 113, 113, 0.9); color: #fff;
+    box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35);
+}
+/* ряд кнопок (4 шт. ≈ 140px) лежит поверх карточки справа сверху — оставляем под него место в строке чипов,
+   чтобы чипы (платформа, формат, ачивки 23/33) переносились на вторую строку, а не прятались под кнопками */
+article.game-card > .flex > .min-w-0.flex-1 > .flex-wrap:first-child { padding-right: 144px; }
