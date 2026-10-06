@@ -187,3 +187,8 @@ function splitArtists(str) {
         .map(x => x.replace(/\u0000(\d+)\u0000/g, (_, i) => keep[i]).trim())
         .filter(Boolean);
 }
+
+/* Скрытые игры: у игры поле hidden = true. Пока не включён фильтр «Показывать скрытые» (33-hidden-games.js),
+   такие игры не попадают в списки, счётчики, поиск и карточки для шеринга. Данные при этом остаются на месте и в бэкапе. */
+window.mhShowHidden = false;
+function isGameHidden(item) { return !!(item && item.hidden) && !window.mhShowHidden; }

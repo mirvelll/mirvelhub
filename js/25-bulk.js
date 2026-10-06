@@ -130,6 +130,8 @@
                 <button type="button" data-b="all">Выбрать все</button>
                 <button type="button" data-b="none">Снять</button>
                 <select id="bulk-move" aria-label="Перенести выбранное"></select>
+                <button type="button" data-b="hide">🙈 Скрыть</button>
+                <button type="button" data-b="unhide">👁 Вернуть</button>
                 <button type="button" data-b="del" class="is-danger">🗑 Удалить</button>
                 <button type="button" data-b="exit">Готово</button>`;
             document.body.appendChild(bar);
@@ -138,6 +140,7 @@
                 if (!b) return;
                 if (b.dataset.b === 'all') { visibleIds(selKey).forEach(x => sel.add(x)); mark(); renderBar(); }
                 else if (b.dataset.b === 'none') { sel.clear(); mark(); renderBar(); }
+                else if (b.dataset.b === 'hide' || b.dataset.b === 'unhide') hideSelected(b.dataset.b === 'hide');
                 else if (b.dataset.b === 'del') removeSelected();
                 else if (b.dataset.b === 'exit') exit();
             });
@@ -154,6 +157,17 @@
         const mv = $('bulk-move');
         mv.disabled = !n;
         mv.style.display = selKey === 'games' ? 'none' : '';
+        // «Скрыть» / «Вернуть» — только для игр; «Вернуть» имеет смысл, когда скрытые видны (фильтр «Показывать скрытые»)
+        const hb = bar.querySelector('[data-b="hide"]'), ub = bar.querySelector('[data-b="unhide"]');
+        hb.style.display = selKey === 'games' ? '' : 'none';
+        ub.style.display = selKey === 'games' && window.mhShowHidden ? '' : 'none';
+        hb.disabled = ub.disabled = !n;
+    }
+    function hideSelected(flag) {
+        if (selKey !== 'games' || !sel.size || !window.MirvelHidden) return;
+        const ids = [...sel];
+        sel.clear();
+        MirvelHidden.set(ids, flag);
     }
     function buildMoveOptions() {
         renderBar();
@@ -330,5 +344,5 @@
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 
-    window.MirvelBulk = { enter, exit, selected: () => [...sel] };
+    window.MirvelBulk = { enter, exit, selected: () => [...sel], undo: showUndo };
 })();

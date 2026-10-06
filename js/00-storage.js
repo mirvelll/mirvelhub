@@ -32,9 +32,9 @@
         '06-crate-digger.js', '07-purchase.js', '08-core.js', '09-collections.js', '10-analytics.js',
         '11-render.js', '12-app.js', '13-extras.js', '14-listen.js', '15-price.js', '16-games.js',
         '17-convenience.js', 'i18n-dict.js', 'i18n.js', '18-hub2.js', '19-features.js', '20-music-detail.js', '21-optimize.js', '22-wishlist.js', '23-sounds.js',
-        '24-share-collection.js', '25-bulk.js', '27-design.js', '28-appearance.js', '29-games-page.js', '30-collection-ui.js', '31-analytics-charts.js', '32-game-bundles.js'
+        '24-share-collection.js', '25-bulk.js', '27-design.js', '28-appearance.js', '29-games-page.js', '30-collection-ui.js', '31-analytics-charts.js', '32-game-bundles.js', '33-hidden-games.js'
     ];
-    const BUILD = '17.3';   // меняется при обновлении файлов — браузер не берёт старые скрипты из кеша
+    const BUILD = '17.4';   // меняется при обновлении файлов — браузер не берёт старые скрипты из кеша
 
     const store = {
         mode: 'ls',            // 'idb' | 'ls'

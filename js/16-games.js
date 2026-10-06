@@ -437,20 +437,22 @@
         const stInfo = st ? STATUS[st] : null;
         if (covers) {
             return `
-            <div class="game-card relative aspect-square group rounded-2xl overflow-hidden glass border border-white/10 hover:border-[var(--theme-btn)] hover:scale-105 transition-all" data-gid="${i.id}" tabindex="0" role="button" aria-label="Открыть: ${esc(i.title)}">
+            <div class="game-card${i.hidden ? ' is-hidden-game' : ''} relative aspect-square group rounded-2xl overflow-hidden glass border border-white/10 hover:border-[var(--theme-btn)] hover:scale-105 transition-all" data-gid="${i.id}" tabindex="0" role="button" aria-label="Открыть: ${esc(i.title)}">
                 ${src ? `<img src="${esc(src)}" alt="" loading="lazy" class="w-full h-full object-cover">`
                       : `<div class="game-ph w-full h-full flex flex-col items-center justify-center bg-gradient-to-tr from-purple-900/40 to-cyan-900/40 p-2 text-center"><span class="text-3xl">🎮</span><span class="text-[10px] font-black truncate w-full mt-2">${esc(i.title)}</span></div>`}
                 <span class="game-tile-plat">${platBadge(i.platform)}</span>
+                ${i.hidden ? '<span class="game-hid-badge">🙈 Скрыта</span>' : ''}
                 ${st ? `<span class="st-dot st-${st}" title="${stInfo.label}"></span>` : ''}
                 ${trophyState(i) === 'full' ? '<span class="absolute right-1.5 top-1.5 text-sm drop-shadow" title="100% ачивок">🏆</span>' : ''}
                 ${i.hasOnline ? '<span class="absolute right-1.5 bottom-1.5 text-sm drop-shadow" title="Есть онлайн-режим">🌐</span>' : ''}
                 <div class="game-ov absolute inset-0 bg-black/85 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity p-2 flex flex-col justify-between text-[10px]">
                     <div><p class="font-black truncate">${esc(i.title)}</p><p class="text-gray-400">${fmtPrice(i)}</p>${st ? `<p class="st-${st}" style="color:var(--sc)">${stInfo.icon} ${stInfo.label}</p>` : ''}</div>
-                    <div class="flex gap-1 justify-end"><button type="button" data-act="edit" class="bg-white/10 rounded p-1" aria-label="Изменить">✏️</button><button type="button" data-act="del" class="bg-red-500/20 text-red-300 rounded p-1" aria-label="Удалить">✕</button></div>
+                    <div class="flex gap-1 justify-end"><button type="button" data-act="hidegame" class="bg-white/10 rounded p-1" aria-label="${i.hidden ? 'Вернуть в список' : 'Скрыть игру'}" title="${i.hidden ? 'Вернуть в список' : 'Скрыть игру'}">${i.hidden ? '👁' : '🙈'}</button><button type="button" data-act="edit" class="bg-white/10 rounded p-1" aria-label="Изменить">✏️</button><button type="button" data-act="del" class="bg-red-500/20 text-red-300 rounded p-1" aria-label="Удалить">✕</button></div>
                 </div>
             </div>`;
         }
         const extras = [
+            i.hidden ? '<span class="gd-chip">🙈 Скрыта</span>' : '',
             i.digital ? '<span class="gd-chip">☁️ Цифровая</span>' : '',
             i.hasOnline ? '<span class="gd-chip is-online">🌐 Онлайн</span>' : '',
             isCIB(i) ? '<span class="gd-chip is-ok">CIB</span>' : '',
@@ -463,7 +465,7 @@
             Number(i.hours) ? `⏱ ${hoursText(i.hours)}` : ''
         ].filter(Boolean).join(' · ');
         return `
-        <article class="game-card glass p-4 rounded-3xl relative group border border-white/5 hover:border-[var(--theme-btn)] transition-all" data-gid="${i.id}" tabindex="0" role="button" aria-label="Открыть: ${esc(i.title)}">
+        <article class="game-card${i.hidden ? ' is-hidden-game' : ''} glass p-4 rounded-3xl relative group border border-white/5 hover:border-[var(--theme-btn)] transition-all" data-gid="${i.id}" tabindex="0" role="button" aria-label="Открыть: ${esc(i.title)}">
             <div class="flex gap-4">
                 <div class="w-24 h-24 rounded-2xl overflow-hidden shrink-0 border border-white/10 bg-gradient-to-tr from-purple-900/40 to-cyan-900/40 flex items-center justify-center text-3xl">
                     ${src ? `<img src="${esc(src)}" alt="" loading="lazy" class="w-full h-full object-cover">` : '🎮'}
@@ -484,6 +486,7 @@
                 </div>
             </div>
             <div class="game-act absolute right-3 top-3 flex gap-1">
+                <button type="button" data-act="hidegame" class="bg-black/80 p-1.5 rounded-xl border border-white/10" aria-label="${i.hidden ? 'Вернуть в список' : 'Скрыть игру'}" title="${i.hidden ? 'Вернуть в список' : 'Скрыть игру'}">${i.hidden ? '👁' : '🙈'}</button>
                 <button type="button" data-act="edit" class="bg-black/80 p-1.5 rounded-xl border border-white/10" aria-label="Изменить">✏️</button>
                 <button type="button" data-act="del" class="bg-red-950/80 text-red-300 p-1.5 rounded-xl border border-red-500/20" aria-label="Удалить">✕</button>
             </div>
@@ -792,6 +795,7 @@
             <div class="flex sm:flex-col gap-2 shrink-0 self-end sm:self-start">
                 <button type="button" class="gd-tool" data-act="share" data-k="games" data-id="${i.id}">📤 Поделиться</button>
                 <button type="button" class="gd-tool" data-act="edit">✏️ Изменить</button>
+                <button type="button" class="gd-tool" data-act="hidegame" data-id="${i.id}">${i.hidden ? '👁 Вернуть в список' : '🙈 Скрыть'}</button>
                 ${link ? `<a class="gd-tool text-center" href="${esc(link)}" target="_blank" rel="noopener noreferrer">🔗 Ссылка</a>` : ''}
                 <button type="button" class="gd-tool is-danger" data-act="del">🗑 Удалить</button>
                 <button type="button" class="gd-tool" data-act="close" aria-label="Закрыть">✕</button>
@@ -1107,7 +1111,7 @@
     let rollItem = null;
 
     function rollPool() {
-        const g = data.games || [];
+        const g = (data.games || []).filter(i => !i.hidden);   // скрытые игры в «Во что поиграть?» не выпадают
         const tiers = [
             [g.filter(i => stOf(i) === 'backlog'), 'из «В планах»'],
             [g.filter(i => !stOf(i)), 'из игр без статуса'],

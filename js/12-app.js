@@ -133,6 +133,7 @@ function buildPaletteEntries(query) {
     if (q) {
         SEARCH_SECTIONS.forEach(sec => {
             (data[sec.key] || [])
+                .filter(i => sec.key !== 'games' || !isGameHidden(i))
                 .filter(i => [i.title, i.artist, i.platform, i.brand, i.label, i.year, i.developer]
                     .some(v => String(v ?? '').toLowerCase().includes(q)))
                 .slice(0, 6)

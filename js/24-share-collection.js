@@ -515,6 +515,7 @@
     function filtered() {
         let list = (data[opt.key] || []).slice();
         if (opt.key === 'games') {
+            list = list.filter(g => !isGameHidden(g));
             if (opt.platform) list = list.filter(g => (g.platform || '') === opt.platform);
             if (opt.status) list = list.filter(g => (g.status || '') === opt.status);
         }
@@ -762,7 +763,7 @@
         const isGames = opt.key === 'games';
         modal.querySelectorAll('.sc-only-games').forEach(el => el.classList.toggle('hidden', !isGames));
         if (!isGames) return;
-        const games = data.games || [];
+        const games = (data.games || []).filter(g => !isGameHidden(g));
         const plats = [...new Set(games.map(g => g.platform).filter(Boolean))].sort((a, b) => a.localeCompare(b, locale()));
         const sts = Object.keys(STATUS_LABEL).filter(k => games.some(g => g.status === k));
         if (opt.platform && !plats.includes(opt.platform)) opt.platform = '';

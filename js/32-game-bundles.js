@@ -32,7 +32,7 @@
        ===================================================== */
     function sync() {
         const list = bundles();
-        const games = data.games || [];
+        const games = (window.mhAllGames ? mhAllGames() : data.games) || [];   // скрытые игры тоже входят в наборы
         const byId = new Map();
         games.forEach(g => {
             if (g.bundleId == null) return;
