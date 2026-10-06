@@ -221,7 +221,7 @@
     function platTag(g) { return `<span class="gb-plat">${esc(g.platform || '')}</span>`; }
 
     function panelHTML() {
-        const sets = bundles();
+        const sets = bundles().filter(b => membersOf(b.id).length);   // набор, все игры которого скрыты, в панели не показываем
         const inSets = sets.reduce((n, b) => n + membersOf(b.id).length, 0);
         const body = sets.map(b => {
             const m = membersOf(b.id).sort((x, y) => (x.title || '').localeCompare(y.title || '', 'ru'));

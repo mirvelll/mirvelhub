@@ -34,7 +34,7 @@
         '17-convenience.js', 'i18n-dict.js', 'i18n.js', '18-hub2.js', '19-features.js', '20-music-detail.js', '21-optimize.js', '22-wishlist.js', '23-sounds.js',
         '24-share-collection.js', '25-bulk.js', '27-design.js', '28-appearance.js', '29-games-page.js', '30-collection-ui.js', '31-analytics-charts.js', '32-game-bundles.js', '33-hidden-games.js'
     ];
-    const BUILD = '17.4';   // меняется при обновлении файлов — браузер не берёт старые скрипты из кеша
+    const BUILD = '17.5';   // меняется при обновлении файлов — браузер не берёт старые скрипты из кеша
 
     const store = {
         mode: 'ls',            // 'idb' | 'ls'
@@ -281,11 +281,32 @@
         store.refreshQuota();
     }
 
+    /* Пока скрипты ещё грузятся, список достижений неполный: игровые («Финальные титры», «Охотник за трофеями»,
+       «Мульти-платформер»…) добавляет только 16-games.js. Отрисовка по requestAnimationFrame успевала вызвать
+       sanitizeUnlockedAchievements() раньше и выбрасывала их из сохранения — после перезагрузки они выдавались
+       заново вместе с опытом. Пока идёт загрузка, лишнего не отбрасываем (только убираем дубли). */
+    store.booting = true;
+    function guardAchievements() {
+        const base = window.sanitizeUnlockedAchievements;
+        if (typeof base !== 'function' || base.__bootGuard) return;
+        const guarded = function () {
+            if (store.booting) {
+                if (typeof data !== 'undefined' && data && Array.isArray(data.unlockedAchievements)) {
+                    data.unlockedAchievements = [...new Set(data.unlockedAchievements)];
+                }
+                return;
+            }
+            return base.apply(this, arguments);
+        };
+        guarded.__bootGuard = true;
+        window.sanitizeUnlockedAchievements = guarded;
+    }
+
     function loadScripts(i) {
-        if (i >= SCRIPTS.length) { armFlush(); document.dispatchEvent(new Event('mirvel-ready')); return; }
+        if (i >= SCRIPTS.length) { store.booting = false; armFlush(); document.dispatchEvent(new Event('mirvel-ready')); return; }
         const s = document.createElement('script');
         s.src = 'js/' + SCRIPTS[i] + '?v=' + BUILD;
-        s.onload = () => loadScripts(i + 1);
+        s.onload = () => { if (SCRIPTS[i] === '03-achievements.js') guardAchievements(); loadScripts(i + 1); };
         s.onerror = () => { console.warn('[MIRVEL] Не загрузился скрипт:', SCRIPTS[i]); loadScripts(i + 1); };
         document.body.appendChild(s);
     }
