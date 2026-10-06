@@ -145,13 +145,18 @@ function todayStamp() {
     return new Date().toISOString().slice(0, 10);
 }
 
-/** Цена для показа: «PS Plus» (игра из подписки), «650 ₴», «~650 ₴» (примерная), «Бесплатно» или «цена ?» (не помню / в наборе) */
+/** Цена для показа: «PS Plus» (игра из подписки), «650 ₴», «~650 ₴» (примерная),
+ *  «Бесплатно», «Подарок», «Активировано кодом», «В наборе» или «Не помню» (цену не помню) */
 function fmtPrice(item) {
     if (!item) return '0 ₴';
     if (item.psPlus) return 'PS Plus';
     if (item.priceFree) return 'Бесплатно';
-    if (item.priceUnknown) return 'цена ?';
+    if (item.priceGift) return 'Подарок';
+    if (item.priceCode) return 'Активировано кодом';
+    if (item.priceBundle) return 'В наборе';
+    if (item.priceUnknown) return 'Не помню';
     const n = Number(item.price) || 0;
+    if (item.isGift && !n) return 'Подарок';
     return `${item.priceApprox ? '~' : ''}${n} ₴`;
 }
 

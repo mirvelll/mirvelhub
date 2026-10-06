@@ -77,7 +77,7 @@ const ACHIEVEMENTS_LIST = [
     { id: 'goal_completed', title: 'Целеустремлённый', desc: 'Отметьте хотя бы одну выполненную коллекционную цель (CD или Винил)', icon: '🎯', xp: 100, cond: d => (d.goals || []).some(g => g.hasCd || g.hasVinyl) },
     { id: 'theme_customizer', title: 'Стиляга', desc: 'Переключите стандартную цветовую тему хаба на любую другую', icon: '🎨', xp: 30, cond: d => !!d.selectedTheme },
     { id: 'custom_cd', title: 'Особый ценитель', desc: 'Добавьте в хаб хотя бы один кастомный CD диск ✨', icon: '✨', xp: 75, cond: d => (d.cds || []).some(c => c.isCustom) },
-    { id: 'free_music', title: 'Сладкая халява', desc: 'Добавьте бесплатный релиз (0 ₴) или подарок в коллекцию', icon: '🎈', xp: 50, cond: d => [...(d.cds || []), ...(d.vinyls || [])].some(i => (i.price === 0 && !i.priceUnknown) || i.isGift) },
+    { id: 'free_music', title: 'Сладкая халява', desc: 'Добавьте бесплатный релиз (0 ₴) или подарок в коллекцию', icon: '🎈', xp: 50, cond: d => [...(d.cds || []), ...(d.vinyls || [])].some(i => (i.price === 0 && !i.priceUnknown && !i.priceBundle) || i.isGift) },
     { id: 'super_wish', title: 'Элитное желание', desc: 'Добавьте в Wishlist вещь стоимостью 5000 ₴ или выше', icon: '💸', xp: 100, cond: d => (d.wishlists || []).some(i => i.price >= 5000) },
     { id: 'decade_hopper', title: 'Эпоха за эпохой', desc: 'Собрать релизы как минимум из 3 разных десятилетий (например, 80-е, 90-е, 00-е)', icon: '🕰️', xp: 80, cond: d => {
         const decades = new Set();

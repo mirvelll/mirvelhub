@@ -347,6 +347,18 @@
     }
     function hideCardSize(panels) {
         panels.forEach(({ panel }) => {
+            // ползунок размера карточек и подпись «авто» справа от него
+            panel.querySelectorAll('input[type="range"]').forEach(r => {
+                if (isGone(r) || r.closest('[data-hs-gone]')) return;
+                hideEl(r);
+                collapseEmpty(r, panel);
+            });
+            textNodes(panel, d => /^\s*авто\s*$/i.test(d)).forEach(n => {
+                const el = n.parentElement;
+                if (isGone(el) || el.closest('[data-hs-gone]') || el === panel) return;
+                hideEl(el);
+                collapseEmpty(el, panel);
+            });
             textNodes(panel, d => /меньше значение|больше карточек в ряду|^\s*размер:\s*\S/i.test(d) || /размер\s+карточ/i.test(d)).forEach(n => {
                 const el = n.parentElement;
                 if (isGone(el) || el.closest('[data-hs-gone]')) return;

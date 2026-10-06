@@ -2,7 +2,6 @@
    MIRVEL HUB — 29-games-page.js (подключать после 28-appearance.js)
    Настройка страницы «Игры»: кнопка «🎛 Настроить» рядом с «Вид».
    • можно скрыть любой блок: статистика, прогресс по платформам, фильтры, сортировка
-   • размер карточек игр (ползунок)
    • быстрые наборы «Компактно» / «Показать всё»
    Настройки хранятся в data.gamesView (необязательное поле, попадает в бэкап).
    Размер корешков «Полки» настраивается ползунком рядом с кнопкой «📚 Полка» (27-design.js).
@@ -26,7 +25,6 @@
     #games.mh-h-filters #game-platform-filters,
     #games.mh-h-sort .mh-blk-sort,
     #games.mh-h-strip #game-strip{display:none!important}
-    #games.mh-sized #games-grid{grid-template-columns:repeat(auto-fill,minmax(min(var(--mh-card,300px),100%),1fr))!important}
     #mh-games-panel{margin-bottom:1.5rem;padding:1.25rem 1.4rem;border-radius:1.25rem}
     #mh-games-panel.hidden{display:none}
     .mgp-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:.9rem}
@@ -35,9 +33,6 @@
     .mgp-title{font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#9ca3af;margin-bottom:.5rem}
     .mgp-row{display:flex;align-items:center;gap:.6rem;font-size:.85rem;color:#d1d5db;padding:.25rem 0;cursor:pointer}
     .mgp-row input{accent-color:var(--theme-btn,#8b5cf6);width:16px;height:16px;cursor:pointer}
-    .mgp-size{display:flex;align-items:center;gap:.7rem}
-    .mgp-size input[type=range]{flex:1;accent-color:var(--theme-btn,#8b5cf6)}
-    .mgp-size output{min-width:3.6rem;text-align:right;font-family:ui-monospace,monospace;font-size:.8rem;color:#22d3ee}
     .mgp-btns{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.9rem}
     `;
     document.head.appendChild(css);
@@ -54,9 +49,8 @@
         if (!sec) return;
         const v = data.gamesView || {}, hide = v.hide || {};
         BLOCKS.forEach(b => sec.classList.toggle('mh-h-' + b.k, !!hide[b.k]));
-        const card = Number(v.card) || 0;
-        sec.classList.toggle('mh-sized', card > 0);
-        if (card > 0) sec.style.setProperty('--mh-card', card + 'px'); else sec.style.removeProperty('--mh-card');
+        sec.classList.remove('mh-sized');            // размер карточек убран из настроек — на случай старого сохранённого значения
+        sec.style.removeProperty('--mh-card');
     }
 
     function sync(panel) {
@@ -66,10 +60,6 @@
             const opt = BLOCKS.find(b => b.k === r.dataset.blkRow)?.optional;
             r.style.display = opt && !$(opt) ? 'none' : '';
         });
-        const rg = panel.querySelector('#mgp-card'), out = panel.querySelector('#mgp-card-out');
-        const card = Number(v.card) || 0;
-        rg.value = card || 300;
-        out.textContent = card ? card + ' px' : 'авто';
     }
 
     function build() {
@@ -89,15 +79,6 @@
                 <div>
                     <p class="mgp-title">Показывать блоки</p>
                     ${BLOCKS.map(b => `<label class="mgp-row" data-blk-row="${b.k}"><input type="checkbox" data-blk="${b.k}"><span>${b.t}</span></label>`).join('')}
-                </div>
-                <div>
-                    <p class="mgp-title">Размер карточек игр</p>
-                    <div class="mgp-size">
-                        <input type="range" id="mgp-card" min="160" max="520" step="10" value="300" aria-label="Размер карточек">
-                        <output id="mgp-card-out">авто</output>
-                    </div>
-                    <p class="text-[11px] text-gray-500 mt-2">Меньше значение — больше карточек в ряду. «Авто» возвращает стандартную сетку. Размер корешков в режиме «📚 Полка» меняется ползунком рядом с кнопкой «Полка».</p>
-                    <div class="mgp-btns"><button type="button" class="mh-btn" data-mgp="card-auto">Размер: авто</button></div>
                 </div>
             </div>
             <div class="mgp-btns">
@@ -124,22 +105,14 @@
             view().hide[cb.dataset.blk] = !cb.checked;
             apply(); save();
         });
-        const rg = panel.querySelector('#mgp-card');
-        rg.addEventListener('input', () => {
-            view().card = Number(rg.value);
-            panel.querySelector('#mgp-card-out').textContent = rg.value + ' px';
-            apply();
-        });
-        rg.addEventListener('change', save);
         panel.addEventListener('click', e => {
             const a = e.target.closest('[data-mgp]');
             if (!a) return;
             const v = view();
             switch (a.dataset.mgp) {
                 case 'close': panel.classList.add('hidden'); return;
-                case 'card-auto': v.card = 0; break;
                 case 'compact': BLOCKS.forEach(b => { v.hide[b.k] = COMPACT.includes(b.k); }); break;
-                case 'all': BLOCKS.forEach(b => { v.hide[b.k] = false; }); v.card = 0; break;
+                case 'all': BLOCKS.forEach(b => { v.hide[b.k] = false; }); break;
             }
             apply(); save(); sync(panel);
         });

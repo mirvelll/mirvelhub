@@ -651,7 +651,7 @@
             </div>
             <div class="grid grid-cols-2 gap-3">
                 <input id="gx-disc" maxlength="40" placeholder="Код диска (SLES-50382…)" class="w-full bg-white/5 p-3.5 rounded-xl border border-white/10 text-white text-sm">
-                <input id="gx-hours" type="number" min="0" step="0.5" placeholder="Наиграно, часов" class="w-full bg-white/5 p-3.5 rounded-xl border border-white/10 text-white text-sm">
+                <input id="gx-hours" type="number" min="0" step="any" placeholder="Наиграно, часов" class="w-full bg-white/5 p-3.5 rounded-xl border border-white/10 text-white text-sm">
             </div>
             <label class="flex items-start gap-2 text-sm text-gray-300 cursor-pointer"><input type="checkbox" id="gx-online" class="accent-purple-500 mt-1"> <span>🌐 Есть онлайн-режим помимо сюжета<small class="block text-[11px] text-gray-500">Сюжетный статус остаётся как есть, а онлайн отмечается отдельно (GTA, Call of Duty, Mortal Kombat…).</small></span></label>
             <p class="text-[11px] text-gray-500">🌐 Статус «Онлайн-игра» — только для игр вообще без сюжета (Among Us, Crash Team Rumble). 💤 «Не в планах» — лежит, но сейчас не интересно.</p>
@@ -805,7 +805,7 @@
             </div>
             <div class="grid grid-cols-2 gap-3 mt-3">
                 <label class="text-xs text-gray-400">Наиграно, часов
-                    <input id="gd-hours" data-field type="number" min="0" step="0.5" value="${Number(i.hours) || ''}" class="gd-input mt-1" placeholder="0"></label>
+                    <input id="gd-hours" data-field type="number" min="0" step="any" value="${Number(i.hours) || ''}" class="gd-input mt-1" placeholder="0"></label>
                 <label class="text-xs text-gray-400">Код диска / серийный номер
                     <input id="gd-disc" data-field maxlength="40" value="${esc(i.discCode || '')}" class="gd-input mt-1" placeholder="SLES-50382"></label>
             </div>

@@ -35,6 +35,24 @@
     const REGION_MAP = { pal: 'PAL', ntscu: 'NTSC-U', ntscj: 'NTSC-J', ntsc: 'NTSC', regionfree: 'Region Free' };
     const DIGITAL_RE = W('digital|цифр\\p{L}*|eshop|psn');
     const DIGITAL_PLATFORMS = ['Steam', 'Epic Games', 'GOG'];
+    const NO_REGION = ['Steam'];                       // у Steam региона нет — поле «Регион» не показываем и в игру не пишем
+    const PS_RE = /playstation|^ps\d?\b|\bpsp\b|vita/i;
+    /* Что можно написать вместо цены (в конце строки): бесплатно, подарок, код, не помню, в наборе, PS Plus */
+    const KIND_WORDS = {
+        free: 'бесплатно|free',
+        gift: 'подарок|подарил\\p{L}*|подарен\\p{L}*|gift',
+        code: 'активирован\\p{L}*(?:\\s+(?:по\\s+)?код\\p{L}*)?|по\\s+коду|кодом|activated(?:\\s+by)?\\s+code|redeemed',
+        unknown: 'не\\s+помню',
+        bundle: 'в\\s+наборе|в\\s+бандле|bundle',
+        psplus: 'ps\\s*plus|psplus'
+    };
+    const SEP = '(?:\\s*[,;|]\\s*|\\s+)';
+    const KIND_END = Object.fromEntries(Object.entries(KIND_WORDS).map(([k, src]) => [k, new RegExp(`${SEP}(?:${src})\\s*$`, 'iu')]));
+    /* часы: «2.1 часа», «10 ч», «5h», «сыграно 3.5», «2 часа сыграно» — любые дроби, не только .5 */
+    const HOURS_END = new RegExp(`${SEP}(?:(?:сыграно|наиграно)\\s*)?(\\d+(?:[.,]\\d+)?)\\s*(?:ч(?![\\p{L}\\d])|час\\p{L}*|h(?![\\p{L}\\d])|hrs?(?![\\p{L}\\d])|hours?(?![\\p{L}\\d]))(?:\\s*(?:сыграно|наиграно))?\\s*$`, 'iu');
+    const HOURS_WORD_END = new RegExp(`${SEP}(?:сыграно|наиграно)\\s*(\\d+(?:[.,]\\d+)?)\\s*$`, 'iu');
+    const KIND_OPTIONS = [['', 'Из текста строки'], ['free', '🆓 Бесплатно'], ['gift', '🎁 Подарок'], ['code', '🔑 Активировано кодом'], ['unknown', 'Не помню'], ['bundle', 'В наборе']];
+    const kindFlags = p => ({ priceFree: p.kind === 'free', priceGift: p.kind === 'gift', priceCode: p.kind === 'code', priceUnknown: p.kind === 'unknown', priceBundle: p.kind === 'bundle', psPlus: p.kind === 'psplus' });
     const GAME_STATUSES = [['', 'Без статуса'], ['backlog', '🗓 В планах'], ['playing', '▶ В процессе'], ['completed', '✔ Пройдено'],
         ['online', '🌐 Онлайн-игра'], ['sandbox', '🏖 Песочница'], ['dropped', '⏸ Заброшено'], ['skipped', '💤 Не в планах'], ['app', '🧩 Приложение']];
     const STATUS_LABEL = Object.fromEntries(GAME_STATUSES);
@@ -42,18 +60,18 @@
     const CONDITIONS = ['M', 'NM', 'VG+', 'VG', 'G+', 'G', 'F', 'P'];
     const PRIORITIES = [['', 'Без приоритета'], ['🔥 Высокий', '🔥 Высокий'], ['⚡ Средний', '⚡ Средний'], ['⏳ Низкий', '⏳ Низкий']];
     const HELP = {
-        auto: 'Одна строка — одна позиция: «Исполнитель - Название, цена». «Авто» — это не ИИ, а простой разбор текста прямо в браузере, поэтому работает без интернета и на GitHub Pages. Слова LP, винил, PS2, Switch сами определяют тип. Год — в скобках: (1991). Цена: «650», «~650» (примерная), «бесплатно».',
-        games: 'Одна строка — одна игра: «Название платформа (год), цена». Платформа, регион и «digital» читаются из текста: «Silent Hill 2 ps2 PAL (2001), 900». Что не указано в строке — берётся из полей выше. Цена: «900», «~900» (примерная), «бесплатно».',
-        other: 'Одна строка — одна позиция: «Исполнитель - Название, цена». Год — в скобках: (1991). Цена: «650», «~650» (примерная), «бесплатно / подарок».'
+        auto: 'Одна строка — одна позиция: «Исполнитель - Название, цена». «Авто» — это не ИИ, а простой разбор текста прямо в браузере, поэтому работает без интернета и на GitHub Pages. Слова LP, винил, PS2, Switch сами определяют тип. Год — в скобках: (1991). Цена: «650», «~650» (примерная), «бесплатно», «подарок», «не помню», «в наборе».',
+        games: 'Одна строка — одна игра: «Название платформа (год), цена». Платформа, регион и «digital» читаются из текста: «Silent Hill 2 ps2 PAL (2001), 900». Что не указано в строке — берётся из полей выше. Цена: «900», «~900» (примерная). Вместо цены можно написать «бесплатно», «подарок», «активировано кодом», «не помню» или «в наборе». Часы: «2.1 часа», «10 ч».',
+        other: 'Одна строка — одна позиция: «Исполнитель - Название, цена». Год — в скобках: (1991). Цена: «650», «~650» (примерная), «бесплатно», «подарок», «не помню», «в наборе».'
     };
     const HOLDER = {
         auto: 'Nirvana - Nevermind, 650\nKendrick Lamar - GNX LP, 1800\nSilent Hill 2 ps2, 900',
-        games: 'Silent Hill 2 ps2 PAL (2001), 900\nZelda: Tears of the Kingdom switch, ~1800\nHades steam, бесплатно',
+        games: 'Silent Hill 2 ps2 PAL (2001), 900\nZelda: Tears of the Kingdom switch, ~1800\nHades steam, бесплатно, 2.1 ч\nPortal 2 steam, подарок',
         other: 'Nirvana - Nevermind, 650\nRadiohead - OK Computer (1997), ~900\nPink Floyd - The Wall, подарок'
     };
     const OPTS_KEY = 'mirvel_qa_opts';
     // поля над строками: запоминаем только то, что обычно не меняется (платформа, регион, состояние)
-    const qaOpts = { platform: '', region: '', condition: 'NM', status: '', digital: false, priority: '' };
+    const qaOpts = { platform: '', region: '', condition: 'NM', status: '', digital: false, priority: '', kind: '' };
     try { const o = JSON.parse(localStorage.getItem(OPTS_KEY) || '{}'); ['platform', 'region', 'condition'].forEach(k => { if (typeof o[k] === 'string') qaOpts[k] = o[k]; }); } catch (e) {}
     const saveOpts = () => { try { localStorage.setItem(OPTS_KEY, JSON.stringify({ platform: qaOpts.platform, region: qaOpts.region, condition: qaOpts.condition })); } catch (e) {} };
     const SHOP_KEY = 'mirvel_qa_shop';
@@ -63,25 +81,38 @@
     function parseLine(raw, mode) {
         let s = raw.trim();
         if (!s) return null;
-        let url = '', price = 0, year = '', approx = false, free = false, region = '', digital = false;
+        let url = '', price = 0, year = '', approx = false, kind = '', region = '', digital = false, hours = 0, hadPrice = false;
         s = s.replace(/https?:\/\/\S+/i, m => { url = m; return ' '; });
-
-        // «бесплатно» / «подарок» в конце строки
-        const fm = s.match(/(?:\s*[,;|]\s*|\s+)(?:бесплатно|подарок|free|gift)\s*$/iu);
-        if (fm) { free = true; s = s.slice(0, fm.index); }
 
         const takePrice = re => {
             const m = s.match(re);
             if (!m) return false;
             approx = !!m[1];   // «~650» / «≈650»
             price = parseFloat(m[2].replace(/\s/g, '').replace(',', '.')) || 0;
+            hadPrice = true;
             s = s.slice(0, m.index);
             return true;
         };
-        if (!free) {
-            takePrice(/\s*[,;|]\s*([~≈])?\s*(\d[\d ]*(?:[.,]\d+)?)\s*(?:₴|грн\.?|uah)?\s*$/i) ||
-                takePrice(/\s+([~≈])?\s*(\d[\d ]*(?:[.,]\d+)?)\s*(?:₴|грн\.?|uah)\s*$/i);
+        // с конца строки по одной снимаем «хвосты» в любом порядке: пометка (бесплатно / подарок / код / не помню / в наборе), часы, цена
+        for (let guard = 0; guard < 8; guard++) {
+            let hit = false;
+            if (!kind) {
+                for (const k in KIND_END) {
+                    const m = s.match(KIND_END[k]);
+                    if (m) { kind = k; s = s.slice(0, m.index); hit = true; break; }
+                }
+            }
+            if (hit) continue;
+            if (!hours && (mode === 'auto' || mode === 'games')) {
+                const m = s.match(HOURS_END) || s.match(HOURS_WORD_END);
+                if (m) { hours = parseFloat(m[1].replace(',', '.')) || 0; s = s.slice(0, m.index); continue; }
+            }
+            if (!hadPrice && (
+                takePrice(/\s*[,;|]\s*([~≈])?\s*(\d[\d ]*(?:[.,]\d+)?)\s*(?:₴|грн\.?|uah)?\s*$/i) ||
+                takePrice(/\s+([~≈])?\s*(\d[\d ]*(?:[.,]\d+)?)\s*(?:₴|грн\.?|uah)\s*$/i))) continue;
+            break;
         }
+        if (kind) { price = 0; approx = false; }
 
         const ym = s.match(/\((\d{4})\)/);
         if (ym && +ym[1] > 1900 && +ym[1] < 2100) { year = +ym[1]; s = s.replace(ym[0], ' '); }
@@ -118,7 +149,7 @@
             category = /худи|футболк|свитшот|кепк|куртк|толстовк|шапк|hoodie|shirt/.test(low) ? 'clothing'
                 : /наушник|плеер|проигрыват|колонк|кабел|усилит|turntable|headphone|speaker/.test(low) ? 'gear' : 'other';
         }
-        return { type, title, artist, price, year, url, platform, category, vinylHint, approx, free, region, digital };
+        return { type, title, artist, price, year, url, platform, category, vinylHint, approx, kind, hadPrice, hours, region, digital };
     }
 
     const isDuplicate = p => (data[p.type] || []).some(x =>
@@ -132,7 +163,8 @@
         if (p.type === 'games') {
             const g = { id, platform: p.platform || 'Другое', region: p.region || '', title: p.title, developer: '', publisher: '', year: p.year,
                 price: p.price, condition: '', edition: '', url: p.url || '', rating: 0, digital: !!p.digital, img: '',
-                priceApprox: !!p.approx, priceFree: !!p.free };
+                priceApprox: !!p.approx, ...kindFlags(p) };
+            if (p.hours) g.hours = p.hours;
             if (p.status) {
                 g.status = p.status;
                 if (p.status === 'playing') g.startedAt = todayISO();
@@ -144,8 +176,8 @@
             id, category: p.category, title: p.title, artist: p.artist, price: p.price, whereBought: shop, year: p.year,
             label: '', condition: p.condition || 'NM',
             formatDetails: p.type === 'vinyls' || p.vinylHint ? 'Виниловая пластинка' : p.type === 'cds' ? 'CD диск' : '',
-            size: '', style: '', brand: '', priority: p.priority || '', url: p.url, isGift: p.type !== 'wishlists' && !!p.free, isCustom: false, rating: 0,
-            priceApprox: !!p.approx,
+            size: '', style: '', brand: '', priority: p.priority || '', url: p.url, isGift: p.type !== 'wishlists' && p.kind === 'gift', isCustom: false, rating: 0,
+            priceApprox: !!p.approx, priceFree: p.kind === 'free', priceUnknown: p.kind === 'unknown', priceBundle: p.kind === 'bundle', priceCode: p.kind === 'code',
             playCount: 0, lastPlayed: '', tags: [], img: '', imgPos: 'center', note: ''
         };
     }
@@ -158,6 +190,9 @@
             if (p.type === 'games') {
                 if (!p.platform) p.platform = (useOpts && qaOpts.platform) || 'Другое';
                 if (useOpts) { p.region = p.region || qaOpts.region; p.status = qaOpts.status; }
+                if (NO_REGION.includes(p.platform)) p.region = '';                       // Steam: региона нет
+                if (useOpts && qaOpts.kind && !p.kind && !p.hadPrice) p.kind = qaOpts.kind;   // «Цена / как получена» из полей выше
+                if (p.kind === 'psplus' && !PS_RE.test(p.platform)) p.kind = '';             // «PS Plus» — только для PlayStation
                 p.digital = p.digital || DIGITAL_PLATFORMS.includes(p.platform) || (useOpts && qaOpts.digital);
             } else if (p.type === 'cds' || p.type === 'vinyls') p.condition = qaOpts.condition || 'NM';
             else if (p.type === 'wishlists') p.priority = qaOpts.priority;
@@ -178,7 +213,8 @@
             const plats = [...document.getElementById('game-platform').options].map(o => o.value);
             html = selectHTML('qa-o-platform', 'Платформа', [['', 'Из текста строки (иначе «Другое»)'], ...plats.map(n => [n, n])], qaOpts.platform) +
                 selectHTML('qa-o-status', 'Статус', GAME_STATUSES, qaOpts.status) +
-                selectHTML('qa-o-region', 'Регион', [['', 'Не указан'], ...REGIONS.map(r => [r, r])], qaOpts.region) +
+                (NO_REGION.includes(qaOpts.platform) ? '' : selectHTML('qa-o-region', 'Регион', [['', 'Не указан'], ...REGIONS.map(r => [r, r])], qaOpts.region)) +
+                selectHTML('qa-o-kind', 'Цена / как получена', KIND_OPTIONS, qaOpts.kind) +
                 `<label class="flex items-center gap-2 text-sm text-gray-300 self-end pb-2.5 cursor-pointer"><input type="checkbox" id="qa-o-digital" class="accent-purple-500"${qaOpts.digital ? ' checked' : ''}> ☁️ Цифровые (не диск)</label>`;
         } else if (qaMode === 'cds' || qaMode === 'vinyls') {
             html = selectHTML('qa-o-condition', 'Состояние носителя', CONDITIONS.map(c => [c, c]), qaOpts.condition);
@@ -197,6 +233,7 @@
         if (v('qa-o-platform')) qaOpts.platform = v('qa-o-platform').value;
         if (v('qa-o-status')) qaOpts.status = v('qa-o-status').value;
         if (v('qa-o-region')) qaOpts.region = v('qa-o-region').value;
+        if (v('qa-o-kind')) qaOpts.kind = v('qa-o-kind').value;
         if (v('qa-o-digital')) qaOpts.digital = v('qa-o-digital').checked;
         if (v('qa-o-condition')) qaOpts.condition = v('qa-o-condition').value;
         if (v('qa-o-priority')) qaOpts.priority = v('qa-o-priority').value;
@@ -240,7 +277,7 @@
         text.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); submit(); } });
         m.querySelector('#qa-submit').onclick = submit;
         m.querySelector('#qa-undo').onclick = undoLast;
-        m.querySelector('#qa-opts').addEventListener('change', () => { readOpts(); renderPreview(); });
+        m.querySelector('#qa-opts').addEventListener('change', e => { readOpts(); if (e.target.id === 'qa-o-platform') renderOpts(); renderPreview(); });   // у Steam поле «Регион» пропадает
     }
 
     function renderChips() {
@@ -253,11 +290,11 @@
         const ok = parsed.filter(p => !p.error);
         document.getElementById('qa-preview').innerHTML = parsed.map(p => {
             if (p.error) return `<div class="qa-row is-error">⚠️ Не удалось разобрать: ${esc(p.raw)}</div>`;
-            const tags = [p.platform, p.region, p.digital ? '☁️' : '', p.status ? STATUS_LABEL[p.status] : '', p.year].filter(Boolean).map(esc).join(' · ');
+            const tags = [p.platform, p.region, p.digital ? '☁️' : '', p.status ? STATUS_LABEL[p.status] : '', p.year, p.hours ? p.hours + ' ч' : ''].filter(Boolean).map(esc).join(' · ');
             return `<div class="qa-row"><span aria-hidden="true">${ICON[p.type]}</span>
                  <span class="truncate flex-1">${esc(p.artist ? p.artist + ' — ' : '')}<b>${esc(p.title)}</b>${tags ? ' · ' + tags : ''}</span>
                  ${isDuplicate(p) ? '<span class="qa-dup">уже есть</span>' : ''}
-                 <span class="font-mono text-cyan-400 shrink-0">${fmtPrice({ price: p.price, priceApprox: p.approx, priceFree: p.free })}</span></div>`;
+                 <span class="font-mono text-cyan-400 shrink-0">${fmtPrice({ price: p.price, priceApprox: p.approx, ...kindFlags(p) })}</span></div>`;
         }).join('');
         document.getElementById('qa-submit').textContent = ok.length ? `Добавить (${ok.length})` : 'Добавить';
     }
