@@ -41,6 +41,7 @@
     const KIND_WORDS = {
         free: 'бесплатно|free',
         gift: 'подарок|подарил\\p{L}*|подарен\\p{L}*|gift',
+        family: 'семья|семейн\\p{L}*|в\\s+семье|family(?:\\s+sharing)?|шеринг|аккаунт\\s+друга|у\\s+друга',
         code: 'активирован\\p{L}*(?:\\s+(?:по\\s+)?код\\p{L}*)?|по\\s+коду|кодом|activated(?:\\s+by)?\\s+code|redeemed',
         unknown: 'не\\s+помню',
         bundle: 'в\\s+наборе|в\\s+бандле|bundle',
@@ -51,8 +52,11 @@
     /* часы: «2.1 часа», «10 ч», «5h», «сыграно 3.5», «2 часа сыграно» — любые дроби, не только .5 */
     const HOURS_END = new RegExp(`${SEP}(?:(?:сыграно|наиграно)\\s*)?(\\d+(?:[.,]\\d+)?)\\s*(?:ч(?![\\p{L}\\d])|час\\p{L}*|h(?![\\p{L}\\d])|hrs?(?![\\p{L}\\d])|hours?(?![\\p{L}\\d]))(?:\\s*(?:сыграно|наиграно))?\\s*$`, 'iu');
     const HOURS_WORD_END = new RegExp(`${SEP}(?:сыграно|наиграно)\\s*(\\d+(?:[.,]\\d+)?)\\s*$`, 'iu');
-    const KIND_OPTIONS = [['', 'Из текста строки'], ['free', '🆓 Бесплатно'], ['gift', '🎁 Подарок'], ['code', '🔑 Активировано кодом'], ['unknown', 'Не помню'], ['bundle', 'В наборе']];
-    const kindFlags = p => ({ priceFree: p.kind === 'free', priceGift: p.kind === 'gift', priceCode: p.kind === 'code', priceUnknown: p.kind === 'unknown', priceBundle: p.kind === 'bundle', psPlus: p.kind === 'psplus' });
+    /* «16/17» (получено/всего), по желанию со словом «ачивки / трофеи / достижения» перед числом. Даты вроде 12/05/2024 не трогаем */
+    const TROPHY_RE = /(?:(?:ачивк\p{L}*|трофе\p{L}*|достижен\p{L}*|achievements?|trophies)\s*[:\-]?\s*)?(?<![\d\/.])(\d{1,4})\s*\/\s*(\d{1,4})(?![\d\/])(?:\s*(?:ачивк\p{L}*|трофе\p{L}*|достижен\p{L}*|achievements?|trophies))?/iu;
+    const PLATINUM_RE = W('платин\\p{L}*|platinum|100%\\s*ачивок');
+    const KIND_OPTIONS = [['', 'Из текста строки'], ['free', '🆓 Бесплатно'], ['gift', '🎁 Подарок'], ['family', '👨‍👩‍👧 Семья'], ['code', '🔑 Активировано кодом'], ['unknown', 'Не помню'], ['bundle', 'В наборе']];
+    const kindFlags = p => ({ priceFree: p.kind === 'free', priceGift: p.kind === 'gift', priceFamily: p.kind === 'family', priceCode: p.kind === 'code', priceUnknown: p.kind === 'unknown', priceBundle: p.kind === 'bundle', psPlus: p.kind === 'psplus' });
     const GAME_STATUSES = [['', 'Без статуса'], ['backlog', '🗓 В планах'], ['playing', '▶ В процессе'], ['completed', '✔ Пройдено'],
         ['online', '🌐 Онлайн-игра'], ['sandbox', '🏖 Песочница'], ['dropped', '⏸ Заброшено'], ['skipped', '💤 Не в планах'], ['app', '🧩 Приложение']];
     const STATUS_LABEL = Object.fromEntries(GAME_STATUSES);
@@ -61,12 +65,12 @@
     const PRIORITIES = [['', 'Без приоритета'], ['🔥 Высокий', '🔥 Высокий'], ['⚡ Средний', '⚡ Средний'], ['⏳ Низкий', '⏳ Низкий']];
     const HELP = {
         auto: 'Одна строка — одна позиция: «Исполнитель - Название, цена». «Авто» — это не ИИ, а простой разбор текста прямо в браузере, поэтому работает без интернета и на GitHub Pages. Слова LP, винил, PS2, Switch сами определяют тип. Год — в скобках: (1991). Цена: «650», «~650» (примерная), «бесплатно», «подарок», «не помню», «в наборе».',
-        games: 'Одна строка — одна игра: «Название платформа (год), цена». Платформа, регион и «digital» читаются из текста: «Silent Hill 2 ps2 PAL (2001), 900». Что не указано в строке — берётся из полей выше. Цена: «900», «~900» (примерная). Вместо цены можно написать «бесплатно», «подарок», «активировано кодом», «не помню» или «в наборе». Часы: «2.1 часа», «10 ч».',
+        games: 'Одна строка — одна игра: «Название платформа (год), цена». Платформа, регион и «digital» читаются из текста: «Silent Hill 2 ps2 PAL (2001), 900». Что не указано в строке — берётся из полей выше. Цена: «900», «~900» (примерная). Вместо цены можно написать «бесплатно», «подарок», «семья», «активировано кодом», «не помню» или «в наборе». Часы: «2.1 часа», «10 ч». Ачивки: «16/17» (получено/всего) или «платина».',
         other: 'Одна строка — одна позиция: «Исполнитель - Название, цена». Год — в скобках: (1991). Цена: «650», «~650» (примерная), «бесплатно», «подарок», «не помню», «в наборе».'
     };
     const HOLDER = {
         auto: 'Nirvana - Nevermind, 650\nKendrick Lamar - GNX LP, 1800\nSilent Hill 2 ps2, 900',
-        games: 'Silent Hill 2 ps2 PAL (2001), 900\nZelda: Tears of the Kingdom switch, ~1800\nHades steam, бесплатно, 2.1 ч\nPortal 2 steam, подарок',
+        games: 'Silent Hill 2 ps2 PAL (2001), 900, 12/48\nZelda: Tears of the Kingdom switch, ~1800\nHades steam, бесплатно, 2.1 ч, 16/17\nPortal 2 steam, семья, 51/51',
         other: 'Nirvana - Nevermind, 650\nRadiohead - OK Computer (1997), ~900\nPink Floyd - The Wall, подарок'
     };
     const OPTS_KEY = 'mirvel_qa_opts';
@@ -83,6 +87,22 @@
         if (!s) return null;
         let url = '', price = 0, year = '', approx = false, kind = '', region = '', digital = false, hours = 0, hadPrice = false;
         s = s.replace(/https?:\/\/\S+/i, m => { url = m; return ' '; });
+
+        /* ачивки / трофеи: «16/17», «ачивки 16/17», «трофеи 3/50», «платина» — в любом месте строки (только для игр) */
+        let trophy = '', trophyDone = 0, trophyTotal = 0;
+        if (mode === 'auto' || mode === 'games') {
+            const tm = s.match(TROPHY_RE);
+            if (tm) {
+                trophyDone = parseInt(tm[1], 10); trophyTotal = parseInt(tm[2], 10);
+                trophy = trophyTotal > 0 && trophyDone >= trophyTotal ? 'full' : 'some';
+                s = s.replace(tm[0], ' ');
+            } else if (PLATINUM_RE.test(s)) {
+                trophy = 'full';
+                s = s.replace(PLATINUM_RE, ' ');
+            }
+            // после вырезания не должно остаться «висячих» запятых — иначе цена и пометки в конце строки не распознаются
+            if (trophy) s = s.replace(/\s*[,;|]\s*(?:[,;|]\s*)+/g, ', ').replace(/[\s,;|]+$/, '');
+        }
 
         const takePrice = re => {
             const m = s.match(re);
@@ -149,7 +169,7 @@
             category = /худи|футболк|свитшот|кепк|куртк|толстовк|шапк|hoodie|shirt/.test(low) ? 'clothing'
                 : /наушник|плеер|проигрыват|колонк|кабел|усилит|turntable|headphone|speaker/.test(low) ? 'gear' : 'other';
         }
-        return { type, title, artist, price, year, url, platform, category, vinylHint, approx, kind, hadPrice, hours, region, digital };
+        return { type, title, artist, price, year, url, platform, category, vinylHint, approx, kind, hadPrice, hours, region, digital, trophy, trophyDone, trophyTotal };
     }
 
     const isDuplicate = p => (data[p.type] || []).some(x =>
@@ -165,6 +185,7 @@
                 price: p.price, condition: '', edition: '', url: p.url || '', rating: 0, digital: !!p.digital, img: '',
                 priceApprox: !!p.approx, ...kindFlags(p) };
             if (p.hours) g.hours = p.hours;
+            if (p.trophy) { g.trophy = p.trophy; g.trophyDone = p.trophyDone || 0; g.trophyTotal = p.trophyTotal || 0; }
             if (p.status) {
                 g.status = p.status;
                 if (p.status === 'playing') g.startedAt = todayISO();
@@ -290,7 +311,7 @@
         const ok = parsed.filter(p => !p.error);
         document.getElementById('qa-preview').innerHTML = parsed.map(p => {
             if (p.error) return `<div class="qa-row is-error">⚠️ Не удалось разобрать: ${esc(p.raw)}</div>`;
-            const tags = [p.platform, p.region, p.digital ? '☁️' : '', p.status ? STATUS_LABEL[p.status] : '', p.year, p.hours ? p.hours + ' ч' : ''].filter(Boolean).map(esc).join(' · ');
+            const tags = [p.platform, p.region, p.digital ? '☁️' : '', p.status ? STATUS_LABEL[p.status] : '', p.year, p.hours ? p.hours + ' ч' : '', p.trophy ? (p.trophyTotal ? `🏆 ${p.trophyDone}/${p.trophyTotal}` : '🏆 100%') : ''].filter(Boolean).map(esc).join(' · ');
             return `<div class="qa-row"><span aria-hidden="true">${ICON[p.type]}</span>
                  <span class="truncate flex-1">${esc(p.artist ? p.artist + ' — ' : '')}<b>${esc(p.title)}</b>${tags ? ' · ' + tags : ''}</span>
                  ${isDuplicate(p) ? '<span class="qa-dup">уже есть</span>' : ''}

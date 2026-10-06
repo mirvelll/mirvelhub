@@ -2,8 +2,8 @@
    MIRVEL HUB — 15-price.js (подключать после 14-listen.js)
    Пометки цены в формах добавления:
      • у всех: «Цена примерная», «Не помню», «В наборе»
-     • только у игр: «Бесплатно», «Подарок», «Активировано кодом», «PS Plus»
-   Флаги у позиции: priceApprox, priceUnknown, priceBundle, priceFree, priceGift, priceCode, psPlus
+     • только у игр: «Бесплатно», «Подарок», «Семья», «Активировано кодом», «PS Plus»
+   Флаги у позиции: priceApprox, priceUnknown, priceBundle, priceFree, priceGift, priceFamily, priceCode, psPlus
    Любая из пометок (кроме «примерной») обнуляет цену; пометки исключают друг друга.
    ========================================================= */
 (() => {
@@ -16,6 +16,7 @@
         free:    ['priceFree',    '🆓 Бесплатно', 'Бесплатно'],
         gift:    ['priceGift',    '🎁 Подарок', 'Подарок'],
         code:    ['priceCode',    '🔑 Активировано кодом', 'Активировано кодом'],
+        family:  ['priceFamily',  '👨‍👩‍👧 Семья (Family Sharing / аккаунт друга)', 'Семья'],
         psplus:  ['psPlus',       '➕ PS Plus (игра из подписки)', 'PS Plus']
     };
     const FORMS = {};                              // key -> { priceId, kinds }
@@ -136,7 +137,7 @@
 
     /* ---------- Подключение ---------- */
     injectControls('item-price', 'pf-item', ['unknown', 'bundle']);
-    injectControls('game-price', 'pf-game', ['unknown', 'bundle', 'free', 'gift', 'code', 'psplus']);
+    injectControls('game-price', 'pf-game', ['unknown', 'bundle', 'free', 'gift', 'family', 'code', 'psplus']);
 
     const openBase = window.openModal;
     window.openModal = (type, id = null) => {

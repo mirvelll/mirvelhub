@@ -146,13 +146,14 @@ function todayStamp() {
 }
 
 /** Цена для показа: «PS Plus» (игра из подписки), «650 ₴», «~650 ₴» (примерная),
- *  «Бесплатно», «Подарок», «Активировано кодом», «В наборе» или «Не помню» (цену не помню) */
+ *  «Бесплатно», «Подарок», «Семья», «Активировано кодом», «В наборе» или «Не помню» (цену не помню) */
 function fmtPrice(item) {
     if (!item) return '0 ₴';
     if (item.psPlus) return 'PS Plus';
     if (item.priceFree) return 'Бесплатно';
     if (item.priceGift) return 'Подарок';
     if (item.priceCode) return 'Активировано кодом';
+    if (item.priceFamily) return 'Семья';
     if (item.priceBundle) return 'В наборе';
     if (item.priceUnknown) return 'Не помню';
     const n = Number(item.price) || 0;
