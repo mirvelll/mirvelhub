@@ -41,7 +41,7 @@
     const GROUPS = ['PlayStation', 'Xbox', 'Nintendo', 'Sega', 'Steam', 'Epic Games', 'GOG', 'PC (диск)', 'Другое'];
     const groupOf = p => {
         p = String(p || '');
-        if (/^(PlayStation|PS\b|PSP)/i.test(p)) return 'PlayStation';
+        if (/^(PlayStation|PS\d|PS\b|PSP)/i.test(p)) return 'PlayStation';
         if (/^Xbox/i.test(p)) return 'Xbox';
         if (/^(Nintendo|SNES|Game Boy)/i.test(p)) return 'Nintendo';
         if (/^Sega/i.test(p)) return 'Sega';
@@ -178,7 +178,7 @@
             <button class="tl-b main" data-a="toggleadd">＋ Добавить игры / музыку</button>
             <button class="tl-b" data-a="shape" id="tl-shape"></button>
             <button class="tl-b" data-a="caps" id="tl-caps">🏷 Подписи</button>
-            <span class="tl-hint" style="margin:0">Размер</span><span class="tl-seg" id="tl-szg"></span>
+            <span style="display:inline-flex;align-items:center;gap:.4rem;white-space:nowrap"><span class="tl-hint" style="margin:0">Размер</span><span class="tl-seg" id="tl-szg"></span></span>
             <button class="tl-b main" data-a="export">🖼 Скачать PNG</button>
             <div class="tl-new" id="tl-new">
                 <input class="tl-in" id="tl-nname" placeholder="Название, например «Топ игр»" maxlength="60" style="flex:1;min-width:160px">
