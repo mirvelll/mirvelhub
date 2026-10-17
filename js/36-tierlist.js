@@ -31,22 +31,49 @@
         const o = (data[it.src] || []).find(x => String(x.id) === String(it.ref));
         return o ? { t: o.title, sub: it.src === 'games' ? o.platform : o.artist, img: o.img } : null;
     }
+    const SIZES = [60, 76, 92, 112, 136];
+    const SIZE_NAMES = ['Очень мелко', 'Мелко', 'Стандарт', 'Крупно', 'Очень крупно'];
+    let dedupe = data.tierDedupe !== false;
+    const newIds = new Set();
+    const normT = t => String(t || '').replace(/[™®©℠]/g, '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/&/g, ' and ').replace(/[^\p{L}\p{N}]+/gu, '');
+    const keyOf = it => { const i = info(it); if (!i) return ''; return it.src === 'games' ? normT(i.t) : normT((i.sub || '') + '|' + i.t); };
+    const uniq = arr => { const seen = new Set(); return arr.filter(a => { const k = keyOf(a); if (!k) return true; if (seen.has(k)) return false; seen.add(k); return true; }); };
+    const GROUPS = ['PlayStation', 'Xbox', 'Nintendo', 'Sega', 'Steam', 'Epic Games', 'GOG', 'PC (диск)', 'Другое'];
+    const groupOf = p => {
+        p = String(p || '');
+        if (/^(PlayStation|PS\b|PSP)/i.test(p)) return 'PlayStation';
+        if (/^Xbox/i.test(p)) return 'Xbox';
+        if (/^(Nintendo|SNES|Game Boy)/i.test(p)) return 'Nintendo';
+        if (/^Sega/i.test(p)) return 'Sega';
+        if (/^Steam/i.test(p)) return 'Steam';
+        if (/^Epic/i.test(p)) return 'Epic Games';
+        if (/^GOG/i.test(p)) return 'GOG';
+        if (/^PC/i.test(p)) return 'PC (диск)';
+        return 'Другое';
+    };
+
+    // новые карточки встают в начало списка (в «Не размещено» они сверху)
     function addItems(l, arr) {
-        let n = 0;
+        const fresh = [];
         arr.forEach(a => {
-            if (a.src !== 'custom' && l.items.some(x => x.src === a.src && String(x.ref) === String(a.ref))) return;
-            if (a.src === 'custom' && a.key && l.items.some(x => x.key === a.key)) return;
-            l.items.push({ id: uid(), tier: '', ...a }); n++;
+            const all = [...fresh, ...l.items];
+            if (a.src !== 'custom' && all.some(x => x.src === a.src && String(x.ref) === String(a.ref))) return;
+            if (a.src === 'custom' && a.key && all.some(x => x.key === a.key)) return;
+            fresh.push({ id: uid(), tier: '', ...a });
         });
-        return n;
+        l.items = [...fresh, ...l.items];
+        fresh.forEach(x => newIds.add(x.id));
+        return fresh.length;
     }
     const fromCollection = (src, o) => ({ src, ref: o.id });
     const allMusic = () => [...(data.cds || []).map(o => ['cds', o]), ...(data.vinyls || []).map(o => ['vinyls', o])];
 
-    function createList(name, kind) {
-        const l = { id: uid(), name: name || 'Мой тир-лист', shape: kind === 'games' ? 'pt' : 'sq', caps: false, size: 92, tiers: mkTiers(['S', 'A', 'B', 'C', 'D', 'F']), items: [] };
-        if (kind === 'games') addItems(l, (data.games || []).map(o => fromCollection('games', o)));
-        if (kind === 'music') addItems(l, allMusic().map(([s, o]) => fromCollection(s, o)));
+    function createList(name, kind, dd) {
+        const l = { id: uid(), name: name || 'Мой тир-лист', shape: kind === 'games' ? 'pt' : 'sq', caps: false, sz: 3, tiers: mkTiers(['S', 'A', 'B', 'C', 'D', 'F']), items: [] };
+        const fix = a => (dd ? uniq(a) : a);
+        if (kind === 'games') addItems(l, fix((data.games || []).map(o => fromCollection('games', o))));
+        if (kind === 'music') addItems(l, fix(allMusic().map(([s, o]) => fromCollection(s, o))));
+        newIds.clear();
         lists().push(l); data.tierActive = l.id; save();
         return l;
     }
@@ -97,7 +124,6 @@
     .tl-pool .tl-zone{min-height:calc(var(--tl-s)*var(--tl-r,1) + 20px)}
     .tl-ph{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;padding:.8rem 1rem;border-bottom:1px solid rgba(255,255,255,.07)}
     .tl-ph b{font-weight:900}
-    .tl-add{margin-top:1.2rem;padding:1.1rem 1.2rem;border-radius:1.2rem;animation:tl-in .3s}
     .tl-tabs{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.9rem}
     .tl-cands{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:6px;max-height:19rem;overflow-y:auto;margin:.8rem 0;padding:2px}
     .tl-cand{position:relative;aspect-ratio:3/4;border-radius:.5rem;overflow:hidden;cursor:pointer;background:#1a1a24;outline:2px solid transparent;transition:all .15s}
@@ -107,8 +133,34 @@
     .tl-row2{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin-top:.6rem}
     .tl-hint{font-size:.75rem;color:#9ca3af;margin-top:.5rem;line-height:1.5}
     .tl-empty{padding:1.2rem;color:#6b7280;font-size:.85rem;width:100%;text-align:center}
+    .tl-add{padding:1.1rem 1.2rem;border-radius:1.2rem}
+    .tl-addwrap{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows .5s cubic-bezier(.25,1,.35,1),opacity .35s}
+    .tl-addwrap.open{grid-template-rows:1fr;opacity:1;margin-bottom:1.2rem}
+    .tl-addwrap>div{min-height:0;overflow:hidden}
+    .tl-seg{display:inline-flex;gap:2px;padding:2px;border-radius:.9rem;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)}
+    .tl-seg .tl-b{border:0;padding:.4rem .75rem;background:transparent}
+    .tl-seg .tl-b.on{background:rgba(var(--theme-rgb,139,92,246),.45)}
+    .tl-b.danger{background:rgba(239,68,68,.3);border-color:#ef4444;color:#fff}
+    .tl-ask{display:inline-flex;gap:.4rem;align-items:center;font-size:.8rem;font-weight:700;animation:tl-in .25s}
+    .tl-cand img,.tl-ed-th img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+    .tl-mine{display:flex;flex-direction:column;gap:.6rem;max-height:26rem;overflow-y:auto;padding:2px}
+    .tl-ed{display:flex;flex-wrap:wrap;gap:.7rem;align-items:flex-start;padding:.7rem;border-radius:1rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
+    .tl-ed.flash{animation:tl-flash 1.8s}
+    @keyframes tl-flash{0%,60%{box-shadow:0 0 0 2px rgb(var(--theme-rgb,139,92,246)),0 0 24px rgba(var(--theme-rgb,139,92,246),.5)}}
+    .tl-ed-img{position:relative;flex:none;width:68px;height:68px;border-radius:.6rem;overflow:hidden;cursor:pointer;background:#1a1a24}
+    .tl-ed-th{position:relative;display:block;width:100%;height:100%}
+    .tl-ed-img i{position:absolute;right:2px;bottom:2px;font-style:normal;font-size:.7rem;background:rgba(0,0,0,.65);border-radius:.4rem;padding:1px 4px}
+    .tl-ed-f{flex:1;min-width:150px;display:flex;flex-direction:column;gap:.4rem}
+    .tl-ed-b{display:flex;gap:.4rem;flex-wrap:wrap}
+    .tl-ed-res{flex-basis:100%;display:flex;flex-direction:column;gap:.5rem}
+    .tl-ed-res:empty{display:none}
+    .tl-picks{display:flex;flex-wrap:wrap;gap:.4rem}
+    .tl-pk{width:64px;height:64px;border-radius:.5rem;overflow:hidden;border:2px solid transparent;cursor:pointer;padding:0;background:#1a1a24;transition:all .15s}
+    .tl-pk:hover{border-color:rgb(var(--theme-rgb,139,92,246));transform:scale(1.08)}
+    .tl-pk.busy{opacity:.4}
+    .tl-pk img{width:100%;height:100%;object-fit:cover}
     @media (max-width:640px){.tl-lab{width:4.2rem}.tl-lab-in{font-size:1rem}}
-    @media (prefers-reduced-motion:reduce){.tl-tile,.tl-zone,.tl-cap{transition:none!important}.tl-tile.tl-pop,.tl-add,.tl-new{animation:none!important}}`;
+    @media (prefers-reduced-motion:reduce){.tl-tile,.tl-zone,.tl-cap{transition:none!important}.tl-tile.tl-pop,.tl-new,.tl-ed.flash{animation:none!important}.tl-addwrap{transition:none!important}}`;
     document.head.appendChild(css);
 
     const main = $('main') || document.querySelector('main');
@@ -119,21 +171,23 @@
         <h2 class="text-4xl font-bold">Тир-листы 🏅</h2>
         <p class="text-gray-500">Расставляйте игры и музыку по рангам — перетаскивайте карточки в нужный тир</p>
         <div class="tl-bar glass no-hover">
-            <select class="tl-sel" id="tl-sel" aria-label="Тир-лист"></select>
+            <span id="tl-namebox"></span>
             <button class="tl-b main" data-a="new">＋ Новый</button>
-            <button class="tl-b" data-a="rename" title="Переименовать">✎</button>
-            <button class="tl-b" data-a="delete" title="Удалить тир-лист">🗑</button>
+            <span id="tl-acts"></span>
             <span class="sp"></span>
+            <button class="tl-b main" data-a="toggleadd">＋ Добавить игры / музыку</button>
             <button class="tl-b" data-a="shape" id="tl-shape"></button>
             <button class="tl-b" data-a="caps" id="tl-caps">🏷 Подписи</button>
-            <label class="tl-hint" style="margin:0">Размер <input type="range" id="tl-size" min="56" max="150" style="width:90px;vertical-align:middle"></label>
+            <span class="tl-hint" style="margin:0">Размер</span><span class="tl-seg" id="tl-szg"></span>
             <button class="tl-b main" data-a="export">🖼 Скачать PNG</button>
             <div class="tl-new" id="tl-new">
                 <input class="tl-in" id="tl-nname" placeholder="Название, например «Топ игр»" maxlength="60" style="flex:1;min-width:160px">
                 <select class="tl-sel" id="tl-nkind"><option value="games">🎮 Все мои игры</option><option value="music">🎵 Вся моя музыка (CD + винил)</option><option value="empty">Пустой (добавлю сам)</option></select>
+                <label class="tl-hint" style="margin:0;display:flex;gap:.4rem;align-items:center;cursor:pointer"><input type="checkbox" id="tl-ndd" checked> 🧹 Убрать повторки</label>
                 <button class="tl-b main" data-a="create">Создать</button>
             </div>
         </div>
+        <div class="tl-addwrap" id="tl-addp"><div id="tl-addin"></div></div>
         <div id="tl-body"></div>`;
     main.appendChild(sec);
     if (!VALID_PAGES.includes('tiers')) VALID_PAGES.push('tiers');
@@ -159,11 +213,30 @@
             <span class="tl-cap">${E(i.t)}</span><button class="tl-x" data-a="rm" title="Убрать из тир-листа">✕</button></div>`;
     }
 
-    let popId = null;
+    let popId = null, renaming = false, delAsk = false, addT = 0, aq = '', hiddenDup = 0;
+    const pg = new Set();
+    const thumb = x => { const s = imgSrc(x.img), h = hue(x.t); return `<div class="tl-fb" style="background:linear-gradient(135deg,hsl(${h} 55% 38%),hsl(${(h + 50) % 360} 55% 20%))">${E(x.t)}</div>${s ? `<img src="${E(s)}" alt="" onerror="this.remove()">` : ''}`; };
+
+    function renderBar() {
+        const l = L(), box = $('tl-namebox'), acts = $('tl-acts');
+        if (renaming && l) {
+            box.innerHTML = `<input class="tl-in" id="tl-rn" value="${E(l.name)}" maxlength="60" style="min-width:210px;font-weight:800" aria-label="Название тир-листа">`;
+            const i = $('tl-rn'); i.focus(); i.select();
+            let done = false;
+            const fin = ok => { if (done) return; done = true; renaming = false; if (ok && i.value.trim()) { l.name = i.value.trim().slice(0, 60); save(); } renderBar(); };
+            i.addEventListener('keydown', e => { if (e.key === 'Enter') fin(true); else if (e.key === 'Escape') fin(false); });
+            i.addEventListener('blur', () => fin(true));
+        } else {
+            box.innerHTML = `<select class="tl-sel" id="tl-sel" aria-label="Тир-лист">${lists().map(x => `<option value="${x.id}"${l && x.id === l.id ? ' selected' : ''}>${E(x.name)}</option>`).join('') || '<option>— нет тир-листов —</option>'}</select>`;
+        }
+        acts.innerHTML = !l ? '' : delAsk
+            ? `<span class="tl-ask">Удалить «${E(l.name)}»? <button class="tl-b danger" data-a="delyes">Да</button><button class="tl-b" data-a="delno">Нет</button></span>`
+            : `<button class="tl-b${renaming ? ' on' : ''}" data-a="rename" title="Переименовать">✎</button><button class="tl-b" data-a="delete" title="Удалить тир-лист">🗑</button>`;
+    }
+
     function render() {
-        let l = L();
-        const sel = $('tl-sel');
-        sel.innerHTML = lists().map(x => `<option value="${x.id}"${l && x.id === l.id ? ' selected' : ''}>${E(x.name)}</option>`).join('') || '<option>— нет тир-листов —</option>';
+        renderBar();
+        const l = L();
         const body = $('tl-body');
         if (!l) {
             body.innerHTML = `<div class="glass no-hover" style="padding:2.5rem;border-radius:1.4rem;text-align:center">
@@ -173,12 +246,14 @@
             return;
         }
         data.tierActive = l.id;
+        if (!l.sz) l.sz = SIZES.reduce((b, v, i) => Math.abs(v - (l.size || 92)) < Math.abs(SIZES[b] - (l.size || 92)) ? i : b, 0) + 1;
         sec.classList.toggle('tl-caps', !!l.caps);
-        sec.style.setProperty('--tl-s', (l.size || 92) + 'px');
+        sec.style.setProperty('--tl-s', SIZES[l.sz - 1] + 'px');
         sec.style.setProperty('--tl-r', l.shape === 'pt' ? 1.33 : 1);
-        $('tl-size').value = l.size || 92;
         $('tl-shape').textContent = l.shape === 'pt' ? '▯ Портрет' : '▢ Квадрат';
         $('tl-caps').classList.toggle('on', !!l.caps);
+        $('tl-szg').innerHTML = SIZE_NAMES.map((n, i) => `<button class="tl-b${l.sz === i + 1 ? ' on' : ''}" data-a="size" data-v="${i + 1}" title="${n}${i === 2 ? ' (по умолчанию)' : ''}">${i + 1}</button>`).join('');
+        const pop = id => popId === id || newIds.has(id);
         const pool = l.items.filter(x => !x.tier && (!q || (info(x)?.t || '').toLowerCase().includes(q.toLowerCase())));
         const poolAll = l.items.filter(x => !x.tier).length;
         body.innerHTML = `
@@ -188,7 +263,7 @@
                     <input class="tl-lab-in" value="${E(t.label)}" maxlength="24" data-tl="${t.id}" aria-label="Название тира">
                     <div class="tl-ctl"><label title="Цвет">🎨<input type="color" value="${t.color}" data-col="${t.id}"></label><button data-a="up" title="Выше">↑</button><button data-a="dn" title="Ниже">↓</button><button data-a="deltier" title="Удалить тир">✕</button></div>
                 </div>
-                <div class="tl-zone" data-tier="${t.id}">${l.items.filter(x => x.tier === t.id).map(x => tileHTML(x, x.id === popId)).join('')}</div>
+                <div class="tl-zone" data-tier="${t.id}">${l.items.filter(x => x.tier === t.id).map(x => tileHTML(x, pop(x.id))).join('')}</div>
             </div>`).join('')}
         </div>
         <div style="margin-top:.7rem"><button class="tl-b" data-a="addtier">＋ Добавить тир</button></div>
@@ -198,40 +273,87 @@
                 <span style="flex:1"></span>
                 <button class="tl-b${addOpen ? ' on' : ''}" data-a="toggleadd">＋ Добавить игры / музыку</button>
                 <button class="tl-b" data-a="reset" title="Вернуть все карточки вниз">↺ Сбросить</button></div>
-            <div class="tl-zone" data-tier="">${pool.map(x => tileHTML(x, x.id === popId)).join('') || `<div class="tl-empty">${poolAll ? 'Ничего не найдено' : 'Здесь появятся карточки — нажмите «Добавить игры / музыку»'}</div>`}</div>
-        </div>
-        <div id="tl-addp"></div>`;
-        popId = null;
-        renderAdd();
+            <div class="tl-zone" data-tier="">${pool.map(x => tileHTML(x, pop(x.id))).join('') || `<div class="tl-empty">${poolAll ? 'Ничего не найдено' : 'Здесь появятся карточки — нажмите «Добавить игры / музыку»'}</div>`}</div>
+        </div>`;
+        popId = null; newIds.clear();
+    }
+
+    /* ---------- Панель «Добавить» (выезжает сверху) ---------- */
+    function setAdd(on) {
+        if (on && !L()) return toast('Сначала создайте тир-лист', 'info');
+        addOpen = on;
+        const w = $('tl-addp'); clearTimeout(addT);
+        if (on) { renderAdd(); requestAnimationFrame(() => requestAnimationFrame(() => w.classList.add('open'))); main.scrollTo({ top: 0, behavior: 'smooth' }); }
+        else { w.classList.remove('open'); addT = setTimeout(() => { if (!addOpen) $('tl-addin').innerHTML = ''; }, 520); }
+        sec.querySelectorAll('[data-a="toggleadd"]').forEach(b => b.classList.toggle('on', on));
     }
 
     function renderAdd() {
-        const host = $('tl-addp'); if (!host) return;
-        const l = L();
-        if (!addOpen || !l) { host.innerHTML = ''; return; }
+        const host = $('tl-addin'), l = L();
+        if (!host || !l || !addOpen) return;
+        const mine = l.items.filter(x => x.src === 'custom').length;
         host.innerHTML = `<div class="tl-add glass no-hover">
-            <div class="tl-tabs">${[['games', '🎮 Игры'], ['music', '🎵 Музыка'], ['custom', '🖼 Своё'], ['spotify', '🟢 Spotify']].map(([k, t]) => `<button class="tl-b${tab === k ? ' on' : ''}" data-a="tab" data-v="${k}">${t}</button>`).join('')}</div>
+            <div class="tl-tabs">${[['games', '🎮 Игры'], ['music', '🎵 Музыка'], ['custom', '🖼 Своё'], ['mine', `✏️ Мои карточки${mine ? ' · ' + mine : ''}`], ['spotify', '🟢 Spotify']].map(([k, t]) => `<button class="tl-b${tab === k ? ' on' : ''}" data-a="tab" data-v="${k}">${t}</button>`).join('')}
+                <button class="tl-b" data-a="toggleadd" style="margin-left:auto" title="Закрыть">✕</button></div>
             <div id="tl-tabbody"></div></div>`;
         renderTab();
     }
 
-    const candidates = () => {
+    function candidates() {
         const l = L(), have = new Set(l.items.filter(x => x.src !== 'custom').map(x => x.src + ':' + x.ref));
+        const seen = new Set(dedupe ? l.items.map(keyOf) : []);
+        const k = aq.toLowerCase(); hiddenDup = 0;
         const src = tab === 'games' ? (data.games || []).map(o => ['games', o]) : allMusic();
-        const k = q.toLowerCase();
-        return src.filter(([s, o]) => !have.has(s + ':' + o.id) && (!k || (o.title || '').toLowerCase().includes(k) || (o.artist || '').toLowerCase().includes(k)));
-    };
+        return src.filter(([s, o]) => {
+            if (have.has(s + ':' + o.id)) return false;
+            if (tab === 'games' && pg.size && !pg.has(groupOf(o.platform))) return false;
+            if (k && !((o.title || '') + ' ' + (o.artist || '')).toLowerCase().includes(k)) return false;
+            if (dedupe) { const key = keyOf({ src: s, ref: o.id }); if (key) { if (seen.has(key)) { hiddenDup++; return false; } seen.add(key); } }
+            return true;
+        });
+    }
+
+    function renderCands() {
+        const box = $('tl-candbox'); if (!box) return;
+        const c = candidates();
+        [...pick].forEach(k => { if (!c.some(([s, o]) => s + ':' + o.id === k)) pick.delete(k); });
+        const nt = $('tl-dd-note'); if (nt) nt.textContent = dedupe && hiddenDup ? `скрыто повторок: ${hiddenDup}` : '';
+        box.innerHTML = c.length ? `<div class="tl-hint">Нажимайте на карточки, чтобы выбрать. Доступно: ${c.length}</div>
+            <div class="tl-cands">${c.map(([s, o]) => `<div class="tl-cand${pick.has(s + ':' + o.id) ? ' sel' : ''}" data-pk="${s}:${o.id}" title="${E(o.title)}">${thumb({ t: o.title, img: o.img })}</div>`).join('')}</div>
+            <div class="tl-row2"><button class="tl-b main" data-a="addsel">Добавить выбранные (${pick.size})</button><button class="tl-b" data-a="addall">Добавить все (${c.length})</button></div>`
+            : `<div class="tl-empty">${hiddenDup ? 'Остались только повторки — отключите «Убрать повторки»' : 'Нечего добавлять: всё уже в тир-листе или ничего не подходит под фильтр'}</div>`;
+    }
+
+    function renderMineList() {
+        const box = $('tl-minebox'); if (!box) return;
+        const k = aq.toLowerCase();
+        const list = L().items.filter(x => x.src === 'custom' && (!k || ((x.t || '') + ' ' + (x.sub || '')).toLowerCase().includes(k)));
+        box.innerHTML = list.map(x => `<div class="tl-ed" data-eid="${x.id}">
+            <label class="tl-ed-img" title="Заменить картинку файлом"><span class="tl-ed-th">${thumb(x)}</span><i>📁</i><input type="file" accept="image/*" hidden data-edfile="1"></label>
+            <div class="tl-ed-f"><input class="tl-in" data-ef="t" value="${E(x.t)}" placeholder="Название" maxlength="120"><input class="tl-in" data-ef="sub" value="${E(x.sub || '')}" placeholder="Исполнитель / подпись" maxlength="120"></div>
+            <div class="tl-ed-b"><button class="tl-b" data-a="edfind">🔎 Другая обложка</button><button class="tl-b" data-a="edclr" title="Убрать картинку">🚫</button><button class="tl-b" data-a="edrm" title="Удалить карточку">🗑</button></div>
+            <div class="tl-ed-res"></div></div>`).join('') || '<div class="tl-empty">Пока пусто. Добавьте картинки во вкладке «🖼 Своё» или импортируйте Spotify.</div>';
+    }
 
     function renderTab() {
         const b = $('tl-tabbody'); if (!b) return;
         if (tab === 'games' || tab === 'music') {
-            const c = candidates();
-            b.innerHTML = c.length ? `<div class="tl-hint">Нажимайте на карточки, чтобы выбрать. Осталось не добавлено: ${c.length}</div>
-                <div class="tl-cands">${c.map(([s, o]) => { const src = imgSrc(o.img), h = hue(o.title); return `<div class="tl-cand${pick.has(s + ':' + o.id) ? ' sel' : ''}" data-pk="${s}:${o.id}" title="${E(o.title)}"><div class="tl-fb" style="background:linear-gradient(135deg,hsl(${h} 55% 38%),hsl(${(h + 50) % 360} 55% 20%))">${E(o.title)}</div>${src ? `<img src="${E(src)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</div>`; }).join('')}</div>
-                <div class="tl-row2"><button class="tl-b main" data-a="addsel">Добавить выбранные (${[...pick].length})</button><button class="tl-b" data-a="addall">Добавить все (${c.length})</button></div>`
-                : `<div class="tl-empty">${tab === 'games' ? 'Все игры уже в тир-листе (или их нет в коллекции)' : 'Вся музыка уже в тир-листе (или её нет в коллекции)'}</div>`;
+            const l = L(), have = new Set(l.items.filter(x => x.src !== 'custom').map(x => x.src + ':' + x.ref)), cnt = new Map();
+            if (tab === 'games') (data.games || []).forEach(o => { if (!have.has('games:' + o.id)) { const g = groupOf(o.platform); cnt.set(g, (cnt.get(g) || 0) + 1); } });
+            b.innerHTML = `<div class="tl-row2" style="margin-top:0"><span class="tl-hint" style="margin:0">🧹 Убрать повторки?</span>
+                <span class="tl-seg"><button class="tl-b${dedupe ? ' on' : ''}" data-a="dd" data-v="1">Да</button><button class="tl-b${dedupe ? '' : ' on'}" data-a="dd" data-v="0">Нет</button></span>
+                <span class="tl-hint" id="tl-dd-note" style="margin:0"></span></div>
+                ${tab === 'games' ? `<div class="tl-row2"><span class="tl-hint" style="margin:0">Платформа:</span><button class="tl-b${pg.size ? '' : ' on'}" data-a="pg" data-v="">Все</button>${GROUPS.filter(g => cnt.has(g)).map(g => `<button class="tl-b${pg.has(g) ? ' on' : ''}" data-a="pg" data-v="${E(g)}">${E(g)} · ${cnt.get(g)}</button>`).join('')}</div>` : ''}
+                <input class="tl-in" id="tl-aq" placeholder="🔍 Поиск" value="${E(aq)}" style="width:100%;margin:.7rem 0 0">
+                <div id="tl-candbox"></div>`;
+            renderCands();
+        } else if (tab === 'mine') {
+            b.innerHTML = `<div class="tl-hint">Все карточки, которые вы добавили сами или импортировали из Spotify. Здесь можно поправить название, исполнителя и картинку — например, если iTunes нашёл не ту обложку. Новые — сверху.</div>
+                <input class="tl-in" id="tl-aq" placeholder="🔍 Поиск по карточкам" value="${E(aq)}" style="width:100%;margin:.6rem 0">
+                <div class="tl-mine" id="tl-minebox"></div>`;
+            renderMineList();
         } else if (tab === 'custom') {
-            b.innerHTML = `<div class="tl-hint">Свои картинки для тир-листа: загрузите файлы (можно сразу много) или вставьте ссылку на картинку / трек / альбом Spotify.</div>
+            b.innerHTML = `<div class="tl-hint">Свои картинки для тир-листа: загрузите файлы (можно сразу много) или вставьте ссылку на картинку / трек / альбом Spotify. Потом всё можно поправить во вкладке «Мои карточки».</div>
                 <div class="tl-row2"><label class="tl-b main" style="cursor:pointer">📁 Загрузить картинки<input type="file" id="tl-files" accept="image/*" multiple hidden></label></div>
                 <div class="tl-row2"><input class="tl-in" id="tl-cn" placeholder="Название" style="flex:1;min-width:140px"><input class="tl-in" id="tl-cs" placeholder="Исполнитель / подпись" style="flex:1;min-width:140px"></div>
                 <div class="tl-row2"><input class="tl-in" id="tl-cu" placeholder="Ссылка на картинку или Spotify" style="flex:2;min-width:200px"><button class="tl-b main" data-a="addurl">Добавить</button></div>
@@ -242,7 +364,7 @@
                 <select class="tl-sel" id="tl-spm"><option value="artist">Топ исполнителей</option><option value="track">Топ треков</option><option value="album">Топ альбомов</option></select>
                 <select class="tl-sel" id="tl-spn"><option>30</option><option selected>50</option><option>100</option><option>200</option></select></div>
                 <div class="tl-row2"><button class="tl-b" data-a="covers">🖼 Подтянуть обложки (iTunes)</button><span class="tl-hint" id="tl-spst"></span></div>
-                <div class="tl-hint">В Spotify-выгрузке нет картинок, поэтому карточки сначала без обложек. Кнопка выше ищет обложки в iTunes (у него лимит около 20 запросов в минуту — если остановится, нажмите ещё раз через минуту, продолжит с того же места). Для «Топ альбомов» нужен расширенный файл Streaming_History_Audio.</div>`;
+                <div class="tl-hint">В Spotify-выгрузке нет картинок, поэтому карточки сначала без обложек. Кнопка выше ищет обложки в iTunes (лимит около 20 запросов в минуту — если остановится, нажмите ещё раз через минуту). Если нашлась не та обложка — поправьте её во вкладке «Мои карточки». Для «Топ альбомов» нужен расширенный файл Streaming_History_Audio.</div>`;
         }
     }
 
@@ -318,70 +440,132 @@
     }
 
     /* ---------- Действия ---------- */
+    async function fromLink(u) {   // → { img, title } из ссылки на картинку или на Spotify
+        if (/spotify\.com/i.test(u)) {
+            const o = await (await fetch('https://open.spotify.com/oembed?url=' + encodeURIComponent(u))).json();
+            return { img: await toDataUrl(o.thumbnail_url), title: o.title };
+        }
+        if (/^data:image\//i.test(u)) return { img: u };
+        if (/^https?:/i.test(u)) return { img: await toDataUrl(u) };
+        throw new Error('bad link');
+    }
+    const itemOf = el => L()?.items.find(x => x.id === el.closest('.tl-ed')?.dataset.eid);
+    const setThumb = (row, it) => { const th = row?.querySelector('.tl-ed-th'); if (th) th.innerHTML = thumb(it); };
+
     async function onClick(e) {
         const t = e.target;
         const pk = t.closest('[data-pk]');
         if (pk) { const k = pk.dataset.pk; pick.has(k) ? pick.delete(k) : pick.add(k); pk.classList.toggle('sel', pick.has(k)); const bt = document.querySelector('[data-a="addsel"]'); if (bt) bt.textContent = `Добавить выбранные (${pick.size})`; return; }
         const a = t.closest('[data-a]'); if (!a) return;
-        const act = a.dataset.a, l = L(), row = a.closest('.tl-row');
-        const tier = row && l?.tiers.find(x => x.id === row.dataset.tid);
+        const act = a.dataset.a, l = L(), trow = a.closest('.tl-row');
+        const tier = trow && l?.tiers.find(x => x.id === trow.dataset.tid);
         switch (act) {
-            case 'new': $('tl-new').classList.toggle('open'); $('tl-nname').focus(); return;
-            case 'create': { const k = $('tl-nkind').value; createList($('tl-nname').value.trim(), k); $('tl-new').classList.remove('open'); $('tl-nname').value = ''; addOpen = k === 'empty'; render(); return; }
-            case 'quick-games': createList('Мой топ игр', 'games'); return render();
-            case 'quick-music': createList('Мой топ музыки', 'music'); return render();
-            case 'rename': { if (!l) return; const n = prompt('Название тир-листа', l.name); if (n && n.trim()) { l.name = n.trim().slice(0, 60); save(); render(); } return; }
-            case 'delete': { if (l && confirm(`Удалить тир-лист «${l.name}»?`)) { data.tierLists = lists().filter(x => x !== l); data.tierActive = ''; save(); render(); } return; }
+            case 'new': { $('tl-ndd').checked = dedupe; $('tl-new').classList.toggle('open'); $('tl-nname').focus(); return; }
+            case 'create': { const k = $('tl-nkind').value; createList($('tl-nname').value.trim(), k, $('tl-ndd').checked); $('tl-new').classList.remove('open'); $('tl-nname').value = ''; render(); if (k === 'empty') setAdd(true); else if (addOpen) renderAdd(); return; }
+            case 'quick-games': createList('Мой топ игр', 'games', dedupe); return render();
+            case 'quick-music': createList('Мой топ музыки', 'music', dedupe); return render();
+            case 'rename': renaming = true; delAsk = false; return renderBar();
+            case 'delete': delAsk = true; renaming = false; return renderBar();
+            case 'delno': delAsk = false; return renderBar();
+            case 'delyes': { delAsk = false; if (l) { data.tierLists = lists().filter(x => x !== l); data.tierActive = ''; save(); } render(); if (addOpen) renderAdd(); return; }
             case 'shape': l.shape = l.shape === 'pt' ? 'sq' : 'pt'; break;
             case 'caps': l.caps = !l.caps; break;
+            case 'size': l.sz = +a.dataset.v; break;
             case 'export': return exportPng();
             case 'addtier': l.tiers.push({ id: uid(), label: 'Новый', color: COLORS[l.tiers.length % COLORS.length] }); break;
             case 'deltier': { if (l.tiers.length <= 1) return toast('Нужен хотя бы один тир', 'error'); l.items.forEach(x => { if (x.tier === tier.id) x.tier = ''; }); l.tiers = l.tiers.filter(x => x !== tier); break; }
             case 'up': case 'dn': { const i = l.tiers.indexOf(tier), j = act === 'up' ? i - 1 : i + 1; if (j < 0 || j >= l.tiers.length) return; [l.tiers[i], l.tiers[j]] = [l.tiers[j], l.tiers[i]]; break; }
             case 'rm': { const id = t.closest('.tl-tile').dataset.id; l.items = l.items.filter(x => x.id !== id); break; }
             case 'reset': l.items.forEach(x => { x.tier = ''; }); break;
-            case 'toggleadd': addOpen = !addOpen; break;
-            case 'tab': tab = a.dataset.v; pick.clear(); return renderAdd();
-            case 'addsel': { const n = addItems(l, [...pick].map(k => { const [s, id] = k.split(':'); return { src: s, ref: id }; })); pick.clear(); toast(`Добавлено: <b>${n}</b>`, 'success'); break; }
-            case 'addall': { const n = addItems(l, candidates().map(([s, o]) => ({ src: s, ref: o.id }))); pick.clear(); toast(`Добавлено: <b>${n}</b>`, 'success'); break; }
+            case 'toggleadd': return setAdd(!addOpen);
+            case 'tab': tab = a.dataset.v; pick.clear(); aq = ''; return renderAdd();
+            case 'dd': dedupe = a.dataset.v === '1'; data.tierDedupe = dedupe; save(); return renderTab();
+            case 'pg': { const v = a.dataset.v; if (!v) pg.clear(); else if (pg.has(v)) pg.delete(v); else pg.add(v); return renderTab(); }
+            case 'addsel': { const n = addItems(l, [...pick].map(k => { const [s, id] = k.split(':'); return { src: s, ref: id }; })); pick.clear(); toast(`Добавлено: <b>${n}</b> — они сверху в «Не размещено»`, 'success'); break; }
+            case 'addall': { const n = addItems(l, candidates().map(([s, o]) => ({ src: s, ref: o.id }))); pick.clear(); toast(`Добавлено: <b>${n}</b> — они сверху в «Не размещено»`, 'success'); break; }
             case 'addurl': {
-                let u = $('tl-cu').value.trim(), name = $('tl-cn').value.trim(), sub = $('tl-cs').value.trim(), img = '';
+                const u = $('tl-cu').value.trim(), sub = $('tl-cs').value.trim(); let name = $('tl-cn').value.trim(), img = '';
                 if (!u && !name) return toast('Вставьте ссылку или введите название', 'error');
-                if (/spotify\.com/i.test(u)) {
-                    try { const o = await (await fetch('https://open.spotify.com/oembed?url=' + encodeURIComponent(u))).json(); img = await toDataUrl(o.thumbnail_url); name = name || o.title; }
-                    catch (_) { toast('Spotify не отдал данные. Вставьте прямую ссылку на картинку или загрузите файл', 'error'); if (!name) return; }
-                } else if (u) img = /^https?:/i.test(u) ? await toDataUrl(u) : '';
+                if (u) { try { const r = await fromLink(u); img = r.img; name = name || r.title || ''; } catch (_) { toast('Не получилось взять картинку по ссылке. Для Spotify вставьте прямую ссылку на картинку или загрузите файл', 'error'); if (!name) return; } }
                 addItems(l, [{ src: 'custom', t: name || 'Без названия', sub, img }]);
                 ['tl-cu', 'tl-cn', 'tl-cs'].forEach(i => { $(i).value = ''; });
+                toast('Добавлено. Править можно во вкладке «Мои карточки»', 'success');
                 break;
             }
             case 'covers': return fetchCovers();
+            /* --- редактор своих карточек --- */
+            case 'edfind': {
+                const row = a.closest('.tl-ed'), it = itemOf(a), res = row.querySelector('.tl-ed-res');
+                if (res.innerHTML) { res.innerHTML = ''; return; }
+                res.innerHTML = `<div class="tl-row2" style="margin:0"><input class="tl-in" data-q="1" value="${E(((it.sub || '') + ' ' + it.t).trim())}" style="flex:1;min-width:150px"><button class="tl-b main" data-a="edsearch">Искать в iTunes</button></div>
+                    <div class="tl-row2" style="margin:0"><input class="tl-in" data-u="1" placeholder="…или ссылка на картинку / Spotify" style="flex:1;min-width:150px"><button class="tl-b" data-a="edurl">Применить</button></div>
+                    <div class="tl-picks"></div>`;
+                return;
+            }
+            case 'edsearch': {
+                const row = a.closest('.tl-ed'), it = itemOf(a), qv = row.querySelector('[data-q]').value.trim(), box = row.querySelector('.tl-picks');
+                if (!qv) return;
+                box.innerHTML = '<span class="tl-hint">Ищу…</span>';
+                try {
+                    const r = await fetch(`https://itunes.apple.com/search?limit=8&media=music&entity=${it.kind === 'track' ? 'song' : 'album'}&term=${encodeURIComponent(qv)}`);
+                    if (!r.ok) throw new Error('limit');
+                    const res = (await r.json()).results.filter(x => x.artworkUrl100);
+                    box.innerHTML = res.length ? res.map(x => `<button type="button" class="tl-pk" data-a="edpick" data-src="${E(x.artworkUrl100.replace('100x100bb', '400x400bb'))}" title="${E((x.artistName || '') + ' — ' + (x.collectionName || x.trackName || ''))}"><img src="${E(x.artworkUrl100)}" alt=""></button>`).join('') : '<span class="tl-hint">Ничего не нашлось — измените запрос</span>';
+                } catch (_) { box.innerHTML = '<span class="tl-hint">iTunes не ответил (лимит или нет доступа). Загрузите картинку файлом или вставьте ссылку</span>'; }
+                return;
+            }
+            case 'edpick': { const it = itemOf(a), row = a.closest('.tl-ed'); a.classList.add('busy'); it.img = await toDataUrl(a.dataset.src); it.noCover = false; save(); setThumb(row, it); render(); toast('Обложка заменена', 'success'); a.classList.remove('busy'); return; }
+            case 'edurl': {
+                const it = itemOf(a), row = a.closest('.tl-ed'), u = row.querySelector('[data-u]').value.trim();
+                if (!u) return;
+                try { const r = await fromLink(u); it.img = r.img; it.noCover = false; if (r.title && !it.t) it.t = r.title; save(); setThumb(row, it); render(); toast('Картинка заменена', 'success'); }
+                catch (_) { toast('Не получилось взять картинку по ссылке', 'error'); }
+                return;
+            }
+            case 'edclr': { const it = itemOf(a); it.img = ''; it.noCover = true; save(); setThumb(a.closest('.tl-ed'), it); render(); return; }
+            case 'edrm': { l.items = l.items.filter(x => x !== itemOf(a)); save(); render(); return renderAdd(); }
             default: return;
         }
         save(); render();
+        if (addOpen && ['rm', 'reset', 'addsel', 'addall', 'addurl'].includes(act)) renderAdd();
     }
 
     async function onChange(e) {
         const t = e.target, l = L();
         if (t.id === 'tl-sel') { data.tierActive = t.value; save(); return render(); }
-        if (t.id === 'tl-size') { l.size = +t.value; sec.style.setProperty('--tl-s', t.value + 'px'); return save(); }
         if (t.dataset.tl) { const x = l.tiers.find(z => z.id === t.dataset.tl); if (x) { x.label = t.value; save(); } return; }
         if (t.dataset.col) { const x = l.tiers.find(z => z.id === t.dataset.col); if (x) { x.color = t.value; save(); render(); } return; }
+        if (t.dataset.ef) {
+            const it = itemOf(t); if (!it) return;
+            if (t.dataset.ef === 't' && !t.value.trim()) { t.value = it.t; return; }
+            it[t.dataset.ef] = t.value.trim(); save(); render(); return;
+        }
+        if (t.dataset.edfile) {
+            const it = itemOf(t); if (!it || !t.files[0]) return;
+            try { it.img = await compress(await readFile(t.files[0])); it.noCover = false; save(); setThumb(t.closest('.tl-ed'), it); render(); toast('Картинка заменена', 'success'); }
+            catch (_) { toast('Не удалось прочитать картинку', 'error'); }
+            return;
+        }
         if (t.id === 'tl-files') {
             const arr = [];
             for (const f of t.files) { try { arr.push({ src: 'custom', t: f.name.replace(/\.[^.]+$/, ''), sub: '', img: await compress(await readFile(f)) }); } catch (_) {} }
-            const n = addItems(l, arr); save(); render(); toast(`Добавлено картинок: <b>${n}</b>. Двойной клик по карточке — переименовать`, 'success');
+            const n = addItems(l, arr); save(); render(); renderAdd(); toast(`Добавлено картинок: <b>${n}</b>. Название и картинку можно поправить во вкладке «Мои карточки»`, 'success');
         }
-        if (t.id === 'tl-sp') { await importSpotify([...t.files]); }
+        if (t.id === 'tl-sp') { await importSpotify([...t.files]); renderAdd(); }
     }
 
     sec.addEventListener('click', onClick);
     sec.addEventListener('change', onChange);
-    sec.addEventListener('input', e => { if (e.target.id === 'tl-q') { q = e.target.value; const l = L(); const pz = sec.querySelector('.tl-pool .tl-zone'); render(); const i = $('tl-q'); i.focus(); i.setSelectionRange(q.length, q.length); } });
-    sec.addEventListener('dblclick', e => {
+    sec.addEventListener('input', e => {
+        if (e.target.id === 'tl-q') { q = e.target.value; render(); const i = $('tl-q'); i.focus(); i.setSelectionRange(q.length, q.length); }
+        else if (e.target.id === 'tl-aq') { aq = e.target.value; tab === 'mine' ? renderMineList() : renderCands(); }
+    });
+    sec.addEventListener('dblclick', e => {   // двойной клик по своей карточке — открыть её в редакторе
         const tile = e.target.closest('.tl-tile'); if (!tile) return;
         const it = L().items.find(x => x.id === tile.dataset.id); if (!it || it.src !== 'custom') return;
-        const n = prompt('Название', it.t); if (n && n.trim()) { it.t = n.trim(); save(); render(); }
+        tab = 'mine'; aq = '';
+        if (addOpen) renderAdd(); else setAdd(true);
+        setTimeout(() => { const r = sec.querySelector(`.tl-ed[data-eid="${it.id}"]`); if (r) { r.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); r.classList.add('flash'); r.querySelector('[data-ef="t"]')?.focus(); } }, 140);
     });
 
     /* ---------- Перетаскивание (мышь и палец) ---------- */
