@@ -242,7 +242,8 @@
             body.innerHTML = `<div class="glass no-hover" style="padding:2.5rem;border-radius:1.4rem;text-align:center">
                 <p style="font-size:3rem">🏅</p><p style="font-weight:900;font-size:1.2rem;margin:.4rem 0">Создайте первый тир-лист</p>
                 <p class="tl-hint">Можно сразу загрузить все ваши игры или музыку и расставить по рангам.</p>
-                <div class="tl-row2" style="justify-content:center"><button class="tl-b main" data-a="quick-games">🎮 Тир-лист по моим играм</button><button class="tl-b" data-a="quick-music">🎵 По моей музыке</button></div></div>`;
+                <div class="tl-row2" style="justify-content:center"><button class="tl-b main" data-a="quick-games">🎮 Тир-лист по моим играм</button><button class="tl-b" data-a="quick-music">🎵 По моей музыке</button><button class="tl-b" data-a="toggleadd">✏️ Пустой + свои карточки</button></div>
+                <p class="tl-hint" style="margin-top:1rem">Кнопка «Добавить игры / музыку» открывает панель: платформы, «Убрать повторки?», свои картинки, Spotify и вкладка «✏️ Мои карточки» для правки названий и обложек.</p></div>`;
             return;
         }
         data.tierActive = l.id;
@@ -280,7 +281,7 @@
 
     /* ---------- Панель «Добавить» (выезжает сверху) ---------- */
     function setAdd(on) {
-        if (on && !L()) return toast('Сначала создайте тир-лист', 'info');
+        if (on && !L()) { createList('Мой тир-лист', 'empty', dedupe); render(); }   // нет тир-листа — создаём пустой и сразу открываем панель
         addOpen = on;
         const w = $('tl-addp'); clearTimeout(addT);
         if (on) { renderAdd(); requestAnimationFrame(() => requestAnimationFrame(() => w.classList.add('open'))); main.scrollTo({ top: 0, behavior: 'smooth' }); }
