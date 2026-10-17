@@ -179,7 +179,7 @@
             <button class="tl-b" data-a="mycards">✏️ Мои карточки</button>
             <button class="tl-b" data-a="shape" id="tl-shape"></button>
             <button class="tl-b" data-a="caps" id="tl-caps">🏷 Подписи</button>
-            <span style="display:inline-flex;align-items:center;gap:.4rem;white-space:nowrap"><span class="tl-hint" style="margin:0">Размер</span><span class="tl-seg" id="tl-szg"></span></span>
+            <span id="tl-sizebox" style="display:inline-flex;align-items:center;gap:.4rem;white-space:nowrap"><span class="tl-hint" style="margin:0">Размер</span><span class="tl-seg" id="tl-szg"></span></span>
             <button class="tl-b main" data-a="export">🖼 Скачать PNG</button>
             <div class="tl-new" id="tl-new">
                 <input class="tl-in" id="tl-nname" placeholder="Название, например «Топ игр»" maxlength="60" style="flex:1;min-width:160px">
@@ -239,6 +239,7 @@
         renderBar();
         const l = L();
         const body = $('tl-body');
+        sec.classList.toggle('tl-nolist', !l);
         if (!l) {
             body.innerHTML = `<div class="glass no-hover" style="padding:2.5rem;border-radius:1.4rem;text-align:center">
                 <p style="font-size:3rem">🏅</p><p style="font-weight:900;font-size:1.2rem;margin:.4rem 0">Создайте первый тир-лист</p>
