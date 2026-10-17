@@ -1,0 +1,106 @@
+/* =========================================================
+   MIRVEL HUB — motion.css (дизайн и анимации, подключается ПОСЛЕДНИМ)
+   Только оформление: ничего не ломает в логике. Всё отключается при «уменьшить движение» в системе.
+   ========================================================= */
+:root {
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ---------- Плавное появление страниц ---------- */
+main .page:not(.hidden) { animation: mvPageIn 0.45s var(--ease-soft) both; }
+@keyframes mvPageIn {
+    from { opacity: 0; transform: translateY(16px) scale(0.995); filter: blur(4px); }
+    to   { opacity: 1; transform: none; filter: none; }
+}
+
+/* ---------- Карточки: каскадное появление + подъём + блик ---------- */
+.release-card, .game-card, .stat-card, .potd-card {
+    animation: mvCardIn 0.5s var(--ease-soft) both;
+    transition: transform 0.35s var(--ease-soft), box-shadow 0.35s var(--ease-soft), border-color 0.25s;
+    will-change: transform;
+}
+.release-card:nth-child(1), .game-card:nth-child(1) { animation-delay: 0ms; }
+.release-card:nth-child(2), .game-card:nth-child(2) { animation-delay: 40ms; }
+.release-card:nth-child(3), .game-card:nth-child(3) { animation-delay: 80ms; }
+.release-card:nth-child(4), .game-card:nth-child(4) { animation-delay: 120ms; }
+.release-card:nth-child(5), .game-card:nth-child(5) { animation-delay: 160ms; }
+.release-card:nth-child(6), .game-card:nth-child(6) { animation-delay: 200ms; }
+.release-card:nth-child(7), .game-card:nth-child(7) { animation-delay: 240ms; }
+.release-card:nth-child(8), .game-card:nth-child(8) { animation-delay: 280ms; }
+.release-card:nth-child(n+9), .game-card:nth-child(n+9) { animation-delay: 320ms; }
+@keyframes mvCardIn {
+    from { opacity: 0; transform: translateY(18px) scale(0.96); }
+    to   { opacity: 1; transform: none; }
+}
+.release-card:hover, .game-card:hover { transform: translateY(-6px) scale(1.015); }
+.release-card:active, .game-card:active { transform: translateY(-2px) scale(0.99); transition-duration: 0.12s; }
+
+/* блик, пробегающий по обложке при наведении */
+.release-card, .game-card { position: relative; overflow: hidden; }
+.release-card::after, .game-card::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 2;
+    background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.14) 50%, transparent 65%);
+    transform: translateX(-120%); transition: transform 0.7s var(--ease-soft);
+}
+.release-card:hover::after, .game-card:hover::after { transform: translateX(120%); }
+
+/* ---------- Плитки статистики: появление при прокрутке (Chrome/Opera/Edge) ---------- */
+@supports (animation-timeline: view()) {
+    main .page .glass.rounded-3xl:not(.no-hover) {
+        animation: mvReveal linear both;
+        animation-timeline: view();
+        animation-range: entry 0% entry 35%;
+    }
+    @keyframes mvReveal { from { opacity: 0; transform: translateY(24px) scale(0.98); } to { opacity: 1; transform: none; } }
+}
+
+/* ---------- Кнопки: отклик при нажатии, живой градиент у главных ---------- */
+button, .nav-btn, .tl-b, a.btn { -webkit-tap-highlight-color: transparent; }
+button:not(:disabled):active, .tl-b:active, .potd-btn:active { transform: scale(0.96); }
+button { transition: transform 0.18s var(--ease-spring), background-color 0.2s, border-color 0.2s, box-shadow 0.25s, filter 0.2s, opacity 0.2s; }
+.tl-b.main, .potd-btn.is-primary, .btn-primary {
+    background-size: 160% 100%; transition: background-position 0.5s var(--ease-soft), transform 0.18s var(--ease-spring), box-shadow 0.25s;
+}
+.tl-b.main:hover { background-position: 100% 0; box-shadow: 0 8px 24px rgba(var(--theme-rgb), 0.45); transform: translateY(-1px); }
+
+/* ---------- Меню: выезжающая полоска у активного пункта ---------- */
+.nav-btn { position: relative; transition: background-color 0.25s, color 0.25s, transform 0.3s var(--ease-soft); }
+.nav-btn:hover { transform: translateX(3px); }
+.nav-btn.is-active::before {
+    content: ''; position: absolute; left: 0; top: 22%; bottom: 22%; width: 3px; border-radius: 3px;
+    background: var(--theme-btn); box-shadow: 0 0 12px var(--theme-btn);
+    animation: mvBar 0.4s var(--ease-spring) both;
+}
+@keyframes mvBar { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@media (max-width: 767px) { .nav-btn:hover { transform: none; } .nav-btn.is-active::before { display: none; } }
+
+/* ---------- Окна: плавное открытие с размытием фона ---------- */
+[id$="modal"]:not(.hidden) { animation: mvFade 0.25s ease both; }
+[id$="modal"]:not(.hidden) > .glass, [id$="modal"]:not(.hidden) > div:not(.hidden) > .glass:first-child { animation: mvModal 0.4s var(--ease-spring) both; }
+@keyframes mvFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mvModal { from { opacity: 0; transform: translateY(24px) scale(0.94); } to { opacity: 1; transform: none; } }
+
+/* ---------- Прогресс-полоски и уведомления ---------- */
+[style*="width:"][class*="rounded-full"], .xp-fill, .bar-fill { transition: width 0.9s var(--ease-soft); }
+#toast-container > * { animation: mvToast 0.45s var(--ease-spring) both; }
+@keyframes mvToast { from { opacity: 0; transform: translateX(40px) scale(0.9); } to { opacity: 1; transform: none; } }
+
+/* ---------- Поля ввода: мягкая подсветка ---------- */
+input:not([type="range"]):not([type="checkbox"]):not([type="color"]), select, textarea { transition: border-color 0.2s, box-shadow 0.25s, background-color 0.2s; }
+
+/* ---------- Тир-листы: карточки «прыгают» при добавлении, плавное перетаскивание ---------- */
+.tl-tile { transition: transform 0.25s var(--ease-spring), box-shadow 0.25s; }
+.tl-tile:hover { transform: translateY(-3px) scale(1.04); z-index: 3; box-shadow: 0 10px 22px rgba(0, 0, 0, 0.5); }
+
+/* ---------- Плавающая кнопка «+» дышит ---------- */
+.fab-add { animation: mvFab 3.5s ease-in-out infinite; }
+@keyframes mvFab { 0%, 100% { box-shadow: 0 10px 28px rgba(var(--theme-rgb), 0.45); } 50% { box-shadow: 0 10px 38px rgba(var(--theme-rgb), 0.75); } }
+
+/* ---------- Экономим батарею и уважаем настройки системы ---------- */
+@media (prefers-reduced-motion: reduce) {
+    main .page:not(.hidden), .release-card, .game-card, .fab-add, #toast-container > * { animation: none !important; }
+}
+
+/* тир-листы: пока нет ни одного листа, прячем пустые кнопки вида/размера */
+.tl-nolist #tl-shape, .tl-nolist #tl-caps, .tl-nolist #tl-sizebox, .tl-nolist [data-a="export"] { display: none !important; }
