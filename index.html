@@ -23,7 +23,8 @@
     <link rel="stylesheet" href="css/settings.css?v=16.4">
     <link rel="stylesheet" href="css/features.css?v=16.4">
     <link rel="stylesheet" href="css/wishlist.css?v=16.4">
-    <link rel="stylesheet" href="css/tailwind.css?v=18.1"><!-- вместо cdn.tailwindcss.com: готовый CSS, браузер больше не собирает стили на каждой загрузке -->
+    <link rel="stylesheet" href="css/tailwind.css?v=18.2">
+    <link rel="stylesheet" href="css/motion.css?v=18.2"><!-- вместо cdn.tailwindcss.com: готовый CSS, браузер больше не собирает стили на каждой загрузке -->
 </head>
 <body class="app-bg flex flex-col md:flex-row min-h-screen">
     <a href="#main" class="skip-link" onclick="event.preventDefault(); document.getElementById('main').focus()">К содержимому</a>
@@ -1046,6 +1047,6 @@
 
     <!-- Скрипты подключаются по порядку (общая глобальная область видимости) -->
     <!-- 00-storage.js открывает IndexedDB, читает данные и сам подгружает остальные скрипты по порядку (список — в нём) -->
-    <script src="js/00-storage.js?v=18.1"></script>
+    <script src="js/00-storage.js?v=18.2"></script>
 </body>
 </html>
