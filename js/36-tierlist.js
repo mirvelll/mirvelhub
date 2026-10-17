@@ -169,13 +169,14 @@
     sec.className = 'page hidden';
     sec.innerHTML = `
         <h2 class="text-4xl font-bold">Тир-листы 🏅</h2>
-        <p class="text-gray-500">Расставляйте игры и музыку по рангам — перетаскивайте карточки в нужный тир</p>
+        <p class="text-gray-500">Расставляйте игры и музыку по рангам — перетаскивайте карточки в нужный тир <span style="opacity:.4;font-size:.7rem">· тир-листы v2</span></p>
         <div class="tl-bar glass no-hover">
             <span id="tl-namebox"></span>
             <button class="tl-b main" data-a="new">＋ Новый</button>
             <span id="tl-acts"></span>
             <span class="sp"></span>
             <button class="tl-b main" data-a="toggleadd">＋ Добавить игры / музыку</button>
+            <button class="tl-b" data-a="mycards">✏️ Мои карточки</button>
             <button class="tl-b" data-a="shape" id="tl-shape"></button>
             <button class="tl-b" data-a="caps" id="tl-caps">🏷 Подписи</button>
             <span style="display:inline-flex;align-items:center;gap:.4rem;white-space:nowrap"><span class="tl-hint" style="margin:0">Размер</span><span class="tl-seg" id="tl-szg"></span></span>
@@ -478,6 +479,7 @@
             case 'up': case 'dn': { const i = l.tiers.indexOf(tier), j = act === 'up' ? i - 1 : i + 1; if (j < 0 || j >= l.tiers.length) return; [l.tiers[i], l.tiers[j]] = [l.tiers[j], l.tiers[i]]; break; }
             case 'rm': { const id = t.closest('.tl-tile').dataset.id; l.items = l.items.filter(x => x.id !== id); break; }
             case 'reset': l.items.forEach(x => { x.tier = ''; }); break;
+            case 'mycards': tab = 'mine'; pick.clear(); aq = ''; if (!addOpen) return setAdd(true); return renderAdd();
             case 'toggleadd': return setAdd(!addOpen);
             case 'tab': tab = a.dataset.v; pick.clear(); aq = ''; return renderAdd();
             case 'dd': dedupe = a.dataset.v === '1'; data.tierDedupe = dedupe; save(); return renderTab();
