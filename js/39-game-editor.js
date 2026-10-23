@@ -115,16 +115,17 @@
         const right = document.createElement('div'); right.className = 'gxm-col';
         const pBlock = more.querySelector('#gx-parts-box'), tBlock = more.querySelector('#gx-trophy')?.parentElement, nBlock = more.querySelector('#gx-note')?.parentElement;
         // слева: основное, платформа, заметки — справа: прохождение, ачивки, комплектность, обложка (колонки ровнее, заметки не уезжают вниз)
+        // слева: основное (с ценой), обложка, платформа — справа: прохождение, ачивки, комплектность, заметки (самое нужное выше, второстепенное ниже)
         left.append(
             card('📝 Основное', wrap([g('game-title'), rowOf('game-developer'), rowOf('game-year'), g('game-edition'), g('game-url')])),
-            card('🎮 Платформа и формат', picker, digitalLabel, regionCell),
-            card('💬 Заметки', nBlock)
+            card('🖼 Обложка', coverRow, coverFile),
+            card('🎮 Платформа и формат', picker, digitalLabel, regionCell)
         );
         right.append(
             card('🚦 Прохождение', blk, coopLabel, ratingBlock),
             card('🏆 Ачивки', tBlock),
             card('📦 Комплектность', pBlock),
-            card('🖼 Обложка', coverRow, coverFile)
+            card('💬 Заметки', nBlock)
         );
         // всё, что другие скрипты успели вставить в колонки (галочки цены, коллекции…), сохраняем — иначе у них пропадают узлы
         const leftovers = [...panel.querySelectorAll('.modal-col > *, .modal-body > *')]
@@ -133,7 +134,7 @@
         const extras = [];
         leftovers.forEach(n => {
             if (n.classList.contains('price-flags') && yearRow) yearRow.after(n);
-            else if (n.id === 'gx-collections') right.insertBefore(card('📚 Коллекции', n), right.children[1] || null);
+            else if (n.id === 'gx-collections') right.insertBefore(card('📚 Коллекции', n), right.children[2] || null);
             else if (n.querySelector('input,select,textarea,button') || n.id) extras.push(n);
         });
         if (extras.length) right.append(card('', ...extras));

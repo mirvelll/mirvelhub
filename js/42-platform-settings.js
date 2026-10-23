@@ -150,9 +150,10 @@
     /* ---------- вкладки ---------- */
     function tabOf(b) {
         if (b.id === 'plat-settings-card') return 'games';
-        if (b.id === 'appearance-card') return 'look';
+        if (b.id === 'appearance-card' || b.id === 'ui-custom-card') return 'look';
         const t = ((b.querySelector('h3, h2')?.textContent) || '') + ' ' + b.id;
-        if (/Аккаунт|Артист месяца|Альбом месяца/i.test(t)) return 'profile';
+        if (/Артист месяца|Альбом месяца/i.test(t)) return 'none';   // блоки больше не нужны — скрыты (поля остаются в DOM)
+        if (/Аккаунт/i.test(t)) return 'profile';
         if (/Внешний вид|Оформление|Тема/i.test(t)) return 'look';
         if (/атмосфер|проигрыв/i.test(t)) return 'sound';
         if (/Платформ|Копировать|Steam|игр/i.test(t)) return 'games';

@@ -433,9 +433,37 @@
     };
 
     /* ---------- Пластинка дня ---------- */
-    let potdShift = 0, potdCurrent = null;
+    /* как у «Игры дня»: смена каждые 8 с, пауза при наведении / на скрытой вкладке, полоска-таймер */
+    const POTD_MS = 8000;
+    let potdCurrent = null, potdBag = [], potdTimer = null, potdHover = false;
+    (() => { const st = document.createElement('style'); st.textContent = '.potd{position:relative}.potd.is-paused .gotd-bar{animation-play-state:paused}.potd.is-swapping > .potd-art,.potd.is-swapping > div.flex-1{animation:gotd-in .45s ease-out}@media(prefers-reduced-motion:reduce){.potd.is-swapping > *{animation:none!important}}'; document.head.appendChild(st); })();
 
-    function renderPotd() {
+    const potdKey = (t, i) => t + ':' + i.id;
+    function potdPool() {
+        return [...(data.cds || []).map(i => ['cds', i]), ...(data.vinyls || []).map(i => ['vinyls', i])];
+    }
+    function potdNext(pool) {
+        const keys = new Set(pool.map(([t, i]) => potdKey(t, i)));
+        potdBag = potdBag.filter(k => keys.has(k));
+        if (!potdBag.length) {
+            potdBag = [...keys];
+            for (let i = potdBag.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [potdBag[i], potdBag[j]] = [potdBag[j], potdBag[i]]; }
+            const cur = potdCurrent && potdKey(potdCurrent.type, { id: potdCurrent.id });
+            if (potdBag.length > 1 && potdBag[potdBag.length - 1] === cur) potdBag.unshift(potdBag.pop());
+        }
+        return potdBag.pop();
+    }
+    function potdRestartBar(w) { const b = w.querySelector('.gotd-bar'); if (b) b.replaceWith(b.cloneNode()); }
+    function potdSchedule() {
+        clearTimeout(potdTimer);
+        potdTimer = setTimeout(() => {
+            const w = document.getElementById('potd-widget');
+            if (!w || potdHover || document.hidden || !w.offsetParent || w.contains(document.activeElement)) { if (w) { potdRestartBar(w); potdSchedule(); } return; }
+            renderPotd(true);
+        }, POTD_MS);
+    }
+
+    function renderPotd(advance) {
         const banner = document.getElementById('greeting-banner');
         if (!banner) return;
         let el = document.getElementById('potd-widget');
@@ -445,21 +473,32 @@
             el.className = 'glass potd';
             el.setAttribute('aria-label', 'Пластинка дня');
             banner.insertAdjacentElement('afterend', el);
+            el.addEventListener('mouseenter', () => { potdHover = true; el.classList.add('is-paused'); });
+            el.addEventListener('mouseleave', () => { potdHover = false; el.classList.remove('is-paused'); potdRestartBar(el); potdSchedule(); });
         }
-        const pool = [...(data.cds || []).map(i => ['cds', i]), ...(data.vinyls || []).map(i => ['vinyls', i])]
-            .sort((a, b) => a[1].id - b[1].id);
+        const pool = potdPool();
 
         if (!pool.length) {
-            potdCurrent = null;
+            potdCurrent = null; potdBag = [];
+            clearTimeout(potdTimer); potdTimer = null;
+            delete el.dataset.key;
             el.innerHTML = `<div class="potd-art" aria-hidden="true"><div class="potd-disc"></div><div class="potd-sleeve">💿</div></div>
                 <div class="flex-1"><h3 class="font-black text-lg">Здесь появится пластинка дня</h3>
-                <p class="text-gray-400 text-sm mt-1">Добавьте первые релизы — каждый день хаб будет предлагать один из них.</p>
+                <p class="text-gray-400 text-sm mt-1">Добавьте первые релизы — хаб будет предлагать один из них.</p>
                 <button type="button" class="potd-btn is-primary mt-3" onclick="openQuickAdd()">＋ Добавить релизы</button></div>`;
             return;
         }
-        const day = Math.floor(Date.now() / 864e5);
-        const [type, item] = pool[(day * 7919 + potdShift) % pool.length];
+        let pick = advance || !potdCurrent ? null : pool.find(([t, i]) => t === potdCurrent.type && i.id === potdCurrent.id);
+        const changed = !pick;
+        if (!pick) {
+            const k = potdNext(pool);
+            pick = pool.find(([t, i]) => potdKey(t, i) === k) || pool[0];
+        }
+        const [type, item] = pick;
         potdCurrent = { type, id: item.id };
+        const sig = potdKey(type, item) + '|' + item.title + '|' + (item.img || '').length + '|' + (item.artist || '') + '|' + (item.year || '');
+        if (!changed && el.dataset.key === sig) { if (!potdTimer) potdSchedule(); return; }   // ничего не поменялось — не мигаем
+        el.dataset.key = sig;
         el.innerHTML = `
             <div class="potd-art" aria-hidden="true"><div class="potd-disc"></div>
                 <div class="potd-sleeve">${item.img ? `<img src="${esc(item.img)}" alt="">` : (type === 'cds' ? '💿' : '💽')}</div></div>
@@ -471,18 +510,21 @@
                     <button type="button" class="potd-btn is-primary" onclick="potdListen()">▶ Слушать</button>
                     <button type="button" class="potd-btn" onclick="potdShuffle()">🔀 Другую</button>
                 </div>
-            </div>`;
+            </div>
+            <span class="gotd-bar" aria-hidden="true"></span>`;
+        el.classList.remove('is-swapping'); void el.offsetWidth; el.classList.add('is-swapping');
+        potdSchedule();
     }
     window.potdListen = () => {
         if (!potdCurrent) return;
         if (data.showScrobble) logPlay(potdCurrent.type, potdCurrent.id);   // скробблинг (сам запустит плеер, если есть ссылка)
         else window.listenTo?.(potdCurrent.id);                            // иначе просто плеер / окно ссылки
     };
-    window.potdShuffle = () => { potdShift += 1; renderPotd(); };
+    window.potdShuffle = () => { renderPotd(true); };
 
     /* ---------- Подключение ---------- */
     const renderAllBase = renderAll;
-    renderAll = function () { renderAllBase(); renderPotd(); };
+    renderAll = function () { renderAllBase(); renderPotd(false); };
 
     buildModal();
     PALETTE_ACTIONS.unshift({ icon: '⚡', title: 'Быстро добавить', hint: 'Список позиций (клавиша N)', run: () => openQuickAdd() });

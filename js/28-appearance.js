@@ -61,10 +61,14 @@
     body.theme-custom .logo{background-image:linear-gradient(90deg,var(--accent-light),#22d3ee)}
 
     /* страница релиза: подкрашивается от обложки */
-    #music-detail-modal .gd-panel{transition:background .5s,border-color .5s,box-shadow .5s}
-    #music-detail-modal.mh-tinted .gd-panel{border-color:rgba(var(--theme-rgb),.45);box-shadow:0 30px 90px rgba(var(--theme-rgb),.28)}
-    #music-detail-modal.mh-tinted .text-purple-300{color:var(--accent-light)!important}
-    #music-detail-modal.mh-tinted .gd-cover{box-shadow:0 18px 50px rgba(var(--theme-rgb),.45)}
+    #music-detail-modal .gd-panel,#game-detail-modal .gd-panel{transition:background .5s,border-color .5s,box-shadow .5s}
+    #music-detail-modal.mh-tinted .gd-panel,#game-detail-modal.mh-tinted .gd-panel{border-color:rgba(var(--theme-rgb),.45);box-shadow:0 30px 90px rgba(var(--theme-rgb),.28)}
+    #music-detail-modal.mh-tinted .text-purple-300,#game-detail-modal.mh-tinted .text-purple-300{color:var(--accent-light)!important}
+    #music-detail-modal.mh-tinted .gd-cover,#game-detail-modal.mh-tinted .gd-cover{box-shadow:0 18px 50px rgba(var(--theme-rgb),.45)}
+    .ap-scope{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 0 28px}
+    .ap-scope button{padding:5px 12px;border-radius:999px;font-size:12px;font-weight:700;color:#9ca3af;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);cursor:pointer;transition:all .2s}
+    .ap-scope button.is-on{color:#fff;border-color:var(--theme-btn,#8b5cf6);background:rgba(var(--theme-rgb,139,92,246),.25)}
+    .ap-scope.is-off{opacity:.4;pointer-events:none}
 
     /* карточка в настройках */
     .ap-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
@@ -116,7 +120,12 @@
     /* =====================================================
        Тема страницы релиза от обложки
        ===================================================== */
-    const detail = $('music-detail-modal');
+    const K_SCOPE = 'mirvel_cover_scope';                       // 'music' (CD/винил) | 'games' | 'both'
+    const scope = () => { const v = LS.get(K_SCOPE); return v === 'games' || v === 'both' ? v : 'music'; };
+    const MODALS = [
+        { el: $('music-detail-modal'), kind: 'music', body: '#md-body' },
+        { el: $('game-detail-modal'), kind: 'games', body: '#gd-body' }
+    ];
     const colorCache = new Map();
     const keyOf = s => s.length + ':' + s.slice(-40);
 
@@ -146,10 +155,10 @@
             im.src = src;
         });
     }
-    function paint(rgb) {
-        const panel = detail.querySelector('.gd-panel');
+    function paint(m, rgb) {
+        const detail = m.el, panel = detail.querySelector('.gd-panel');
         if (!panel) return;
-        if (!rgb) { unpaint(); return; }
+        if (!rgb) { unpaint(m); return; }
         const t = tune(rgb, .45, .58).map(Math.round), l = rgbToHex(lighten(t)), s = t.join(', ');
         if (!detail.classList.contains('mh-tinted')) detail.classList.add('mh-tinted');
         detail.style.setProperty('--theme-rgb', s);
@@ -158,35 +167,44 @@
         detail.style.background = `radial-gradient(ellipse at 50% 0%, rgba(${s}, 0.38), rgba(0,0,0,0.8) 70%)`;
         panel.style.backgroundImage = `linear-gradient(165deg, rgba(${s}, 0.26), rgba(3,3,7,0.55) 55%)`;
     }
-    function unpaint() {
-        if (!detail) return;
+    function unpaint(m) {
+        const detail = m.el; if (!detail) return;
         if (detail.classList.contains('mh-tinted')) detail.classList.remove('mh-tinted');
         ['--theme-rgb', '--theme-btn', '--accent-light', 'background'].forEach(p => detail.style.removeProperty(p));
         const panel = detail.querySelector('.gd-panel'); if (panel) panel.style.backgroundImage = '';
     }
-    async function tint() {
+    async function tintOne(m) {
+        const detail = m.el;
         if (!detail || detail.classList.contains('hidden')) return;
-        if (LS.get(K_COVER) === '0') { unpaint(); return; }
+        const sc = scope();
+        if (LS.get(K_COVER) === '0' || (sc !== 'both' && sc !== m.kind)) { unpaint(m); return; }
         const img = detail.querySelector('.gd-cover img');
-        if (!img || !img.getAttribute('src')) { unpaint(); return; }
+        if (!img || !img.getAttribute('src')) { unpaint(m); return; }
         const src = img.getAttribute('src');
         const hit = colorCache.get(keyOf(src));
-        if (hit !== undefined) { paint(hit); return; }
+        if (hit !== undefined) { paint(m, hit); return; }
         const rgb = await dominant(src);
-        if (!detail.classList.contains('hidden')) paint(rgb);
+        if (!detail.classList.contains('hidden')) paint(m, rgb);
     }
-    if (detail) {
-        const body = detail.querySelector('#md-body');
-        if (body) new MutationObserver(tint).observe(body, { childList: true });
+    const tint = () => MODALS.forEach(m => { if (m.el) tintOne(m); });
+    /* модалка игры создаётся скриптом 16-games.js — ищем её, если на момент загрузки этого файла её ещё нет */
+    function wire(m) {
+        if (!m.el || m.wired) return;
+        m.wired = true;
+        const body = m.el.querySelector(m.body);
+        if (body) new MutationObserver(() => tintOne(m)).observe(body, { childList: true });
         /* реагируем только на реальное открытие/закрытие, а не на свои же правки класса (иначе бесконечный цикл) */
-        let wasHidden = detail.classList.contains('hidden');
+        let wasHidden = m.el.classList.contains('hidden');
         new MutationObserver(() => {
-            const h = detail.classList.contains('hidden');
+            const h = m.el.classList.contains('hidden');
             if (h === wasHidden) return;
             wasHidden = h;
-            if (h) unpaint(); else tint();
-        }).observe(detail, { attributes: true, attributeFilter: ['class'] });
+            if (h) unpaint(m); else tintOne(m);
+        }).observe(m.el, { attributes: true, attributeFilter: ['class'] });
     }
+    function wireAll() { MODALS.forEach(m => { if (!m.el) m.el = $(m.kind === 'music' ? 'music-detail-modal' : 'game-detail-modal'); wire(m); }); }
+    wireAll();
+    if (MODALS.some(m => !m.wired)) { let n = 0; const iv = setInterval(() => { wireAll(); if (MODALS.every(m => m.wired) || ++n > 40) clearInterval(iv); }, 500); }
 
     /* =====================================================
        Страница коллекции (один HTML-файл)
@@ -296,8 +314,13 @@ q.oninput=f})();
             </div>
             <label class="flex items-start gap-3 text-sm text-gray-300 cursor-pointer">
                 <input type="checkbox" id="ap-cover" class="mt-1">
-                <span>Страница релиза окрашивается в цвет обложки</span>
+                <span>Страница релиза / игры окрашивается в цвет обложки</span>
             </label>
+            <div class=\"ap-scope\" id=\"ap-scope\" role=\"group\" aria-label=\"Где применять\">
+                <button type=\"button\" data-sc=\"music\">💿 CD и винил</button>
+                <button type=\"button\" data-sc=\"games\">🎮 Игры</button>
+                <button type=\"button\" data-sc=\"both\">✨ Везде</button>
+            </div>
             <label class="flex items-start gap-3 text-sm text-gray-300 cursor-pointer">
                 <input type="checkbox" id="ap-haptics" class="mt-1">
                 <span>Вибро-отклик на телефоне (добавление, избранное)</span>
@@ -318,7 +341,10 @@ q.oninput=f})();
         $('ap-color').addEventListener('input', e => { LS.set(K_ACCENT, e.target.value); applyAccent(); });
         const cb = $('ap-cover');
         cb.checked = LS.get(K_COVER) !== '0';
-        cb.addEventListener('change', () => { LS.set(K_COVER, cb.checked ? '1' : '0'); tint(); });
+        const paintScope = () => { const sc = scope(); document.querySelectorAll('#ap-scope [data-sc]').forEach(b => b.classList.toggle('is-on', b.dataset.sc === sc)); $('ap-scope')?.classList.toggle('is-off', !cb.checked); };
+        cb.addEventListener('change', () => { LS.set(K_COVER, cb.checked ? '1' : '0'); paintScope(); tint(); });
+        $('ap-scope')?.addEventListener('click', e => { const b = e.target.closest('[data-sc]'); if (!b) return; LS.set(K_SCOPE, b.dataset.sc); paintScope(); tint(); });
+        paintScope();
         const hp = $('ap-haptics');
         hp.checked = LS.get('mirvel_haptics') !== '0';
         hp.addEventListener('change', () => { LS.set('mirvel_haptics', hp.checked ? '1' : '0'); if (hp.checked && navigator.vibrate) { try { navigator.vibrate(20); } catch (_) {} } });

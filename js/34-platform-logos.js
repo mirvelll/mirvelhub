@@ -143,7 +143,7 @@
     }
     /* names → { [key]: Image|null } */
     async function load(names) {
-        const keys = [...new Set((names || []).map(keyOf))];
+        const keys = [...new Set((names || []).map(n => keyOf(n)))];
         const imgs = await Promise.all(keys.map(loadKey));
         const out = {};
         keys.forEach((k, i) => { out[k] = imgs[i]; });
