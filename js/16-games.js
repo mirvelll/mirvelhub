@@ -339,6 +339,7 @@
         const digital = all.filter(i => i.digital).length;
         const pile = all.filter(i => stOf(i) === 'backlog').reduce((s, i) => s + (Number(i.price) || 0), 0);
         const cib = all.filter(isCIB).length;
+        const dlcTotal = all.reduce((n, i) => n + (window.mhDlcCount ? window.mhDlcCount(i) : 0), 0);
         const seg = k => `<span class="gs-seg st-${k}" style="width:${cnt[k] / total * 100}%" title="${STATUS[k].label}: ${cnt[k]}"></span>`;
         strip.innerHTML = `
             <div class="flex flex-wrap justify-between gap-2 text-xs mb-3">
@@ -352,6 +353,7 @@
                 ${none ? `<span>Без статуса: <b class="text-white">${none}</b></span>` : ''}
                 <span>⏱ Наиграно: <b class="text-white">${hoursText(hours)}</b></span>
                 <span>☁️ Цифровых: <b class="text-white">${digital}</b></span>
+                ${dlcTotal ? `<span>🧩 Дополнений: <b class="text-white">${dlcTotal}</b></span>` : ''}
                 ${cib ? `<span>📦 CIB: <b class="text-white">${cib}</b></span>` : ''}
                 ${withOnline ? `<span>🌐 Сюжет + онлайн: <b class="text-white">${withOnline}</b></span>` : ''}
                 ${pile ? `<span>💸 Ждёт прохождения на: <b class="text-white">${pile} ₴</b></span>` : ''}
@@ -445,6 +447,7 @@
                 ${st ? `<span class="st-dot st-${st}" title="${stInfo.label}"></span>` : ''}
                 ${trophyState(i) === 'full' ? '<span class="absolute right-1.5 top-1.5 text-sm drop-shadow" title="100% ачивок">🏆</span>' : ''}
                 ${i.hasOnline ? '<span class="absolute right-1.5 bottom-1.5 text-sm drop-shadow" title="Есть онлайн-режим">🌐</span>' : ''}
+                ${window.mhDlcCount && window.mhDlcCount(i) ? `<span class="absolute left-1.5 bottom-1.5 text-[10px] font-black bg-black/70 rounded-full px-1.5 py-0.5" title="Куплено дополнений">🧩 ${window.mhDlcCount(i)}</span>` : ''}
                 <div class="game-ov absolute inset-0 bg-black/85 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity p-2 flex flex-col justify-between text-[10px]">
                     <div><p class="font-black truncate">${esc(i.title)}</p><p class="text-gray-400">${fmtPrice(i)}</p>${st ? `<p class="st-${st}" style="color:var(--sc)">${stInfo.icon} ${stInfo.label}</p>` : ''}</div>
                     <div class="flex gap-1 justify-end"><button type="button" data-act="hidegame" class="bg-white/10 rounded p-1" aria-label="${i.hidden ? 'Вернуть в список' : 'Скрыть игру'}" title="${i.hidden ? 'Вернуть в список' : 'Скрыть игру'}">${i.hidden ? '👁' : '🙈'}</button><button type="button" data-act="edit" class="bg-white/10 rounded p-1" aria-label="Изменить">✏️</button><button type="button" data-act="del" class="bg-red-500/20 text-red-300 rounded p-1" aria-label="Удалить">✕</button></div>
@@ -462,6 +465,7 @@
         const meta = [
             (i.note || '').trim() ? '📝' : '',
             photosOf(i).length ? `📷 ${photosOf(i).length}` : '',
+            window.mhDlcCount && window.mhDlcCount(i) ? `🧩 ${window.mhDlcCount(i)}` : '',
             Number(i.hours) ? `⏱ ${hoursText(i.hours)}` : ''
         ].filter(Boolean).join(' · ');
         return `
