@@ -122,7 +122,7 @@
         const t = TYPES[d.type] || TYPES.dlc;
         const from = Array.isArray(d.from) ? d.from : [];
         const price = d.free === 'gift' ? '🎁 Подарок' : d.free === 'free' ? '🆓 Бесплатно' : (num(d.price) ? money(num(d.price)) : (d.owned ? 'без цены' : ''));
-        const meta = [t.label, price, d.date ? fmtDate(d.date) : '', num(d.hours) ? hoursText(d.hours) : ''].filter(Boolean).map(esc).join(' · ');
+        const meta = [t.label, price, d.date ? fmtDate(d.date) : ''].filter(Boolean).map(esc).join(' · ');
         const link = d.url && /^https?:\/\//i.test(d.url) ? d.url : '';
         return `<div class="gdx-card ${d.owned ? 'is-owned' : 'is-wish'}" data-dlc="${esc(d.id)}">
             <div class="gdx-pic">${d.img ? `<img src="${esc(d.img)}" alt="" loading="lazy">` : t.ico}
@@ -157,7 +157,6 @@
             <input id="gdx-price" class="gd-input" type="number" min="0" step="any" placeholder="Цена, ₴" value="${d?.price || ''}">
             <input id="gdx-giftfrom" class="gd-input" maxlength="60" placeholder="От кого подарок" value="${esc(d?.giftFrom || '')}">
             <input id="gdx-date" class="gd-input" type="date" value="${esc(d?.date || '')}" aria-label="Дата покупки">
-            <input id="gdx-hours" class="gd-input" type="number" min="0" step="any" placeholder="Часы" value="${d?.hours || ''}">
             <select id="gdx-rating" class="gd-input"><option value="0">★ Оценка: нет</option>${[1, 2, 3, 4, 5].map(n => `<option value="${n}"${d?.rating === n ? ' selected' : ''}>${stars(n)}</option>`).join('')}</select>
             <input id="gdx-url" class="gd-input wide" placeholder="Ссылка (магазин, гайд…)" value="${esc(d?.url || '')}">
             <div class="wide"><p class="text-[11px] text-gray-500 mb-1">Откуда дополнение (платформы):</p>
@@ -207,11 +206,11 @@
     function keepForm() {
         const f = $('gdx-form'); if (!f) return;
         draft = { title: $('gdx-title').value, type: $('gdx-type').value, free: $('gdx-free').value, price: $('gdx-price').value, giftFrom: $('gdx-giftfrom').value,
-            date: $('gdx-date').value, hours: $('gdx-hours').value, rating: $('gdx-rating').value, url: $('gdx-url').value, note: $('gdx-note').value, owned: $('gdx-owned').checked };
+            date: $('gdx-date').value, rating: $('gdx-rating').value, url: $('gdx-url').value, note: $('gdx-note').value, owned: $('gdx-owned').checked };
     }
     function restoreForm() {
         if (!draft || !$('gdx-form')) return;
-        const m = { title: 'gdx-title', type: 'gdx-type', free: 'gdx-free', price: 'gdx-price', giftFrom: 'gdx-giftfrom', date: 'gdx-date', hours: 'gdx-hours', rating: 'gdx-rating', url: 'gdx-url', note: 'gdx-note' };
+        const m = { title: 'gdx-title', type: 'gdx-type', free: 'gdx-free', price: 'gdx-price', giftFrom: 'gdx-giftfrom', date: 'gdx-date', rating: 'gdx-rating', url: 'gdx-url', note: 'gdx-note' };
         Object.entries(m).forEach(([k, id]) => { $(id).value = draft[k]; });
         $('gdx-owned').checked = draft.owned;
     }
@@ -312,7 +311,6 @@
                         from: [...formFrom],
                         free: $('gdx-free').value,
                         giftFrom: $('gdx-giftfrom').value.trim(),
-                        hours: num($('gdx-hours').value),
                         rating: Math.min(5, num($('gdx-rating').value)),
                         url: $('gdx-url').value.trim(),
                         note: $('gdx-note').value.trim()
