@@ -21,7 +21,7 @@
     const KINDS = [['all', 'Всё', null], ['music', '🎵 Музыка', ['cds', 'vinyls']], ['games', '🎮 Игры', ['games']], ['stuff', '🛍 Вещи', ['stuff']]];
     let seed = Math.random();
     let box = null, obs = null, raf = 0;
-    let pos = 0, holdUntil = 0, lastSet = 0, last = 0, period = 0, cloned = false, restore = false;
+    let pos = 0, holdUntil = 0, lastSet = 0, last = 0, curSc = null;
 
     const css = document.createElement('style');
     css.textContent = `
@@ -81,23 +81,24 @@
     const realTiles = sc => [...sc.querySelectorAll('.mh-fav-tile:not(.fv-clone)')].filter(t => t.style.display !== 'none');
 
     /* ---------- зацикливание: копии карточек в конце ленты ---------- */
-    function dropClones(sc) { sc.querySelectorAll('.fv-clone').forEach(c => c.remove()); cloned = false; period = 0; }
+    function dropClones(sc) { sc.querySelectorAll('.fv-clone').forEach(c => c.remove()); sc._fvc = false; sc._fvp = 0; }
     function ensureClones(sc) {
-        if (cloned) return true;
+        if (sc._fvc && (sc._fvp === 0 || sc.querySelector('.fv-clone'))) return true;
         const v = view();
         if (!v.auto || v.rows || !sc.clientWidth) return false;
         const tiles = realTiles(sc);
         if (!tiles.length) return false;
-        const last = tiles[tiles.length - 1];
-        const content = last.offsetLeft + last.offsetWidth - tiles[0].offsetLeft;
-        if (content <= sc.clientWidth + 8) { cloned = true; period = 0; return true; }   // всё и так помещается — крутить нечего
+        const lastT = tiles[tiles.length - 1];
+        const content = lastT.offsetLeft + lastT.offsetWidth - tiles[0].offsetLeft;
+        if (content <= sc.clientWidth + 8) { sc._fvc = true; sc._fvp = 0; return true; }   // всё и так помещается — крутить нечего
         const copies = Math.ceil(sc.clientWidth / content) + 1;
         quiet(() => {
+            sc.querySelectorAll('.fv-clone').forEach(c => c.remove());
             for (let c = 0; c < copies; c++) tiles.forEach(t => { const n = t.cloneNode(true); n.classList.add('fv-clone'); n.setAttribute('aria-hidden', 'true'); n.tabIndex = -1; sc.appendChild(n); });
         });
         const first = sc.querySelector('.fv-clone');
-        period = first.offsetLeft - tiles[0].offsetLeft;
-        cloned = true;
+        sc._fvp = first ? first.offsetLeft - tiles[0].offsetLeft : 0;
+        sc._fvc = true;
         return true;
     }
 
@@ -141,7 +142,7 @@
         if (!box || box.hidden) return;
         const sc = box.querySelector('.mh-fav-scroll'); if (!sc) return;
         quiet(() => {
-            cloned = false; period = 0; restore = true;
+            sc._fvc = false; sc._fvp = 0;
             mergeVersions(sc);
             sortTiles(sc);
             applyKind(sc);
@@ -153,7 +154,7 @@
     function redo() {                   // после смены настройки
         const sc = box.querySelector('.mh-fav-scroll'); if (!sc) return;
         quiet(() => { dropClones(sc); sortTiles(sc); applyKind(sc); paintBar(); });
-        pos = 0; sc.scrollLeft = 0; lastSet = 0; restore = false;
+        pos = 0; sc.scrollLeft = 0; lastSet = 0; holdUntil = 0; curSc = sc;   // тумблер действует сразу: без паузы и без ожидания прокрутки
     }
 
     function onClick(e) {
@@ -179,8 +180,10 @@
         const v = view();
         const sc = box && box.querySelector('.mh-fav-scroll');
         if (!sc || box.hidden || !v.auto || v.rows || document.hidden || !box.offsetParent) return;
-        if (!ensureClones(sc) || !period) return;
-        if (restore) { sc.scrollLeft = pos; lastSet = sc.scrollLeft; restore = false; }   // после перерисовки возвращаем место, где была лента
+        if (sc !== curSc) { curSc = sc; lastSet = -1; }        // блок перерисовался — возвращаем ленту туда, где она была
+        if (!ensureClones(sc) || !sc._fvp) return;
+        const period = sc._fvp;
+        if (lastSet < 0) { sc.scrollLeft = pos; lastSet = sc.scrollLeft; }
         if (Math.abs(sc.scrollLeft - lastSet) > 3) { pos = sc.scrollLeft; holdUntil = ts + 2500; }   // листаешь сам — не мешаем
         if (ts < holdUntil || sc.matches(':hover')) return;
         pos += SPEED[v.speed][1] * dt;
@@ -197,11 +200,11 @@
         box._fv = true;
         box.addEventListener('click', onClick, true);
         box.addEventListener('change', e => { const s = e.target.closest('select[data-fv="order"]'); if (!s) return; view().order = s.value; save2(); redo(); });
-        const hold = ms => () => { holdUntil = performance.now() + ms; };
+        const hold = ms => e => { if (e.target.closest && e.target.closest('.fv-bar')) return; holdUntil = performance.now() + ms; };
         box.addEventListener('touchstart', hold(3500), { passive: true });
         box.addEventListener('wheel', hold(2500), { passive: true });
-        box.addEventListener('pointerdown', hold(2500), { passive: true });
-        document.addEventListener('visibilitychange', () => { last = 0; holdUntil = performance.now() + 300; });
+        box.addEventListener('pointerdown', e => { if (!e.target.closest('.fv-bar')) holdUntil = performance.now() + 2500; }, { passive: true });
+        document.addEventListener('visibilitychange', () => { last = 0; holdUntil = performance.now() + 300; lastSet = -1; });
         obs = new MutationObserver(() => decorate());
         obs.observe(box, { childList: true });
         decorate();

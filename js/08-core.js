@@ -254,10 +254,20 @@ function showToast(message, type = 'info') {
 
     requestAnimationFrame(() => toast.classList.add('is-visible'));
     const ttl = type === 'error' ? 6000 : 3000;
-    setTimeout(() => {
+    let gone = false, timer = 0;
+    const dismiss = () => {
+        if (gone) return;
+        gone = true; clearTimeout(timer);
         toast.classList.remove('is-visible');
         setTimeout(() => toast.remove(), 300);
-    }, ttl);
+    };
+    const arm = ms => { clearTimeout(timer); timer = setTimeout(dismiss, ms); };
+    arm(ttl);
+    // клик по уведомлению закрывает его сразу (кнопки внутри — например «Вернуть» — работают как раньше)
+    toast.style.cursor = 'pointer';
+    toast.addEventListener('click', e => { if (!e.target.closest('button,a,input')) dismiss(); });
+    toast.addEventListener('mouseenter', () => clearTimeout(timer));
+    toast.addEventListener('mouseleave', () => { if (!gone) arm(1500); });
 }
 
 function getRandomRelease() {

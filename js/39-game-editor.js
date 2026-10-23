@@ -57,7 +57,7 @@
         $('game-digital')?.addEventListener('change', syncDigital);
         $('gx-picker')?.addEventListener('click', () => setTimeout(syncDigital, 0));
         $('game-platform')?.addEventListener('change', syncDigital);
-        layoutModal(modal, more);
+        try { layoutModal(modal, more); } catch (err) { console.error('[MIRVEL] layoutModal', err); }
         return true;
     }
 
@@ -72,8 +72,9 @@
     }
     function layoutModal(modal, more) {
         const panel = modal.firstElementChild;
-        panel.classList.remove('space-y-4', 'p-8');
-        panel.style.cssText += ';max-width:min(1100px,96vw);padding:1.5rem 1.75rem;max-height:92vh;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;';
+        // modal-ready (17-convenience.js) задаёт overflow:hidden !important — из-за этого окно не листалось
+        panel.classList.remove('space-y-4', 'p-8', 'modal-ready', 'overflow-y-auto');
+        panel.style.removeProperty('overflow');
         panel.classList.add('gxm-panel');
         const header = panel.firstElementChild;
         const card = (title, ...nodes) => {
@@ -123,17 +124,32 @@
             card('📦 Комплектность', pBlock),
             card('💬 Заметки', nBlock)
         );
+        // всё, что другие скрипты успели вставить в колонки (галочки цены, коллекции…), сохраняем — иначе у них пропадают узлы
+        const leftovers = [...panel.querySelectorAll('.modal-col > *, .modal-body > *')]
+            .filter(n => n !== more && !n.classList.contains('modal-col') && !n.classList.contains('modal-body'));
+        const yearRow = rowOf('game-year');
+        const extras = [];
+        leftovers.forEach(n => {
+            if (n.classList.contains('price-flags') && yearRow) yearRow.after(n);
+            else if (n.id === 'gx-collections') right.insertBefore(card('📚 Коллекции', n), right.children[1] || null);
+            else if (n.querySelector('input,select,textarea,button') || n.id) extras.push(n);
+        });
+        if (extras.length) right.append(card('', ...extras));
         // убираем подписи, которые теперь дублируют заголовки карточек
         tBlock?.querySelector(':scope > label')?.remove(); pBlock?.querySelector(':scope > label')?.remove(); nBlock?.querySelector(':scope > label')?.remove();
         if (pBlock) pBlock.closest('.gxm-card').id = 'gxm-parts-card';
 
         const grid = document.createElement('div'); grid.className = 'gxm-wrap'; grid.append(left, right);
         const foot = document.createElement('div'); foot.className = 'gxm-foot';
-        [cancelBtn, saveBtn].forEach(b => { if (b) { b.classList.add('gxm-fbtn'); foot.appendChild(b); } });
-        [...panel.children].forEach(n => { if (n !== header && n.type !== 'hidden' && n.id !== 'game-edit-id') n.remove?.(); });
-        // hidden-инпут и скрытая платформа (select) остаются в DOM — на них опирается сохранение
-        if (platRow) { platRow.className = 'hidden'; panel.appendChild(platRow); }
-        panel.append(grid, foot);
+        [cancelBtn, saveBtn].forEach(b => { if (b) { b.classList.remove('w-full'); b.classList.add('gxm-fbtn'); foot.appendChild(b); } });
+        // скрытый input id и скрытая платформа (select) остаются в DOM — на них опирается сохранение
+        const keep = new Set([header, $('game-edit-id'), platRow]);
+        [...panel.children].forEach(n => { if (!keep.has(n)) n.remove(); });
+        if (platRow) platRow.className = 'hidden';
+        const scroll = document.createElement('div'); scroll.className = 'gxm-scroll';
+        if (platRow) scroll.appendChild(platRow);
+        scroll.appendChild(grid);
+        panel.append(scroll, foot);
     }
 
     function paintParts() {
@@ -209,7 +225,11 @@
     .gxm-thumb img{width:100%;height:100%;object-fit:cover}
     .gxm-btn{width:100%;padding:10px;border-radius:12px;font-weight:800;font-size:13px;color:#fff;background:rgba(6,182,212,.7);cursor:pointer}
     .gxm-check{display:flex;align-items:center;gap:8px;font-size:13px;color:#d1d5db;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.04)}
-    .gxm-foot{position:sticky;bottom:-1.5rem;display:flex;gap:10px;justify-content:flex-end;margin:16px -1.75rem -1.5rem;padding:14px 1.75rem;background:rgba(13,13,20,.88);backdrop-filter:blur(10px);border-top:1px solid rgba(255,255,255,.08)}
+    .gxm-panel{display:flex!important;flex-direction:column;overflow:hidden!important;padding:0!important;max-width:min(1100px,96vw)!important;max-height:calc(100dvh - 32px)!important}
+    .gxm-panel>:first-child{flex:0 0 auto;margin:0!important;padding:20px 26px 6px}
+    .gxm-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:4px 26px 18px}
+    .gxm-foot{flex:0 0 auto;display:flex;gap:10px;justify-content:flex-end;margin:0!important;padding:12px 26px calc(14px + env(safe-area-inset-bottom,0px));background:rgba(13,13,20,.96);border-top:1px solid rgba(255,255,255,.08)}
+    @media(max-width:600px){.gxm-panel>:first-child{padding:16px 16px 4px}.gxm-scroll{padding:4px 14px 14px}.gxm-foot{padding:10px 14px calc(12px + env(safe-area-inset-bottom,0px))}}
     .gxm-fbtn{flex:0 0 auto;width:auto!important;padding:11px 26px!important;border-radius:12px!important;font-weight:800}
     .gxm-foot .gxm-fbtn:last-child{flex:1 1 auto;max-width:340px}
     @media(max-width:600px){.gxm-foot{justify-content:stretch}.gxm-fbtn{flex:1!important;max-width:none!important}}

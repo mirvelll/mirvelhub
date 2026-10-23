@@ -265,32 +265,46 @@
         c.lineCap = 'butt';
     }
 
-    /* Плашка платформы: логотип + название (на крупных плитках), только логотип — на мелких. Возвращает false, если логотипа нет */
+    /* Плашка платформы: логотип + название — на плитке ЛЮБОГО размера (на мелких всё уменьшается, но не пропадает).
+       Если логотип не загрузился, рисуется цветной кружок с первой буквой. */
     function platPill(c, platform, logos, x, y, s, circle, capTop) {
         const L = window.mhPlatLogo;
-        if (!L) return false;
-        const m = L.meta(platform), im = logos && logos[m.key];
-        if (!im) return false;
-        const fs = Math.max(11, Math.round(s * 0.07)), h = Math.round(fs * 1.9), d = h - 4, pad = Math.round(fs * 0.55);
-        const withText = s >= 130;
-        let txt = '';
-        if (withText) {
+        const m = L ? L.meta(platform) : { key: 'other', color: '#a78bfa', label: String(platform || ''), code: String(platform || '').slice(0, 5).toUpperCase() };
+        const im = logos && logos[m.key];
+        const fs0 = s >= 130 ? Math.max(11, Math.round(s * 0.07)) : Math.max(6, Math.round(s * 0.085));
+        const maxW = s * 0.94;
+        let fs = fs0, txt = '', h = 0, d = 0, pad = 0, w = 0;
+        for (; fs >= 6; fs--) {
+            h = Math.round(fs * 1.9); d = h - 4; pad = Math.round(fs * 0.55);
             c.font = `800 ${fs}px ${FONT_U}`;
-            txt = wrap(c, s >= 200 ? m.label : m.code, s * 0.9 - d - pad * 3, 1)[0] || '';
+            const room = maxW - 2 - d - pad * 1.7;
+            const cands = s >= 200 ? [m.label, m.code] : [m.code];
+            txt = cands.find(t => t && c.measureText(t).width <= room) || '';
+            if (txt) break;
         }
-        const w = withText ? 2 + d + pad * 0.7 + c.measureText(txt).width + pad * 1.2 : h;
-        const bottom = capTop != null ? capTop - s * 0.02 : y + s - s * 0.05;
-        const bx = circle ? x + s / 2 - w / 2 : x + s * 0.05;
+        if (!txt) {                                  // совсем тесно: укорачиваем код, но не убираем название
+            fs = 6; h = Math.round(fs * 1.9); d = h - 4; pad = Math.round(fs * 0.55);
+            c.font = `800 ${fs}px ${FONT_U}`;
+            txt = wrap(c, m.code || m.label, Math.max(8, maxW - 2 - d - pad * 1.7), 1)[0] || '';
+        }
+        c.font = `800 ${fs}px ${FONT_U}`;
+        w = 2 + d + pad * 0.7 + c.measureText(txt).width + pad * 1.2;
+        const gapB = s * 0.05;
+        const bottom = capTop != null ? capTop - s * 0.02 : y + s - gapB;
+        const bx = circle ? x + s / 2 - w / 2 : x + Math.min(gapB, Math.max(2, s - w - 2));
         const by = circle ? y + s * 0.8 : bottom - h;
         rrect(c, bx, by, w, h, h / 2); c.fillStyle = 'rgba(0,0,0,0.74)'; c.fill();
-        c.lineWidth = 1.5; c.strokeStyle = m.color; c.globalAlpha = 0.7; c.stroke(); c.globalAlpha = 1;
+        c.lineWidth = Math.max(1, Math.min(1.5, fs / 6)); c.strokeStyle = m.color; c.globalAlpha = 0.7; c.stroke(); c.globalAlpha = 1;
         c.imageSmoothingQuality = 'high';
-        c.drawImage(im, bx + 2, by + 2, d, d);
-        if (withText) {
-            c.font = `800 ${fs}px ${FONT_U}`; c.fillStyle = '#fff'; c.textAlign = 'left'; c.textBaseline = 'middle';
-            c.fillText(txt, bx + 2 + d + pad * 0.7, by + h / 2 + 1);
-            c.textBaseline = 'alphabetic';
+        if (im) c.drawImage(im, bx + 2, by + 2, d, d);
+        else {
+            c.beginPath(); c.arc(bx + 2 + d / 2, by + 2 + d / 2, d / 2, 0, Math.PI * 2); c.fillStyle = m.color; c.fill();
+            c.font = `800 ${Math.max(6, Math.round(d * 0.6))}px ${FONT_U}`; c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle';
+            c.fillText(String(m.label || '?').charAt(0).toUpperCase(), bx + 2 + d / 2, by + 2 + d / 2 + 1);
         }
+        c.font = `800 ${fs}px ${FONT_U}`; c.fillStyle = '#fff'; c.textAlign = 'left'; c.textBaseline = 'middle';
+        c.fillText(txt, bx + 2 + d + pad * 0.7, by + h / 2 + 1);
+        c.textBaseline = 'alphabetic';
         return true;
     }
 
@@ -355,7 +369,7 @@
             if (circle) drawCheck(c, x + s * 0.85, y + s * 0.15, rr);
             else drawCheck(c, x + s - s * 0.05 - rr, y + s * 0.05 + rr, rr);
         }
-        if (o.isGames && o.platformChip && s >= 70 && item.platform) {
+        if (o.isGames && o.platformChip && item.platform) {
             const logo = platPill(c, item.platform, o.logos, x, y, s, circle, capTop);
             if (!logo && s >= 130 && !captions) {          // логотип не загрузился — старая текстовая плашка
                 const fs = Math.max(12, Math.round(s * 0.075));
