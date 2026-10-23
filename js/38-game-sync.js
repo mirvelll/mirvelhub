@@ -149,6 +149,7 @@
         else { const first = body.querySelector(':scope > .gd-sec'); if (first) first.before(t.firstElementChild); else body.appendChild(t.firstElementChild); }
     }
     function current() { const el = document.querySelector('#gd-body [data-act="share"][data-id]'); return el ? gameById(el.dataset.id) : null; }
+    function rerender() { const g = current(); if (g && typeof window.openGameDetail === 'function') window.openGameDetail(g.id); else refresh(); }
     function refresh() { const g = current(); const old = $('gsy'); if (!g || !old) return; const t = document.createElement('div'); t.innerHTML = sectionHTML(g); old.replaceWith(t.firstElementChild); }
 
     function init() {
@@ -162,22 +163,40 @@
                 const sid = Number(a.closest('[data-sid]')?.dataset.sid);
                 switch (a.dataset.act) {
                     case 'gsy-panel': panelOpen = !panelOpen; refresh(); break;
-                    case 'gsy-tg': { const k = a.dataset.k; setOpt(g, { [k]: !opts(g)[k] }); persist(); refresh(); break; }
-                    case 'gsy-sync': { const n = syncAll(g); persist(); refresh(); showToast(n ? `Синхронизировано: ${n} изм. 🔄` : 'Всё уже совпадает ✓', 'success'); break; }
+                    case 'gsy-tg': { const k = a.dataset.k; setOpt(g, { [k]: !opts(g)[k] }); persist(); rerender(); break; }
+                    case 'gsy-sync': { const n = syncAll(g); persist(); rerender(); showToast(n ? `Синхронизировано: ${n} изм. 🔄` : 'Всё уже совпадает ✓', 'success'); break; }
                     case 'gsy-link': {
                         const id = Number($('gsy-pick')?.value); if (!id) { showToast('Выберите игру', 'error'); break; }
                         const o = opts(g); setOpt(g, { links: [...new Set([...o.links, id])], ignore: o.ignore.filter(x => x !== id) });
                         const s = gameById(id); if (s) setOpt(s, { ignore: opts(s).ignore.filter(x => x !== g.id) });
-                        const n = syncAll(g); persist(); panelOpen = false; refresh(); showToast(`Версия привязана 🔗${n ? ` · синхронизировано: ${n}` : ''}`, 'success'); break;
+                        const n = syncAll(g); persist(); panelOpen = false; rerender(); showToast(`Версия привязана 🔗${n ? ` · синхронизировано: ${n}` : ''}`, 'success'); break;
                     }
                     case 'gsy-unlink': {
                         if (!sid) break;
                         const o = opts(g); setOpt(g, { links: o.links.filter(x => x !== sid), ignore: [...new Set([...o.ignore, sid])] });
                         const s = gameById(sid); if (s) setOpt(s, { links: opts(s).links.filter(x => x !== g.id) });
-                        persist(); refresh(); showToast('Версия отвязана'); break;
+                        persist(); rerender(); showToast('Версия отвязана'); break;
                     }
                     case 'gsy-open': if (sid && typeof window.openGameDetail === 'function') window.openGameDetail(sid); break;
                 }
+                return;
+            }
+            // удаление дополнения: убираем его и у других версий (если у них включена синхронизация дополнений)
+            if (e.target.closest('[data-act="dlc-del"]')) {
+                setTimeout(() => {
+                    const g = current(), l = window.__mhLastDlc;
+                    if (!g || !l || l.gid !== g.id || !opts(g).dlcs || dlcsOf(g).some(x => x.id === l.d.id)) return;
+                    let n = 0;
+                    siblings(g).forEach(({ g: s }) => {
+                        if (!opts(s).dlcs || !Array.isArray(s.dlcs)) return;
+                        const before = s.dlcs.length;
+                        s.dlcs = s.dlcs.filter(x => normT(x.title) !== normT(l.d.title));
+                        n += before - s.dlcs.length;
+                    });
+                    window.__mhLastDlc = null;
+                    if (n) persist();
+                    refresh();
+                }, 0);
                 return;
             }
             // после любого действия с дополнением (обработчик 37-game-dlc.js уже отработал) — раздаём изменения версиям
@@ -189,7 +208,7 @@
     }
 
     window.mhGameSiblings = g => siblings(g).map(s => s.g);
-    window.mhGameTotalHours = g => [g, ...siblings(g).map(s => s.g)].reduce((s, x) => s + num(x.hours), 0);
+    window.mhGameTotalHours = g => opts(g).hours ? [g, ...siblings(g).filter(s => opts(s.g).hours).map(s => s.g)].reduce((s, x) => s + num(x.hours), 0) : num(g.hours);
 
     if ($('gd-body')) init(); else document.addEventListener('DOMContentLoaded', init);
 })();

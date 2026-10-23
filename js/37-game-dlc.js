@@ -102,7 +102,12 @@
         const added = g.id && g.id > 1e12 ? new Date(g.id) : null;
         const days = added ? Math.max(0, Math.floor((Date.now() - added.getTime()) / 864e5)) : null;
         const tiles = [
-            ['⏱ Часов в игре', hrs ? hoursText(hrs) : '—', hrs && owned ? `≈ ${money(spent / hrs)} за час` : ''],
+            (() => {
+                const sibs = window.mhGameSiblings ? window.mhGameSiblings(g) : [];
+                const all = window.mhGameTotalHours ? window.mhGameTotalHours(g) : hrs;
+                if (sibs.length && all > hrs) return ['⏱ Часов во всех версиях', hoursText(all), `эта версия: ${hoursText(hrs)} · версий: ${sibs.length + 1}`];
+                return ['⏱ Часов в игре', hrs ? hoursText(hrs) : '—', hrs && owned ? `≈ ${money(spent / hrs)} за час` : ''];
+            })(),
             ['🧩 Дополнения', dl.length ? `${owned}<span class="text-gray-500 text-sm font-bold"> / ${dl.length}</span>` : '0', dl.length ? 'куплено / всего' : 'пока нет'],
             ['💰 Потрачено', spent ? money(spent) : '—', dlcSpent(g) ? `из них на DLC: ${money(dlcSpent(g))}` : 'игра + дополнения'],
             ...(g.trophy ? [['🏆 Ачивки', full ? '100%' : total ? `${Math.min(100, Math.round(done / total * 100))}%` : `${done}`, total ? `${done} из ${total}` : '']] : []),

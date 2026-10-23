@@ -109,7 +109,7 @@
     const SORTS = [
         ['title', '🔤', 'Алфавиту'], ['platform', '🎮', 'Платформам'], ['status', '🚦', 'Статусу'],
         ['digital', '☁️', 'Цифровые'], ['price_desc', '💸', 'Дорогие'], ['year_desc', '📅', 'Новее'],
-        ['rating', '⭐', 'Оценке'], ['recent', '🕒', 'Недавно добавлены']
+        ['rating', '⭐', 'Оценке'], ['hours', '⏱', 'Часам'], ['recent', '🕒', 'Недавно добавлены']
     ];
     const byTitle = (a, b) => (a.title || '').localeCompare(b.title || '', 'ru');
     const COMPARE = {
@@ -120,10 +120,11 @@
         price_desc: (a, b) => (Number(b.price) || 0) - (Number(a.price) || 0) || byTitle(a, b),
         year_desc: (a, b) => (Number(b.year) || 0) - (Number(a.year) || 0) || byTitle(a, b),
         rating: (a, b) => (b.rating || 0) - (a.rating || 0) || byTitle(a, b),
+        hours: (a, b) => (Number(b.hours) || 0) - (Number(a.hours) || 0) || byTitle(a, b),
         recent: (a, b) => (b.id || 0) - (a.id || 0)
     };
 
-    const gs = { platform: '', status: '', format: '', trophy: '', online: '', sort: 'title' };
+    const gs = { platform: '', status: '', format: '', trophy: '', online: '', sort: 'title', dir: 1 };
     const hasOnlineMode = i => !!(i && (i.hasOnline || i.status === 'online')); // есть онлайн-режим (в том числе «чисто онлайн» игры)
     const totalHours = i => Number(i?.hours) || 0;
     // раньше часы онлайна вводились отдельно — переносим их в общие часы, чтобы ничего не потерялось
@@ -252,12 +253,14 @@
         sortBar.id = 'game-sort-bar';
         sortBar.className = 'flex flex-wrap gap-2 items-center mb-6 bg-white/5 p-3 rounded-2xl border border-white/5';
         sortBar.innerHTML = `<span class="gf-label">Сортировать</span>` + SORTS.map(([k, ico, label]) =>
-            `<button type="button" class="gsort-btn" data-sort="${k}"><span aria-hidden="true">${ico}</span>${esc(label)}</button>`).join('');
+            `<button type="button" class="gsort-btn" data-sort="${k}"><span aria-hidden="true">${ico}</span>${esc(label)}</button>`).join('') +
+            `<button type="button" class="gsort-dir" data-dir="1" title="Перевернуть порядок">⇅ Обратно</button>`;
 
         // Клики (делегирование — элементы пересоздаются при каждой отрисовке)
         sortBar.addEventListener('click', e => {
+            if (e.target.closest('[data-dir]')) { gs.dir = -gs.dir; updateUI(); return; }
             const b = e.target.closest('[data-sort]');
-            if (b) { gs.sort = b.dataset.sort; updateUI(); }
+            if (b) { if (gs.sort === b.dataset.sort) gs.dir = -gs.dir; else { gs.sort = b.dataset.sort; gs.dir = 1; } updateUI(); }
         });
         platBar.addEventListener('click', e => {
             const b = e.target.closest('[data-plat]');
@@ -314,11 +317,11 @@
             if (gs.format === 'disc' && i.digital) return false;
             if (gs.format === 'digital' && !i.digital) return false;
             if (gs.trophy && trophyState(i) !== gs.trophy) return false;
-            if (gs.online && !hasOnlineMode(i)) return false;
+            if (gs.online === 'coop' ? !i.coop : (gs.online && !hasOnlineMode(i))) return false;
             if (!q) return true;
             const st = stOf(i) ? STATUS[stOf(i)].label : '';
             return [i.title, i.platform, platMeta(i.platform).code, i.developer, i.publisher, i.edition, i.region,
-                i.year, i.discCode, i.note, st, i.digital ? 'цифровая цифра digital' : 'диск', hasOnlineMode(i) ? 'онлайн online' : '']
+                i.year, i.discCode, i.note, st, i.digital ? 'цифровая цифра digital' : 'диск', hasOnlineMode(i) ? 'онлайн online' : '', i.coop ? 'кооператив коп coop' : '']
                 .some(v => String(v ?? '').toLowerCase().includes(q));
         });
     }
@@ -399,12 +402,15 @@
 
         // режим: показываем фильтр, только если есть игры с онлайном
         const onlineCount = all.filter(hasOnlineMode).length;
-        if (gs.online && !onlineCount) gs.online = '';
-        $('game-mode-group')?.classList.toggle('hidden', !onlineCount);
+        const coopCount = all.filter(i => i.coop).length;
+        if (gs.online === '1' && !onlineCount) gs.online = '';
+        if (gs.online === 'coop' && !coopCount) gs.online = '';
+        $('game-mode-group')?.classList.toggle('hidden', !(onlineCount || coopCount));
         const modeBox = $('game-mode-chips');
         if (modeBox) {
             modeBox.innerHTML = chipHTML('data-mode', '', 'Все', !gs.online) +
-                chipHTML('data-mode', '1', '🌐 Есть онлайн', gs.online === '1', onlineCount);
+                (onlineCount ? chipHTML('data-mode', '1', '🌐 Есть онлайн', gs.online === '1', onlineCount) : '') +
+                (coopCount ? chipHTML('data-mode', 'coop', '🤝 Кооператив', gs.online === 'coop', coopCount) : '');
         }
 
         // ачивки: показываем фильтр, только если хоть одна игра их отслеживает
@@ -423,6 +429,7 @@
         $('game-reset-filters')?.classList.toggle('hidden', !active);
 
         document.querySelectorAll('#game-sort-bar [data-sort]').forEach(b => b.classList.toggle('is-on', b.dataset.sort === gs.sort));
+        const sb = $('game-sort-bar'); if (sb) { sb.dataset.dir = gs.dir < 0 ? 'up' : 'down'; sb.querySelector('.gsort-dir')?.classList.toggle('is-on', gs.dir < 0); }
     }
 
     function trophyChip(i) {
@@ -446,7 +453,7 @@
                 ${i.hidden ? '<span class="game-hid-badge">🙈 Скрыта</span>' : ''}
                 ${st ? `<span class="st-dot st-${st}" title="${stInfo.label}"></span>` : ''}
                 ${trophyState(i) === 'full' ? '<span class="absolute right-1.5 top-1.5 text-sm drop-shadow" title="100% ачивок">🏆</span>' : ''}
-                ${i.hasOnline ? '<span class="absolute right-1.5 bottom-1.5 text-sm drop-shadow" title="Есть онлайн-режим">🌐</span>' : ''}
+                ${(i.hasOnline || i.coop) ? `<span class="absolute right-1.5 bottom-1.5 text-sm drop-shadow" title="${i.coop ? 'Кооператив' : 'Есть онлайн-режим'}">${i.hasOnline ? '🌐' : ''}${i.coop ? '🤝' : ''}</span>` : ''}
                 ${window.mhDlcCount && window.mhDlcCount(i) ? `<span class="absolute left-1.5 bottom-1.5 text-[10px] font-black bg-black/70 rounded-full px-1.5 py-0.5" title="Куплено дополнений">🧩 ${window.mhDlcCount(i)}</span>` : ''}
                 <div class="game-ov absolute inset-0 bg-black/85 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity p-2 flex flex-col justify-between text-[10px]">
                     <div><p class="font-black truncate">${esc(i.title)}</p><p class="text-gray-400">${fmtPrice(i)}</p>${st ? `<p class="st-${st}" style="color:var(--sc)">${stInfo.icon} ${stInfo.label}</p>` : ''}</div>
@@ -458,6 +465,7 @@
             i.hidden ? '<span class="gd-chip">🙈 Скрыта</span>' : '',
             i.digital ? '<span class="gd-chip">☁️ Цифровая</span>' : '',
             i.hasOnline ? '<span class="gd-chip is-online">🌐 Онлайн</span>' : '',
+            i.coop ? '<span class="gd-chip is-online">🤝 Кооператив</span>' : '',
             isCIB(i) ? '<span class="gd-chip is-ok">CIB</span>' : '',
             i.region ? `<span class="gd-chip">${esc(i.region)}</span>` : '',
             trophyChip(i)
@@ -524,6 +532,7 @@
         renderFilters(all);
 
         const items = filteredGames().sort(COMPARE[gs.sort] || byTitle);
+        if (gs.dir < 0 && gs.sort !== 'platform') items.reverse();
         const covers = data.gameViewMode === 'covers';
         grid.className = covers
             ? 'grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4 p-2'
@@ -788,6 +797,7 @@
                     ${i.region ? `<span class="gd-chip">${esc(i.region)}</span>` : ''}
                     ${isCIB(i) ? '<span class="gd-chip is-ok">📦 CIB — полный комплект</span>' : ''}
                     ${i.hasOnline ? '<span class="gd-chip is-online">🌐 Есть онлайн</span>' : ''}
+                    ${i.coop ? '<span class="gd-chip is-online">🤝 Кооператив</span>' : ''}
                 </div>
                 <h3 class="text-2xl sm:text-3xl font-black leading-tight break-words" style="font-family:var(--font-display)">${esc(i.title)}</h3>
                 ${meta ? `<p class="text-sm text-gray-400">${meta}</p>` : ''}
