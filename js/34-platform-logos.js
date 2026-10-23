@@ -18,7 +18,8 @@
         'Nintendo GameCube': 'GC', 'Nintendo Wii': 'WII', 'Nintendo Wii U': 'WIIU', 'Nintendo Switch': 'NSW', 'Nintendo Switch 2': 'NSW2',
         'Nintendo DS': 'DS', 'Nintendo 3DS': '3DS', 'Nintendo 64': 'N64', 'SNES': 'SNES', 'Game Boy': 'GB', 'Game Boy Advance': 'GBA',
         'Sega Dreamcast': 'DC', 'Sega Mega Drive': 'MD', 'Sega Saturn': 'SAT',
-        'PC CD/DVD': 'PC', 'Steam': 'STEAM', 'Epic Games': 'EPIC', 'GOG': 'GOG'
+        'PC CD/DVD': 'PC', 'Steam': 'STEAM', 'Epic Games': 'EPIC', 'GOG': 'GOG',
+        'Battle.net': 'BNET', 'EA App': 'EA', 'Ubisoft Connect': 'UBI', 'Xbox App': 'XAPP', 'Rockstar Launcher': 'RSG', 'itch.io': 'ITCH', 'iOS': 'IOS', 'Android': 'AND'
     };
 
     /* ---------- Логотипы: круг 64×64 + знак (упрощённые, нарисованы вручную) ---------- */
@@ -54,13 +55,37 @@
             '<circle cx="32" cy="32" r="32" fill="#4b5563"/>' +
             '<rect x="15" y="17" width="34" height="23" rx="3" fill="none" stroke="#fff" stroke-width="4"/>' +
             '<path d="M25 48 H39 M32 40 V48" stroke="#fff" stroke-width="4" stroke-linecap="round"/>' },
+        bnet: { color: '#148eff', body:
+            '<circle cx="32" cy="32" r="32" fill="#0b1d33"/><path d="M32 14 C40 20 46 28 44 36 C42 44 34 48 32 52 C30 48 22 44 20 36 C18 28 24 20 32 14Z" fill="none" stroke="#38a3ff" stroke-width="4" stroke-linejoin="round"/>' },
+        ea: { color: '#ff4747', body:
+            '<circle cx="32" cy="32" r="32" fill="#1b1b1f"/><text x="32" y="40" font-size="24" ' + F + '>EA</text>' },
+        ubi: { color: '#0070ff', body:
+            '<circle cx="32" cy="32" r="32" fill="#0b2a5a"/><circle cx="32" cy="32" r="14" fill="none" stroke="#fff" stroke-width="4"/><path d="M32 32 m-6 3 a8 8 0 1 0 8-8" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/>' },
+        rock: { color: '#fcaf17', body:
+            '<circle cx="32" cy="32" r="32" fill="#fcaf17"/><text x="32" y="43" font-size="30" font-family="Arial, Helvetica, sans-serif" font-weight="900" fill="#111" text-anchor="middle">R</text>' },
+        itch: { color: '#fa5c5c', body:
+            '<circle cx="32" cy="32" r="32" fill="#fa5c5c"/><path d="M18 26 L22 18 H42 L46 26 V30 H18Z M20 32 H44 V46 H20Z" fill="#fff"/>' },
+        ios: { color: '#e5e7eb', body:
+            '<circle cx="32" cy="32" r="32" fill="#2b2b30"/><path d="M32 20 C36 14 42 16 42 16 C42 21 38 24 34 24 M32 26 C28 24 22 26 22 34 C22 42 27 50 31 50 C33 50 33 49 35 49 C37 49 37 50 39 50 C43 50 47 43 47 38 C41 36 41 29 46 27 C44 24 38 23 32 26Z" fill="#fff"/>' },
+        android: { color: '#3ddc84', body:
+            '<circle cx="32" cy="32" r="32" fill="#143d27"/><path d="M18 38 A14 14 0 0 1 46 38Z" fill="#3ddc84"/><circle cx="26" cy="33" r="1.8" fill="#143d27"/><circle cx="38" cy="33" r="1.8" fill="#143d27"/><path d="M22 24 L26 29 M42 24 L38 29" stroke="#3ddc84" stroke-width="2.6" stroke-linecap="round"/>' },
         other: { color: '#a78bfa', body:
             '<circle cx="32" cy="32" r="32" fill="#7c3aed"/>' +
             '<path d="M32 18 V46 M18 32 H46" stroke="#fff" stroke-width="6" stroke-linecap="round"/>' }
     };
 
-    function keyOf(name) {
+    /* свои логотипы (загружаются в настройках): data.platPrefs.logos[название] = dataURL круглой картинки */
+    const custom = name => { try { return (data.platPrefs && data.platPrefs.logos && data.platPrefs.logos[name]) || ''; } catch (_) { return ''; } };
+    function keyOf(name, noCustom) {
         const n = String(name || '').toLowerCase();
+        if (!noCustom && custom(name)) return 'c:' + name;
+        if (/battle\.?net/.test(n)) return 'bnet';
+        if (/^ea\b|ea app|origin/.test(n)) return 'ea';
+        if (/ubisoft|uplay/.test(n)) return 'ubi';
+        if (/rockstar/.test(n)) return 'rock';
+        if (/itch/.test(n)) return 'itch';
+        if (/^ios$|iphone|ipad/.test(n)) return 'ios';
+        if (/android/.test(n)) return 'android';
         if (/steam/.test(n)) return 'steam';
         if (/epic/.test(n)) return 'epic';
         if (/gog/.test(n)) return 'gog';
@@ -74,9 +99,16 @@
     function meta(name) {
         const key = keyOf(name);
         const label = String(name || '').trim() || 'Другое';
-        return { key, color: LOGOS[key].color, label, code: CODES[name] || label.slice(0, 5).toUpperCase() };
+        const base = key.startsWith('c:') ? keyOf(name, true) : key;
+        return { key, color: LOGOS[base].color, label, code: CODES[name] || label.slice(0, 5).toUpperCase() };
     }
-    const svgText = (key, px) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="${px}" height="${px}">${LOGOS[key].body}</svg>`;
+    const svgText = (key, px) => {
+        if (key.startsWith('c:')) {
+            const u = custom(key.slice(2));
+            return `<img src="${esc(u)}" alt="" width="${px}" height="${px}" style="width:${px}px;height:${px}px;border-radius:50%;object-fit:cover;display:block">`;
+        }
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="${px}" height="${px}">${LOGOS[key].body}</svg>`;
+    };
     const svg = (name, px = 20) => svgText(keyOf(name), px);
 
     /* HTML-плашка: логотип + название платформы (для «Игры дня») */
@@ -88,14 +120,25 @@
     /* Картинки для canvas: SVG → Image (data-URL не «портит» холст). Кеш по ключу логотипа. */
     const cache = new Map();
     function loadKey(key) {
-        if (cache.has(key)) return cache.get(key);
+        const ck = key.startsWith('c:') ? key + '|' + custom(key.slice(2)) : key;
+        if (cache.has(ck)) return cache.get(ck);
         const p = new Promise(res => {
             const im = new Image();
-            im.onload = () => res(im);
             im.onerror = () => res(null);
-            im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgText(key, 128));
+            if (key.startsWith('c:')) {
+                im.onload = () => {                       // уже круглая картинка → рисуем на холсте 128×128
+                    const c = document.createElement('canvas'); c.width = c.height = 128;
+                    const g = c.getContext('2d'); g.imageSmoothingQuality = 'high';
+                    g.beginPath(); g.arc(64, 64, 64, 0, Math.PI * 2); g.clip(); g.drawImage(im, 0, 0, 128, 128);
+                    res(c);
+                };
+                im.src = custom(key.slice(2));
+            } else {
+                im.onload = () => res(im);
+                im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgText(key, 128));
+            }
         });
-        cache.set(key, p);
+        cache.set(ck, p);
         return p;
     }
     /* names → { [key]: Image|null } */
@@ -107,7 +150,7 @@
         return out;
     }
 
-    window.mhPlatLogo = { meta, keyOf, svg, pill, load };
+    window.mhPlatLogo = { meta, keyOf, svg, pill, load, hasCustom: custom };
 
     const st = document.createElement('style');
     st.textContent = `

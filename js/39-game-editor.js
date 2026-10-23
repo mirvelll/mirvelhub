@@ -41,7 +41,7 @@
             </div>
             <div>
                 <label class="text-[10px] text-gray-400 font-bold block uppercase mb-1.5">Заметки и личное мнение</label>
-                <textarea id="gx-note" rows="4" placeholder="Впечатления, версия издания, особенности диска, что понравилось…" class="w-full bg-white/5 p-3.5 rounded-xl border border-white/10 text-white text-sm"></textarea>
+                <textarea id="gx-note" rows="3" placeholder="Впечатления, версия издания, особенности диска, что понравилось…" class="w-full bg-white/5 p-3.5 rounded-xl border border-white/10 text-white text-sm"></textarea>
             </div>
             <p class="text-[11px] text-gray-500">Фото диска и дополнения (DLC) добавляются на странице игры.</p>`;
         blk.insertAdjacentElement('afterend', more);
@@ -64,7 +64,8 @@
     /* ---------- раскладка окна: широкое, две колонки, карточки ---------- */
     function syncDigital() {
         const plat = $('game-platform')?.value || '';
-        const dig = !!$('game-digital')?.checked || ['Steam', 'Epic Games', 'GOG'].includes(plat);
+        const stores = window.mhGamePlat?.DIGITAL_STORES;
+        const dig = !!$('game-digital')?.checked || (stores ? stores.has(plat) : ['Steam', 'Epic Games', 'GOG'].includes(plat));
         $('gx-parts-box')?.classList.toggle('hidden', dig);
         $('gxm-parts-card')?.classList.toggle('hidden', dig);
         const rc = $('gxm-region'); if (rc) rc.classList.toggle('hidden', dig);   // у цифровых игр регион не нужен
@@ -111,18 +112,19 @@
         coverRow.append(cThumb); const cr = document.createElement('div'); cr.className = 'flex-1 space-y-2'; [coverBtn, coverStatus].forEach(n => n && cr.appendChild(n)); coverRow.append(cr);
 
         const left = document.createElement('div'); left.className = 'gxm-col';
+        const right = document.createElement('div'); right.className = 'gxm-col';
+        const pBlock = more.querySelector('#gx-parts-box'), tBlock = more.querySelector('#gx-trophy')?.parentElement, nBlock = more.querySelector('#gx-note')?.parentElement;
+        // слева: основное, платформа, заметки — справа: прохождение, ачивки, комплектность, обложка (колонки ровнее, заметки не уезжают вниз)
         left.append(
             card('📝 Основное', wrap([g('game-title'), rowOf('game-developer'), rowOf('game-year'), g('game-edition'), g('game-url')])),
             card('🎮 Платформа и формат', picker, digitalLabel, regionCell),
-            card('🖼 Обложка', coverRow, coverFile)
+            card('💬 Заметки', nBlock)
         );
-        const right = document.createElement('div'); right.className = 'gxm-col';
-        const pBlock = more.querySelector('#gx-parts-box'), tBlock = more.querySelector('#gx-trophy')?.parentElement, nBlock = more.querySelector('#gx-note')?.parentElement;
         right.append(
             card('🚦 Прохождение', blk, coopLabel, ratingBlock),
             card('🏆 Ачивки', tBlock),
             card('📦 Комплектность', pBlock),
-            card('💬 Заметки', nBlock)
+            card('🖼 Обложка', coverRow, coverFile)
         );
         // всё, что другие скрипты успели вставить в колонки (галочки цены, коллекции…), сохраняем — иначе у них пропадают узлы
         const leftovers = [...panel.querySelectorAll('.modal-col > *, .modal-body > *')]
@@ -217,7 +219,7 @@
     .gxm-wrap{display:grid;grid-template-columns:1fr;gap:16px;margin-top:14px}
     @media(min-width:860px){.gxm-wrap{grid-template-columns:1.1fr 1fr;align-items:start}}
     .gxm-col{display:flex;flex-direction:column;gap:14px;min-width:0}
-    .gxm-card{display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:18px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08)}
+    .gxm-card{display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08)}
     .gxm-t{font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#9ca3af}
     .gxm-fields{display:flex;flex-direction:column;gap:10px}
     .gxm-fields .grid{display:grid}
@@ -235,9 +237,20 @@
     @media(max-width:600px){.gxm-foot{justify-content:stretch}.gxm-fbtn{flex:1!important;max-width:none!important}}
     /* страница игры: шире и компактнее */
     @media(min-width:900px){#game-detail-modal .gd-panel{max-width:min(1180px,96vw)!important}}
+
+    /* тумблеры вместо системных галочек */
+    #game-modal input[type=checkbox]{appearance:none;-webkit-appearance:none;flex:0 0 auto;width:38px;height:22px;margin:0;border-radius:999px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);position:relative;cursor:pointer;transition:background .2s,border-color .2s}
+    #game-modal input[type=checkbox]::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#e5e7eb;transition:transform .2s,background .2s;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+    #game-modal input[type=checkbox]:checked{background:linear-gradient(135deg,#8b5cf6,#22d3ee);border-color:transparent}
+    #game-modal input[type=checkbox]:checked::after{transform:translateX(16px);background:#fff}
+    #game-modal input[type=checkbox]:focus-visible{outline:2px solid var(--theme-btn,#8b5cf6);outline-offset:2px}
+    #game-modal input[type=checkbox]:disabled{opacity:.45;cursor:default}
+    #game-modal label:has(>input[type=checkbox]){display:flex;align-items:center;gap:10px;cursor:pointer}
+    #game-modal .price-flags{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:#d1d5db}
+    #game-modal .gxm-check{padding:9px 12px}
     .gv-grid{display:grid;grid-template-columns:1fr;gap:14px;margin-top:20px}
-    @media(min-width:860px){.gv-grid{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}}
-    .gv-grid > .gd-sec{margin-top:0!important;padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}
+    @media(min-width:860px){.gv-grid{grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}}
+    .gv-grid > .gd-sec{margin-top:0!important;height:100%;display:flex;flex-direction:column;padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}
     `;
     document.head.appendChild(css);
 

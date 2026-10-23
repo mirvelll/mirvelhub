@@ -34,7 +34,7 @@
     const REGION_RE = W('region ?free|ntsc-?j|ntsc-?u|ntsc|pal');
     const REGION_MAP = { pal: 'PAL', ntscu: 'NTSC-U', ntscj: 'NTSC-J', ntsc: 'NTSC', regionfree: 'Region Free' };
     const DIGITAL_RE = W('digital|цифр\\p{L}*|eshop|psn');
-    const DIGITAL_PLATFORMS = ['Steam', 'Epic Games', 'GOG'];
+    const DIGITAL_PLATFORMS = ['Steam', 'Epic Games', 'GOG', 'Battle.net', 'EA App', 'Ubisoft Connect', 'Xbox App', 'Rockstar Launcher', 'itch.io', 'iOS', 'Android'];
     const NO_REGION = ['Steam'];                       // у Steam региона нет — поле «Регион» не показываем и в игру не пишем
     const PS_RE = /playstation|^ps\d?\b|\bpsp\b|vita/i;
     /* Что можно написать вместо цены (в конце строки): бесплатно, подарок, код, не помню, в наборе, PS Plus */

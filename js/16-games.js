@@ -22,9 +22,10 @@
         nin:   { color: '#ef4444', glyph: '◉', name: 'Nintendo' },
         sega:  { color: '#06b6d4', glyph: '◈', name: 'Sega' },
         pc:    { color: '#9ca3af', glyph: '▣', name: 'PC' },
+        phone: { color: '#f59e0b', glyph: '📱', name: 'Телефон' },
         other: { color: '#a78bfa', glyph: '＋', name: 'Другое' }
     };
-    const FAMILY_KEYS = ['ps', 'xbox', 'nin', 'sega', 'pc', 'other'];
+    const FAMILY_KEYS = ['ps', 'xbox', 'nin', 'sega', 'pc', 'phone', 'other'];
     // [название (= значение в селекте), короткий код, семейство]
     const PLATFORMS = [
         ['PlayStation 1', 'PS1', 'ps'], ['PlayStation 2', 'PS2', 'ps'], ['PlayStation 3', 'PS3', 'ps'],
@@ -35,10 +36,19 @@
         ['Nintendo 64', 'N64', 'nin'], ['SNES', 'SNES', 'nin'], ['Game Boy', 'GB', 'nin'], ['Game Boy Advance', 'GBA', 'nin'],
         ['Sega Dreamcast', 'DC', 'sega'], ['Sega Mega Drive', 'MD', 'sega'], ['Sega Saturn', 'SAT', 'sega'],
         ['PC CD/DVD', 'PC', 'pc'], ['Steam', 'STEAM', 'pc'], ['Epic Games', 'EPIC', 'pc'], ['GOG', 'GOG', 'pc'],
+        ['Battle.net', 'BNET', 'pc'], ['EA App', 'EA', 'pc'], ['Ubisoft Connect', 'UBI', 'pc'], ['Xbox App', 'XAPP', 'pc'],
+        ['Rockstar Launcher', 'RSG', 'pc'], ['itch.io', 'ITCH', 'pc'],
+        ['iOS', 'IOS', 'phone'], ['Android', 'AND', 'phone'],
         ['Другое', '•••', 'other']
     ];
     // магазины, где игра по определению цифровая
-    const DIGITAL_STORES = new Set(['Steam', 'Epic Games', 'GOG']);
+    const DIGITAL_STORES = new Set(['Steam', 'Epic Games', 'GOG', 'Battle.net', 'EA App', 'Ubisoft Connect', 'Xbox App', 'Rockstar Launcher', 'itch.io', 'iOS', 'Android']);
+    // доступ для настроек (42-platform-settings.js) и редактора (39-game-editor.js)
+    window.mhGamePlat = { PLATFORMS, FAMILIES, FAMILY_KEYS, DIGITAL_STORES };
+    // скрытые в настройках платформы / семейства (уже добавленные игры не трогаются)
+    const prefs = () => data.platPrefs || {};
+    const famHidden = f => f !== 'other' && (prefs().hiddenFams || []).includes(f);
+    const platHidden = n => (prefs().hiddenPlats || []).includes(n) || famHidden(familyOf(n));
     // свои цвета / значки у отдельных платформ
     const PLAT_STYLE = {
         'Steam':      { color: '#1b9ad6', glyph: '♨' },
@@ -57,7 +67,7 @@
     };
     function platBadge(name, large = false) {
         const m = platMeta(name);
-        return `<span class="plat-badge${large ? ' is-lg' : ''}" style="--pc:${m.color}" title="${esc(name || 'Другое')}"><span class="plat-ico" aria-hidden="true">${m.glyph}</span><span>${esc(m.code)}</span></span>`;
+        return `<span class="plat-badge${large ? ' is-lg' : ''}" style="--pc:${m.color}" title="${esc(name || 'Другое')}"><span class="plat-ico" aria-hidden="true">${window.mhPlatLogo ? window.mhPlatLogo.svg(name, 24) : m.glyph}</span><span>${esc(m.code)}</span></span>`;
     }
 
     /* =====================================================
@@ -607,6 +617,7 @@
         const fams = $('gx-fams');
         if (fams) {
             fams.querySelectorAll('[data-fam]').forEach(b => {
+                b.classList.toggle('hidden', famHidden(b.dataset.fam) && b.dataset.fam !== pickFam);
                 const on = b.dataset.fam === pickFam;
                 b.classList.toggle('is-on', on);
                 b.setAttribute('aria-pressed', String(on));
@@ -614,7 +625,7 @@
         }
         const box = $('gx-platforms');
         if (box) {
-            const list = PLATFORMS.filter(p => p[2] === pickFam);
+            const list = PLATFORMS.filter(p => p[2] === pickFam && (!platHidden(p[0]) || p[0] === cur));
             box.innerHTML = list.map(p => `<button type=\"button\" class=\"gx-plat${p[0] === cur ? ' is-on' : ''}\" data-plat=\"${esc(p[0])}\" title=\"${esc(p[0])}\" aria-pressed=\"${p[0] === cur}\">${platBadge(p[0])}</button>`).join('');
         }
         const nameEl = $('gx-plat-name');
@@ -697,6 +708,10 @@
         const item = id ? gameById(id) : null;
         ensurePlatformOptions(item?.platform);
         openBase(id);
+        if (!item && platHidden($('game-platform').value)) {
+            const f = PLATFORMS.find(p => !platHidden(p[0]));
+            if (f) $('game-platform').value = f[0];
+        }
         setPickerValue($('game-platform').value);
         mStatus = item ? stOf(item) : '';
         renderModalStatus();

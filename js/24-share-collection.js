@@ -449,8 +449,11 @@
         if (o.bg === 'photo') await ensurePhoto();
         o.logos = (o.isGames && o.platformChip && window.mhPlatLogo) ? await window.mhPlatLogo.load(o.items.map(i => i.platform || '')) : {};
 
-        const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+        // повышенная чёткость: холст в несколько раз больше, рисуем в тех же логических координатах (лимит ~16 Мпикс — для iOS)
+        const SS = Math.max(1, Math.min(3, Math.floor(Math.sqrt(16e6 / (W * H)) * 4) / 4));
+        const cv = document.createElement('canvas'); cv.width = Math.round(W * SS); cv.height = Math.round(H * SS);
         const c = cv.getContext('2d');
+        c.scale(SS, SS);
         c.imageSmoothingQuality = 'high';
         drawBackground(c, W, H, o, imgs, rgb);
 
