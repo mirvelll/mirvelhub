@@ -34,7 +34,7 @@
         '17-convenience.js', 'i18n-dict.js', 'i18n.js', '18-hub2.js', '19-features.js', '20-music-detail.js', '21-optimize.js', '22-wishlist.js', '23-sounds.js',
         '24-share-collection.js', '25-bulk.js', '27-design.js', '28-appearance.js', '29-games-page.js', '30-collection-ui.js', '31-analytics-charts.js', '32-game-bundles.js', '33-hidden-games.js', '34-platform-logos.js', '35-copy-games.js', '36-tierlist.js', '37-game-dlc.js', '38-game-sync.js'
     ];
-    const BUILD = '18.4';
+    const BUILD = '18.5';
 
     /* Ускорение загрузки: все скрипты начинают скачиваться СРАЗУ и параллельно (preload),
        а выполняются по-прежнему строго по порядку. Раньше каждый следующий файл начинал качаться

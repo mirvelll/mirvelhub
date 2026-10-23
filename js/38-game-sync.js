@@ -35,8 +35,8 @@
     }
 
     /* ---------- слияние ---------- */
-    const DLC_FIELDS = ['title', 'type', 'price', 'date', 'owned', 'done', 'hours', 'note', 'url', 'img'];
-    function copyDlc(src) { const r = { id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5) }; DLC_FIELDS.forEach(k => { if (src[k] !== undefined) r[k] = src[k]; }); return r; }
+    const DLC_FIELDS = ['title', 'type', 'price', 'date', 'owned', 'done', 'hours', 'note', 'url', 'img', 'from', 'free', 'giftFrom', 'rating'];
+    function copyDlc(src, from) { const r = { id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5) }; DLC_FIELDS.forEach(k => { if (src[k] !== undefined) r[k] = Array.isArray(src[k]) ? [...src[k]] : src[k]; }); if (!r.from || !r.from.length) r.from = from && from.platform ? [from.platform] : []; return r; }
 
     /** источник правды — g: добавляет недостающие дополнения и обновляет совпавшие по названию */
     function pushDlcs(g, overwrite) {
@@ -47,8 +47,8 @@
             if (!Array.isArray(s.dlcs)) s.dlcs = [];
             dlcsOf(g).forEach(d => {
                 const ex = s.dlcs.find(x => normT(x.title) === normT(d.title));
-                if (!ex) { s.dlcs.push(copyDlc(d)); changed++; }
-                else if (overwrite) { DLC_FIELDS.forEach(k => { if (d[k] !== undefined && ex[k] !== d[k]) { ex[k] = d[k]; changed++; } }); }
+                if (!ex) { s.dlcs.push(copyDlc(d, g)); changed++; }
+                else if (overwrite) { DLC_FIELDS.forEach(k => { if (k === 'from') return; if (d[k] !== undefined && ex[k] !== d[k]) { ex[k] = d[k]; changed++; } }); }
                 else DLC_FIELDS.forEach(k => { if ((ex[k] === undefined || ex[k] === '' || ex[k] === 0) && d[k]) { ex[k] = d[k]; changed++; } });
             });
         });
@@ -102,7 +102,7 @@
             const dl = dlcsOf(x.g).filter(d => d.owned).length;
             return `<div class="gsy-row${x.me ? ' is-me' : ''}" ${x.me ? '' : `data-sid="${x.g.id}"`}>
                 <div class="min-w-0 flex-1">
-                    <div class="flex items-center gap-2 flex-wrap">${typeof platBadge === 'function' ? platBadge(x.g.platform) : esc(x.g.platform || '')}
+                    <div class="flex items-center gap-2 flex-wrap">${window.mhPlatLogo ? window.mhPlatLogo.pill(x.g.platform || 'Другое') : esc(x.g.platform || '')}
                         <span class="text-sm font-bold text-white">${x.me ? 'Эта версия' : esc(x.g.title)}</span>
                         ${x.me ? '' : `<span class="text-[10px] text-gray-500">${x.auto ? 'найдена по названию' : 'добавлена вручную'}</span>`}</div>
                     <div class="gsy-bar"><i style="width:${pct}%"></i></div>
