@@ -151,10 +151,10 @@
         const extras = [];
         leftovers.forEach(n => {
             if (n.classList.contains('price-flags')) { if (!priceFlags && yearRow) yearRow.after(n); }
-            else if (n.id === 'gx-collections') mid.append(card('📚 Коллекции', n));
+            else if (n.id === 'gx-collections') { n.querySelector(':scope > label')?.remove(); right.insertBefore(card('📚 Коллекции', n), right.children[1] || null); }
             else if (n.querySelector('input,select,textarea,button') || n.id) extras.push(n);
         });
-        if (extras.length) right.append(card('', ...extras));
+        if (extras.length) { const ex = document.createElement('div'); ex.style.display = 'contents'; extras.forEach(n => ex.appendChild(n)); right.append(ex); }
         // убираем подписи, которые теперь дублируют заголовки карточек
         tBlock?.querySelector(':scope > label')?.remove(); pBlock?.querySelector(':scope > label')?.remove(); nBlock?.querySelector(':scope > label')?.remove();
         if (pBlock) pBlock.closest('.gxm-card').id = 'gxm-parts-card';
