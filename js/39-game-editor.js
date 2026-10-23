@@ -19,7 +19,8 @@
 
     function setupEditor() {
         const modal = $('game-modal'), blk = $('gx-block');
-        if (!modal || !blk || $('gx-more')) return false;
+        if (!modal || !blk || modal.dataset.gxm === '1') return modal?.dataset.gxm === '1';
+        modal.dataset.gxm = '1';
 
         const more = document.createElement('div');
         more.id = 'gx-more';
@@ -55,13 +56,15 @@
         });
         $('game-digital')?.addEventListener('change', syncDigital);
         $('gx-picker')?.addEventListener('click', () => setTimeout(syncDigital, 0));
+        $('game-platform')?.addEventListener('change', syncDigital);
         layoutModal(modal, more);
         return true;
     }
 
     /* ---------- раскладка окна: широкое, две колонки, карточки ---------- */
     function syncDigital() {
-        const dig = !!$('game-digital')?.checked;
+        const plat = $('game-platform')?.value || '';
+        const dig = !!$('game-digital')?.checked || ['Steam', 'Epic Games', 'GOG'].includes(plat);
         $('gx-parts-box')?.classList.toggle('hidden', dig);
         $('gxm-parts-card')?.classList.toggle('hidden', dig);
         const rc = $('gxm-region'); if (rc) rc.classList.toggle('hidden', dig);   // у цифровых игр регион не нужен
@@ -70,7 +73,7 @@
     function layoutModal(modal, more) {
         const panel = modal.firstElementChild;
         panel.classList.remove('space-y-4', 'p-8');
-        panel.style.cssText += ';max-width:min(1100px,96vw);padding:1.5rem 1.75rem;';
+        panel.style.cssText += ';max-width:min(1100px,96vw);padding:1.5rem 1.75rem;max-height:92vh;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;';
         panel.classList.add('gxm-panel');
         const header = panel.firstElementChild;
         const card = (title, ...nodes) => {
@@ -151,7 +154,7 @@
             const g = id ? gameById(id) : null;
             mTrophy = g?.trophy || '';
             mParts = { ...(g?.parts || {}) };
-            if ($('gx-more')) {
+            if ($('gx-note')) {
                 $('gx-tdone').value = g?.trophyDone || '';
                 $('gx-ttotal').value = g?.trophyTotal || '';
                 $('gx-note').value = g?.note || '';
@@ -165,7 +168,7 @@
         window.saveGameItem = async (...args) => {
             const editId = Number($('game-edit-id')?.value) || null;
             const before = new Set((data.games || []).map(x => x.id));
-            const ex = $('gx-more') ? {
+            const ex = $('gx-note') ? {
                 trophy: mTrophy,
                 trophyDone: Math.max(0, parseInt($('gx-tdone').value) || 0),
                 trophyTotal: Math.max(0, parseInt($('gx-ttotal').value) || 0),

@@ -15,14 +15,11 @@
     const css = document.createElement('style');
     css.textContent = `
     [data-mh-list="games"]{display:none!important}
-    #game-sort-bar{gap:8px}
-    #game-sort-bar .gsort-btn{border-radius:999px;padding:6px 14px;transition:all .2s}
-    #game-sort-bar .gsort-btn.is-on{background:linear-gradient(135deg,var(--theme-btn,#8b5cf6),#06b6d4);color:#fff;border-color:transparent;box-shadow:0 6px 18px rgba(139,92,246,.35)}
-    #game-sort-bar .gsort-btn.is-on::after{content:" ↓";font-weight:900}
-    #game-sort-bar[data-dir="up"] .gsort-btn.is-on::after{content:" ↑"}
-    #game-sort-bar .gsort-dir{margin-left:auto;padding:6px 14px;border-radius:999px;font-size:12px;font-weight:800;color:#9ca3af;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);cursor:pointer;transition:all .2s}
-    #game-sort-bar .gsort-dir.is-on{color:#fff;border-color:var(--theme-btn,#8b5cf6);background:rgba(139,92,246,.18)}
-    @media(max-width:640px){#game-sort-bar{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}#game-sort-bar::-webkit-scrollbar{display:none}#game-sort-bar>*{flex-shrink:0}}
+    #game-sort-bar{gap:10px;align-items:center}
+    #game-sort-bar .gsort-sel{padding:8px 14px;border-radius:12px;font-size:13px;font-weight:800;color:#fff;background:#0d0d14;border:1px solid rgba(255,255,255,.18);cursor:pointer;min-width:190px}
+    #game-sort-bar .gsort-sel:focus{outline:none;border-color:var(--theme-btn,#8b5cf6)}
+    #game-sort-bar .gsort-dir{padding:8px 16px;border-radius:12px;font-size:13px;font-weight:800;color:#fff;background:rgba(139,92,246,.2);border:1px solid var(--theme-btn,#8b5cf6);cursor:pointer;transition:all .2s;white-space:nowrap}
+    #game-sort-bar .gsort-dir:hover{background:rgba(139,92,246,.35)}
     `;
     document.head.appendChild(css);
 

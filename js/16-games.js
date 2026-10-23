@@ -252,15 +252,14 @@
         }
         sortBar.id = 'game-sort-bar';
         sortBar.className = 'flex flex-wrap gap-2 items-center mb-6 bg-white/5 p-3 rounded-2xl border border-white/5';
-        sortBar.innerHTML = `<span class="gf-label">Сортировать</span>` + SORTS.map(([k, ico, label]) =>
-            `<button type="button" class="gsort-btn" data-sort="${k}"><span aria-hidden="true">${ico}</span>${esc(label)}</button>`).join('') +
-            `<button type="button" class="gsort-dir" data-dir="1" title="Перевернуть порядок">⇅ Обратно</button>`;
+        sortBar.innerHTML = `<span class="gf-label">Сортировка</span>
+            <select id="game-sort-sel" class="gsort-sel" aria-label="Сортировать по">${SORTS.map(([k, ico, label]) => `<option value="${k}">${ico} ${esc(label)}</option>`).join('')}</select>
+            <button type="button" class="gsort-dir" data-dir="1" id="game-sort-dir"></button>`;
+        sortBar.addEventListener('change', e => { const sel = e.target.closest('#game-sort-sel'); if (sel) { gs.sort = sel.value; gs.dir = 1; updateUI(); } });
 
         // Клики (делегирование — элементы пересоздаются при каждой отрисовке)
         sortBar.addEventListener('click', e => {
-            if (e.target.closest('[data-dir]')) { gs.dir = -gs.dir; updateUI(); return; }
-            const b = e.target.closest('[data-sort]');
-            if (b) { if (gs.sort === b.dataset.sort) gs.dir = -gs.dir; else { gs.sort = b.dataset.sort; gs.dir = 1; } updateUI(); }
+            if (e.target.closest('[data-dir]')) { gs.dir = -gs.dir; updateUI(); }
         });
         platBar.addEventListener('click', e => {
             const b = e.target.closest('[data-plat]');
@@ -429,7 +428,15 @@
         $('game-reset-filters')?.classList.toggle('hidden', !active);
 
         document.querySelectorAll('#game-sort-bar [data-sort]').forEach(b => b.classList.toggle('is-on', b.dataset.sort === gs.sort));
-        const sb = $('game-sort-bar'); if (sb) { sb.dataset.dir = gs.dir < 0 ? 'up' : 'down'; sb.querySelector('.gsort-dir')?.classList.toggle('is-on', gs.dir < 0); }
+        const sel = $('game-sort-sel'); if (sel) sel.value = gs.sort;
+        const dirBtn = $('game-sort-dir');
+        if (dirBtn) {
+            const L = { title: ['А → Я', 'Я → А'], hours: ['Больше часов сверху', 'Меньше часов сверху'], price_desc: ['Дорогие сверху', 'Дешёвые сверху'],
+                year_desc: ['Новее сверху', 'Старее сверху'], rating: ['Лучшие сверху', 'Худшие сверху'], recent: ['Новые сверху', 'Старые сверху'] };
+            const l = L[gs.sort] || ['По порядку', 'В обратном порядке'];
+            dirBtn.textContent = (gs.dir < 0 ? '↑ ' : '↓ ') + l[gs.dir < 0 ? 1 : 0];
+            dirBtn.title = 'Нажмите, чтобы перевернуть порядок';
+        }
     }
 
     function trophyChip(i) {

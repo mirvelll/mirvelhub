@@ -17,7 +17,7 @@
     const normT = t => String(t || '').replace(/[™®©℠]/g, '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/&/g, ' and ').replace(/[^\p{L}\p{N}]+/gu, '');
     const dlcsOf = g => (Array.isArray(g?.dlcs) ? g.dlcs : []);
 
-    const opts = g => ({ hours: true, dlcs: true, trophies: false, links: [], ignore: [], ...(g?.sync || {}) });
+    const opts = g => ({ hours: true, dlcs: true, trophies: false, prio: false, links: [], ignore: [], ...(g?.sync || {}) });
     function setOpt(g, patch) { g.sync = { ...opts(g), ...patch }; }
 
     /** все версии этой же игры (без неё самой) */
@@ -33,6 +33,10 @@
         (data.games || []).forEach(x => { if (x.id !== g.id && opts(x).links.includes(g.id) && !out.has(x.id) && !o.ignore.includes(x.id)) out.set(x.id, { g: x, auto: false }); });
         return [...out.values()];
     }
+
+    const groupOf = g => [g, ...siblings(g).map(s => s.g)];
+    const primaryOf = g => groupOf(g).find(x => opts(x).prio) || null;
+    function setPrimary(g, id) { groupOf(g).forEach(x => setOpt(x, { prio: id != null && x.id === id })); }
 
     /* ---------- слияние ---------- */
     const DLC_FIELDS = ['title', 'type', 'price', 'date', 'owned', 'done', 'note', 'url', 'img', 'from', 'free', 'giftFrom', 'rating'];
@@ -57,12 +61,14 @@
     /** полная синхронизация: сначала собираем недостающее со всех, потом раздаём */
     function syncAll(g) {
         let n = 0;
+        const prim = primaryOf(g);
         if (opts(g).dlcs) {
             siblings(g).forEach(({ g: s }) => { if (opts(s).dlcs) n += pushDlcs(s, false); });
             n += pushDlcs(g, false);
+            if (prim && opts(prim).dlcs) n += pushDlcs(prim, true);   // приоритетная версия — главная: её данные перезаписывают остальные
         }
         if (opts(g).trophies) {
-            const src = [g, ...siblings(g).map(x => x.g)].filter(x => opts(x).trophies && x.trophy)
+            const src = (prim && opts(prim).trophies && prim.trophy ? prim : null) || [g, ...siblings(g).map(x => x.g)].filter(x => opts(x).trophies && x.trophy)
                 .sort((a, b) => num(b.trophyDone) - num(a.trophyDone))[0];
             if (src) [g, ...siblings(g).map(x => x.g)].forEach(x => {
                 if (!opts(x).trophies || x === src) return;
@@ -88,6 +94,7 @@
     .gsy-tg.is-on{color:#34d399;border-color:rgba(52,211,153,.5);background:rgba(52,211,153,.12)}
     .gsy-x{padding:4px 8px;border-radius:8px;font-size:11px;cursor:pointer;color:#9ca3af;background:rgba(255,255,255,.06)}
     .gsy-x:hover{color:#fca5a5}
+    .gsy-x.gsy-p{color:#facc15;background:rgba(250,204,21,.14);border:1px solid rgba(250,204,21,.4)}
     `;
     document.head.appendChild(css);
 
@@ -97,10 +104,12 @@
         const sib = siblings(g), o = opts(g);
         const all = [{ g, me: true }, ...sib.map(s => ({ g: s.g, auto: s.auto }))];
         const total = all.reduce((s, x) => s + num(x.g.hours), 0);
+        const prim = primaryOf(g);
         const rows = all.map(x => {
             const h = num(x.g.hours), pct = total ? Math.round(h / total * 100) : 0;
             const dl = dlcsOf(x.g).filter(d => d.owned).length;
-            return `<div class="gsy-row${x.me ? ' is-me' : ''}" ${x.me ? '' : `data-sid="${x.g.id}"`}>
+            const isP = !!prim && prim.id === x.g.id;
+            return `<div class="gsy-row${x.me ? ' is-me' : ''}" data-pid="${x.g.id}" ${x.me ? '' : `data-sid="${x.g.id}"`}>
                 <div class="min-w-0 flex-1">
                     <div class="flex items-center gap-2 flex-wrap">${window.mhPlatLogo ? window.mhPlatLogo.pill(x.g.platform || 'Другое') : esc(x.g.platform || '')}
                         <span class="text-sm font-bold text-white">${x.me ? 'Эта версия' : esc(x.g.title)}</span>
@@ -108,6 +117,7 @@
                     <div class="gsy-bar"><i style="width:${pct}%"></i></div>
                     <p class="text-[11px] text-gray-500 mt-1">🧩 ${dl} доп.${x.g.trophy ? ` · 🏆 ${x.g.trophy === 'full' ? '100%' : `${num(x.g.trophyDone)}/${num(x.g.trophyTotal) || '?'}`}` : ''}</p>
                 </div>
+                <button type="button" class="gsy-x${isP ? ' gsy-p' : ''}" data-act="gsy-prio" title="${isP ? 'Приоритетная версия (нажмите, чтобы снять)' : 'Сделать приоритетной'}">${isP ? '⭐ Главная' : '☆'}</button>
                 <div class="gsy-h">${h ? hrs(h) : '—'}<small>${h && total ? pct + '%' : 'нет часов'}</small></div>
                 ${x.me ? '' : `<button type="button" class="gsy-x" data-act="gsy-open" title="Открыть эту версию">↗</button><button type="button" class="gsy-x" data-act="gsy-unlink" title="Отвязать">✕</button>`}
             </div>`;
@@ -127,6 +137,7 @@
                 <span class="text-[11px] text-gray-500 self-center">Синхронизировать:</span>
                 ${tg('hours', '⏱ Часы (разбивка и итог)')}${tg('dlcs', '🧩 Дополнения')}${tg('trophies', '🏆 Достижения')}
             </div>
+            ${sib.length ? '<p class="text-[11px] text-gray-500 mt-2">⭐ <b>Главная версия</b> — её дополнения и данные берутся за основу при синхронизации, и именно она показывается в «Любимом».</p>' : ''}
             ${panelOpen ? `<div class="mt-3 flex gap-2 flex-wrap"><select id="gsy-pick" class="gd-input" style="max-width:100%;background:#0d0d14"><option value="">— выберите игру из коллекции —</option>${cand.map(x => `<option value="${x.id}">${esc(x.title)} · ${esc(x.platform || '')}</option>`).join('')}</select>
                 <button type="button" class="gd-tool" data-act="gsy-link">Привязать</button></div>
                 <p class="text-[11px] text-gray-500 mt-2">Нужной версии нет в списке? Сначала добавьте игру обычной кнопкой «＋», потом вернитесь сюда — если название совпадает, она привяжется автоматически.</p>` : ''}
@@ -177,6 +188,13 @@
                         const s = gameById(sid); if (s) setOpt(s, { links: opts(s).links.filter(x => x !== g.id) });
                         persist(); rerender(); showToast('Версия отвязана'); break;
                     }
+                    case 'gsy-prio': {
+                        const pid = Number(a.closest('[data-pid]')?.dataset.pid); if (!pid) break;
+                        const cur = primaryOf(g);
+                        setPrimary(g, cur && cur.id === pid ? null : pid);
+                        if (!(cur && cur.id === pid)) syncAll(g);
+                        persist(); rerender(); showToast(cur && cur.id === pid ? 'Приоритет снят' : '⭐ Главная версия выбрана', 'success'); break;
+                    }
                     case 'gsy-open': if (sid && typeof window.openGameDetail === 'function') window.openGameDetail(sid); break;
                 }
                 return;
@@ -207,6 +225,7 @@
         new MutationObserver(() => { if (modal.classList.contains('hidden')) panelOpen = false; }).observe(modal, { attributes: true, attributeFilter: ['class'] });
     }
 
+    window.mhGamePrimary = g => primaryOf(g);
     window.mhGameSiblings = g => siblings(g).map(s => s.g);
     window.mhGameTotalHours = g => opts(g).hours ? [g, ...siblings(g).filter(s => opts(s.g).hours).map(s => s.g)].reduce((s, x) => s + num(x.hours), 0) : num(g.hours);
 
