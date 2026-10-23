@@ -65,10 +65,27 @@
     #music-detail-modal.mh-tinted .gd-panel,#game-detail-modal.mh-tinted .gd-panel{border-color:rgba(var(--theme-rgb),.45);box-shadow:0 30px 90px rgba(var(--theme-rgb),.28)}
     #music-detail-modal.mh-tinted .text-purple-300,#game-detail-modal.mh-tinted .text-purple-300{color:var(--accent-light)!important}
     #music-detail-modal.mh-tinted .gd-cover,#game-detail-modal.mh-tinted .gd-cover{box-shadow:0 18px 50px rgba(var(--theme-rgb),.45)}
+
+    /* страница игры: «геймерский» стиль — неон, HUD-рамка, сканлайны */
+    #game-detail-modal.mh-gamer .gd-panel{border:1px solid rgba(var(--theme-rgb,139,92,246),.6)!important;border-radius:14px!important;
+        box-shadow:0 0 0 1px rgba(0,0,0,.6),0 0 28px rgba(var(--theme-rgb,139,92,246),.45),inset 0 0 60px rgba(var(--theme-rgb,139,92,246),.1)!important;position:relative;
+        background-image:repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 4px),linear-gradient(165deg,rgba(var(--theme-rgb,139,92,246),.22),rgba(3,3,7,.6) 55%)}
+    #game-detail-modal.mh-gamer .gd-panel::before{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+        background:linear-gradient(90deg,transparent,rgba(var(--theme-rgb,139,92,246),.9),transparent) top/60% 2px no-repeat;animation:mh-gm-scan 4s linear infinite}
+    @keyframes mh-gm-scan{0%{background-position:-60% 0}100%{background-position:160% 0}}
+    #game-detail-modal.mh-gamer .gd-cover{border-radius:12px!important;box-shadow:0 0 0 2px rgba(var(--theme-rgb,139,92,246),.9),0 0 34px rgba(var(--theme-rgb,139,92,246),.65),0 18px 50px rgba(0,0,0,.7)!important}
+    #game-detail-modal.mh-gamer h1,#game-detail-modal.mh-gamer h2{text-transform:uppercase;letter-spacing:.04em;text-shadow:0 0 18px rgba(var(--theme-rgb,139,92,246),.8)}
+    #game-detail-modal.mh-gamer .gd-sec{border-radius:10px!important;border:1px solid rgba(var(--theme-rgb,139,92,246),.3)!important;background:rgba(0,0,0,.28)!important;
+        clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px))}
+    #game-detail-modal.mh-gamer .gd-sec-title{color:rgb(var(--theme-rgb,139,92,246))!important;text-shadow:0 0 10px rgba(var(--theme-rgb,139,92,246),.7);letter-spacing:.14em;text-transform:uppercase}
+    #game-detail-modal.mh-gamer .gd-chip{border-radius:6px!important;border:1px solid rgba(var(--theme-rgb,139,92,246),.55)!important;box-shadow:0 0 10px rgba(var(--theme-rgb,139,92,246),.3)}
+    #game-detail-modal.mh-gamer .gd-tool:hover{box-shadow:0 0 16px rgba(var(--theme-rgb,139,92,246),.6)}
+    @media(prefers-reduced-motion:reduce){#game-detail-modal.mh-gamer .gd-panel::before{animation:none}}
     .ap-scope{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 0 28px}
     .ap-scope button{padding:5px 12px;border-radius:999px;font-size:12px;font-weight:700;color:#9ca3af;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);cursor:pointer;transition:all .2s}
     .ap-scope button.is-on{color:#fff;border-color:var(--theme-btn,#8b5cf6);background:rgba(var(--theme-rgb,139,92,246),.25)}
-    .ap-scope.is-off{opacity:.4;pointer-events:none}
+    .ap-scope.is-off,.ap-bright.is-off{opacity:.4;pointer-events:none}
+    .ap-bright{margin-left:28px;display:flex;flex-direction:column;gap:6px}
 
     /* карточка в настройках */
     .ap-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
@@ -120,6 +137,8 @@
     /* =====================================================
        Тема страницы релиза от обложки
        ===================================================== */
+    const K_BRIGHT = 'mirvel_cover_bright', K_GAMER = 'mirvel_game_gamer';   // яркость 0–100 (50 = как раньше) и «геймерский» стиль страницы игры
+    const bright = () => { const v = Number(LS.get(K_BRIGHT)); return Number.isFinite(v) && LS.get(K_BRIGHT) !== null ? Math.max(0, Math.min(100, v)) : 50; };
     const K_SCOPE = 'mirvel_cover_scope';                       // 'music' (CD/винил) | 'games' | 'both'
     const scope = () => { const v = LS.get(K_SCOPE); return v === 'games' || v === 'both' ? v : 'music'; };
     const MODALS = [
@@ -159,13 +178,14 @@
         const detail = m.el, panel = detail.querySelector('.gd-panel');
         if (!panel) return;
         if (!rgb) { unpaint(m); return; }
-        const t = tune(rgb, .45, .58).map(Math.round), l = rgbToHex(lighten(t)), s = t.join(', ');
+        const bv = bright(), k = .4 + bv * .012;      // k: сила заливки (0 → слабая, 50 → как раньше, 100 → яркая)
+        const t = tune(rgb, .45, .3 + bv * .0056).map(Math.round), l = rgbToHex(lighten(t)), s = t.join(', ');
         if (!detail.classList.contains('mh-tinted')) detail.classList.add('mh-tinted');
         detail.style.setProperty('--theme-rgb', s);
         detail.style.setProperty('--theme-btn', `rgb(${s})`);
         detail.style.setProperty('--accent-light', l);
-        detail.style.background = `radial-gradient(ellipse at 50% 0%, rgba(${s}, 0.38), rgba(0,0,0,0.8) 70%)`;
-        panel.style.backgroundImage = `linear-gradient(165deg, rgba(${s}, 0.26), rgba(3,3,7,0.55) 55%)`;
+        detail.style.background = `radial-gradient(ellipse at 50% 0%, rgba(${s}, ${Math.min(.9, .38 * k).toFixed(2)}), rgba(0,0,0,0.8) 70%)`;
+        panel.style.backgroundImage = `linear-gradient(165deg, rgba(${s}, ${Math.min(.8, .26 * k).toFixed(2)}), rgba(3,3,7,0.55) 55%)`;
     }
     function unpaint(m) {
         const detail = m.el; if (!detail) return;
@@ -186,6 +206,7 @@
         const rgb = await dominant(src);
         if (!detail.classList.contains('hidden')) paint(m, rgb);
     }
+    const applyGamer = () => { const m = $('game-detail-modal'); if (m) m.classList.toggle('mh-gamer', LS.get(K_GAMER) === '1'); };
     const tint = () => MODALS.forEach(m => { if (m.el) tintOne(m); });
     /* модалка игры создаётся скриптом 16-games.js — ищем её, если на момент загрузки этого файла её ещё нет */
     function wire(m) {
@@ -203,7 +224,7 @@
         }).observe(m.el, { attributes: true, attributeFilter: ['class'] });
     }
     function wireAll() { MODALS.forEach(m => { if (!m.el) m.el = $(m.kind === 'music' ? 'music-detail-modal' : 'game-detail-modal'); wire(m); }); }
-    wireAll();
+    wireAll(); applyGamer();
     if (MODALS.some(m => !m.wired)) { let n = 0; const iv = setInterval(() => { wireAll(); if (MODALS.every(m => m.wired) || ++n > 40) clearInterval(iv); }, 500); }
 
     /* =====================================================
@@ -321,6 +342,14 @@ q.oninput=f})();
                 <button type=\"button\" data-sc=\"games\">🎮 Игры</button>
                 <button type=\"button\" data-sc=\"both\">✨ Везде</button>
             </div>
+            <div class=\"ap-bright\" id=\"ap-bright-box\">
+                <label class=\"text-xs text-gray-400 font-bold uppercase flex justify-between\"><span>Яркость цвета</span><output id=\"ap-bright-out\" class=\"text-white\"></output></label>
+                <input type=\"range\" id=\"ap-bright\" min=\"0\" max=\"100\" step=\"1\" class=\"w-full\" style=\"accent-color:var(--theme-btn,#8b5cf6)\">
+            </div>
+            <label class=\"flex items-start gap-3 text-sm text-gray-300 cursor-pointer\">
+                <input type=\"checkbox\" id=\"ap-gamer\" class=\"mt-1\">
+                <span>🎮 Геймерский стиль страницы игры <small class=\"block text-gray-500\">неоновая рамка, HUD-блоки, сканлайны, свечение обложки</small></span>
+            </label>
             <label class="flex items-start gap-3 text-sm text-gray-300 cursor-pointer">
                 <input type="checkbox" id="ap-haptics" class="mt-1">
                 <span>Вибро-отклик на телефоне (добавление, избранное)</span>
@@ -344,7 +373,12 @@ q.oninput=f})();
         const paintScope = () => { const sc = scope(); document.querySelectorAll('#ap-scope [data-sc]').forEach(b => b.classList.toggle('is-on', b.dataset.sc === sc)); $('ap-scope')?.classList.toggle('is-off', !cb.checked); };
         cb.addEventListener('change', () => { LS.set(K_COVER, cb.checked ? '1' : '0'); paintScope(); tint(); });
         $('ap-scope')?.addEventListener('click', e => { const b = e.target.closest('[data-sc]'); if (!b) return; LS.set(K_SCOPE, b.dataset.sc); paintScope(); tint(); });
-        paintScope();
+        const bo = () => { $('ap-bright').value = bright(); $('ap-bright-out').textContent = bright() + '%'; $('ap-bright-box').classList.toggle('is-off', !cb.checked); };
+        $('ap-bright').addEventListener('input', e => { LS.set(K_BRIGHT, e.target.value); bo(); tint(); });
+        const gm = $('ap-gamer'); gm.checked = LS.get(K_GAMER) === '1';
+        gm.addEventListener('change', () => { LS.set(K_GAMER, gm.checked ? '1' : '0'); applyGamer(); });
+        cb.addEventListener('change', bo);
+        paintScope(); bo();
         const hp = $('ap-haptics');
         hp.checked = LS.get('mirvel_haptics') !== '0';
         hp.addEventListener('change', () => { LS.set('mirvel_haptics', hp.checked ? '1' : '0'); if (hp.checked && navigator.vibrate) { try { navigator.vibrate(20); } catch (_) {} } });
