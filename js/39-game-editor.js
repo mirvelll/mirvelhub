@@ -69,6 +69,19 @@
         $('gx-parts-box')?.classList.toggle('hidden', dig);
         $('gxm-parts-card')?.classList.toggle('hidden', dig);
         const rc = $('gxm-region'); if (rc) rc.classList.toggle('hidden', dig);   // у цифровых игр регион не нужен
+        // состояние (M / NM / VG…) — только для физических копий
+        const cond = $('game-condition');
+        if (cond) {
+            cond.classList.toggle('hidden', dig);
+            if (dig) cond.value = '';
+            const row = cond.parentElement; if (row) row.style.gridTemplateColumns = dig ? 'repeat(2,minmax(0,1fr))' : '';
+        }
+        // код диска — тоже только для дисков
+        const disc = $('gx-disc');
+        if (disc) {
+            disc.classList.toggle('hidden', dig);
+            const row = disc.parentElement; if (row) row.style.gridTemplateColumns = dig ? '1fr' : '';
+        }
         paintParts();
     }
     function layoutModal(modal, more) {
@@ -112,17 +125,21 @@
         coverRow.append(cThumb); const cr = document.createElement('div'); cr.className = 'flex-1 space-y-2'; [coverBtn, coverStatus].forEach(n => n && cr.appendChild(n)); coverRow.append(cr);
 
         const left = document.createElement('div'); left.className = 'gxm-col';
+        const mid = document.createElement('div'); mid.className = 'gxm-col';
         const right = document.createElement('div'); right.className = 'gxm-col';
+        const priceFlags = modal.querySelector('.price-flags');   // «≈ цена примерная», «бесплатно», «подарок»…
         const pBlock = more.querySelector('#gx-parts-box'), tBlock = more.querySelector('#gx-trophy')?.parentElement, nBlock = more.querySelector('#gx-note')?.parentElement;
         // слева: основное, платформа, заметки — справа: прохождение, ачивки, комплектность, обложка (колонки ровнее, заметки не уезжают вниз)
         // слева: основное (с ценой), обложка, платформа — справа: прохождение, ачивки, комплектность, заметки (самое нужное выше, второстепенное ниже)
         left.append(
-            card('📝 Основное', wrap([g('game-title'), rowOf('game-developer'), rowOf('game-year'), g('game-edition'), g('game-url')])),
-            card('🖼 Обложка', coverRow, coverFile),
-            card('🎮 Платформа и формат', picker, digitalLabel, regionCell)
+            card('📝 Основное', wrap([g('game-title'), rowOf('game-developer'), rowOf('game-year'), priceFlags, g('game-edition'), g('game-url')])),
+            card('🖼 Обложка', coverRow, coverFile)
+        );
+        mid.append(
+            card('🎮 Платформа и формат', picker, digitalLabel, regionCell),
+            card('🚦 Прохождение', blk, coopLabel, ratingBlock)
         );
         right.append(
-            card('🚦 Прохождение', blk, coopLabel, ratingBlock),
             card('🏆 Ачивки', tBlock),
             card('📦 Комплектность', pBlock),
             card('💬 Заметки', nBlock)
@@ -133,8 +150,8 @@
         const yearRow = rowOf('game-year');
         const extras = [];
         leftovers.forEach(n => {
-            if (n.classList.contains('price-flags') && yearRow) yearRow.after(n);
-            else if (n.id === 'gx-collections') right.insertBefore(card('📚 Коллекции', n), right.children[2] || null);
+            if (n.classList.contains('price-flags')) { if (!priceFlags && yearRow) yearRow.after(n); }
+            else if (n.id === 'gx-collections') mid.append(card('📚 Коллекции', n));
             else if (n.querySelector('input,select,textarea,button') || n.id) extras.push(n);
         });
         if (extras.length) right.append(card('', ...extras));
@@ -142,7 +159,7 @@
         tBlock?.querySelector(':scope > label')?.remove(); pBlock?.querySelector(':scope > label')?.remove(); nBlock?.querySelector(':scope > label')?.remove();
         if (pBlock) pBlock.closest('.gxm-card').id = 'gxm-parts-card';
 
-        const grid = document.createElement('div'); grid.className = 'gxm-wrap'; grid.append(left, right);
+        const grid = document.createElement('div'); grid.className = 'gxm-wrap'; grid.append(left, mid, right);
         const foot = document.createElement('div'); foot.className = 'gxm-foot';
         [cancelBtn, saveBtn].forEach(b => { if (b) { b.classList.remove('w-full'); b.classList.add('gxm-fbtn'); foot.appendChild(b); } });
         // скрытый input id и скрытая платформа (select) остаются в DOM — на них опирается сохранение
@@ -218,17 +235,28 @@
     .gv-note{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.6;color:#e5e7eb;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:12px 14px}
     .gv-st{pointer-events:none}
     .gxm-wrap{display:grid;grid-template-columns:1fr;gap:16px;margin-top:14px}
-    @media(min-width:860px){.gxm-wrap{grid-template-columns:1.1fr 1fr;align-items:start}}
+    @media(min-width:760px){.gxm-wrap{grid-template-columns:1fr 1fr;align-items:start}}
+    @media(min-width:1180px){.gxm-wrap{grid-template-columns:1fr 1fr 1fr}}
+    .gxm-card.hidden,#gxm-region.hidden,#game-modal .hidden{display:none!important}
     .gxm-col{display:flex;flex-direction:column;gap:14px;min-width:0}
-    .gxm-card{display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08)}
-    .gxm-t{font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#9ca3af}
-    .gxm-fields{display:flex;flex-direction:column;gap:10px}
+    .gxm-card{display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-radius:18px;background:linear-gradient(160deg,rgba(255,255,255,.055),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.09);box-shadow:0 6px 20px rgba(0,0,0,.18)}
+    .gxm-card:empty{display:none}
+    .gxm-t{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#9ca3af}
+    .gxm-fields{display:flex;flex-direction:column;gap:8px}
+    .gxm-fields input:not([type=checkbox]),.gxm-fields select{padding:9px 12px!important;font-size:13px!important;border-radius:11px!important}
+    .gxm-fields .grid{gap:8px!important}
+    #game-modal .price-flags{padding:2px 0}
+    #game-modal .price-flags label{padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:11.5px;gap:7px}
+    #game-modal .price-flags input[type=checkbox]{width:28px;height:16px}
+    #game-modal .price-flags input[type=checkbox]::after{width:10px;height:10px}
+    #game-modal .price-flags input[type=checkbox]:checked::after{transform:translateX(12px)}
+    #game-modal #gx-disc,#game-modal #gx-hours{padding:9px 12px!important;font-size:13px!important}
     .gxm-fields .grid{display:grid}
-    .gxm-thumb{width:84px;height:84px;border-radius:16px;overflow:hidden;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font-size:30px;flex-shrink:0;border:1px solid rgba(255,255,255,.1)}
+    .gxm-thumb{width:68px;height:68px;border-radius:16px;overflow:hidden;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font-size:30px;flex-shrink:0;border:1px solid rgba(255,255,255,.1)}
     .gxm-thumb img{width:100%;height:100%;object-fit:cover}
     .gxm-btn{width:100%;padding:10px;border-radius:12px;font-weight:800;font-size:13px;color:#fff;background:rgba(6,182,212,.7);cursor:pointer}
     .gxm-check{display:flex;align-items:center;gap:8px;font-size:13px;color:#d1d5db;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.04)}
-    .gxm-panel{display:flex!important;flex-direction:column;overflow:hidden!important;padding:0!important;max-width:min(1100px,96vw)!important;max-height:calc(100dvh - 32px)!important}
+    .gxm-panel{display:flex!important;flex-direction:column;overflow:hidden!important;padding:0!important;max-width:min(1360px,96vw)!important;max-height:calc(100dvh - 32px)!important}
     .gxm-panel>:first-child{flex:0 0 auto;margin:0!important;padding:20px 26px 6px}
     .gxm-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:4px 26px 18px}
     .gxm-foot{flex:0 0 auto;display:flex;gap:10px;justify-content:flex-end;margin:0!important;padding:12px 26px calc(14px + env(safe-area-inset-bottom,0px));background:rgba(13,13,20,.96);border-top:1px solid rgba(255,255,255,.08)}
