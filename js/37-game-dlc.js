@@ -38,9 +38,6 @@
     const css = document.createElement('style');
     css.textContent = `
     #gd-body{position:relative;isolation:isolate}
-    .gdx-bg{position:absolute;left:-1.75rem;right:-1.75rem;top:-1.75rem;height:300px;z-index:-1;overflow:hidden;border-radius:1.5rem 1.5rem 0 0;pointer-events:none}
-    .gdx-bg i{position:absolute;inset:-30px;background-size:cover;background-position:center;filter:blur(34px) saturate(1.5);opacity:.5;transform:scale(1.15)}
-    .gdx-bg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(13,13,20,.1),rgba(13,13,20,.65) 65%,#0d0d14)}
     #gd-body .gd-cover{width:200px;height:200px;border-radius:24px;box-shadow:0 22px 50px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.12)}
     @media(max-width:640px){#gd-body .gd-cover{width:100%;height:auto;aspect-ratio:1/1;max-width:260px;margin:0 auto}}
     .gdx-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:10px;margin-top:20px}
@@ -227,17 +224,6 @@
         const modal = $('game-detail-modal');
         const g = modal && !modal.classList.contains('hidden') ? currentGame() : null;
         if (!g) return;
-        // фон из обложки
-        const cover = body.querySelector('.gd-cover img');
-        if (cover && !body.querySelector('.gdx-bg')) {
-            const bg = document.createElement('div');
-            bg.className = 'gdx-bg';
-            bg.setAttribute('aria-hidden', 'true');
-            const i = document.createElement('i');
-            i.style.backgroundImage = `url("${cover.src.replace(/"/g, '%22')}")`;
-            bg.appendChild(i);
-            body.prepend(bg);
-        }
         // плитки — сразу под шапкой
         const head = body.querySelector(':scope > .flex');
         if (head && !body.querySelector('.gdx-tiles')) head.insertAdjacentHTML('afterend', tilesHTML(g));
