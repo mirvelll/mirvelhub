@@ -453,7 +453,10 @@
         c.fillStyle = glow; c.fillRect(0, 0, W, H);
 
         /* обложка */
-        const S = 840, cx = (W - S) / 2, cy = 250;
+        /* у игры с данными обложка меньше — внизу нужно место для статов и дополнений */
+        const rich = !!(o.stats && o.stats.length);
+        const roomy = rich && !(o.dlcs && o.dlcs.length);   // без дополнений места больше — обложка крупнее
+        const S = rich ? (roomy ? 640 : 500) : 840, cx = (W - S) / 2, cy = rich ? (roomy ? 150 : 110) : 250;
         c.save();
         c.shadowColor = 'rgba(0,0,0,0.65)'; c.shadowBlur = 90; c.shadowOffsetY = 36;
         rrect(c, cx, cy, S, S, 44); c.fillStyle = '#0d0d14'; c.fill();
@@ -472,7 +475,7 @@
 
         /* значок формата / платформы */
         c.textBaseline = 'alphabetic'; c.textAlign = 'center';
-        let y = cy + S + 84;
+        let y = cy + S + (rich ? 76 : 84);
         c.font = `800 38px ${FONT_U}`;
         const badge = `${o.icon}  ${o.badge}`;
         const bw = Math.min(W - 160, c.measureText(badge).width + 64);
@@ -481,11 +484,11 @@
         c.fillStyle = '#fff'; c.fillText(badge, W / 2, y);
 
         /* название (подбираем размер, чтобы влезло в 3 строки) */
-        y += 120;
-        let size = 82, res;
-        for (const s of [82, 70, 60, 50]) {
+        y += rich ? 104 : 120;
+        let size = rich ? 66 : 82, res;
+        for (const s of (rich ? [66, 58, 50, 44] : [82, 70, 60, 50])) {
             size = s; c.font = `800 ${s}px ${FONT_D}`;
-            res = wrap(c, o.title, 900, 3);
+            res = wrap(c, o.title, 900, rich ? 2 : 3);
             if (res.ok) break;
         }
         c.fillStyle = '#fff';
@@ -497,29 +500,100 @@
             const r2 = wrap(c, o.sub, 900, 1); c.fillText(r2.lines[0], W / 2, y);
         }
         if (o.meta) {
-            y += 56; c.font = `500 34px ${FONT_U}`; c.fillStyle = 'rgba(255,255,255,0.55)';
+            y += rich ? 52 : 56; c.font = `500 ${rich ? 32 : 34}px ${FONT_U}`; c.fillStyle = 'rgba(255,255,255,0.55)';
             const r3 = wrap(c, o.meta, 900, 1); c.fillText(r3.lines[0], W / 2, y);
         }
 
         /* оценка */
         const rating = Math.max(0, Math.min(5, Number(o.rating) || 0));
         if (rating) {
-            const sy = Math.max(y + 130, 1690);
-            c.font = `900 92px ${FONT_U}`; c.textAlign = 'left';
-            const step = 112, x0 = (W - step * 5) / 2 + 8;
+            const fs = rich ? 64 : 92, step = rich ? 78 : 112;
+            const sy = rich ? y + 92 : Math.max(y + 130, 1690);
+            c.font = `900 ${fs}px ${FONT_U}`; c.textAlign = 'left';
+            const x0 = (W - step * 5) / 2 + (rich ? 6 : 8);
             for (let i = 0; i < 5; i++) {
                 c.fillStyle = i < rating ? '#facc15' : 'rgba(255,255,255,0.2)';
-                if (i < rating) { c.shadowColor = 'rgba(250,204,21,0.55)'; c.shadowBlur = 26; }
+                if (i < rating) { c.shadowColor = 'rgba(250,204,21,0.55)'; c.shadowBlur = rich ? 18 : 26; }
                 c.fillText('★', x0 + i * step, sy);
                 c.shadowBlur = 0; c.shadowColor = 'transparent';
             }
             c.textAlign = 'center';
+            y = sy;
         }
 
-        /* подпись */
-        c.font = `800 30px ${FONT_D}`; c.fillStyle = 'rgba(255,255,255,0.4)'; c.textAlign = 'center';
-        try { c.letterSpacing = '6px'; } catch (_) {}
-        c.fillText('MIRVEL HUB', W / 2, H - 70);
+        /* плитки со статами + дополнения (только у игр) */
+        if (rich) {
+            c.textAlign = 'left';
+            const gap = 24, tw = Math.floor((900 - gap * 2) / 3), th = 158;
+            const rows = Math.ceil(o.stats.length / 3);
+            let ty = y + 50;
+            o.stats.forEach((t, i) => {
+                const r = Math.floor(i / 3), inRow = Math.min(3, o.stats.length - r * 3);
+                const x = (W - (tw * inRow + gap * (inRow - 1))) / 2 + (i % 3) * (tw + gap), yy = ty + r * (th + gap);
+                rrect(c, x, yy, tw, th, 28);
+                c.fillStyle = 'rgba(255,255,255,0.07)'; c.fill();
+                c.lineWidth = 2; c.strokeStyle = t.accent ? `rgba(${t.accent}, 0.55)` : 'rgba(255,255,255,0.14)'; c.stroke();
+                c.font = `800 21px ${FONT_U}`; c.fillStyle = 'rgba(255,255,255,0.5)';
+                c.fillText(String(t.label).toUpperCase(), x + 24, yy + 40, tw - 40);
+                let fs = 46; c.font = `900 ${fs}px ${FONT_U}`;
+                while (fs > 26 && c.measureText(t.value).width > tw - 44) { fs -= 2; c.font = `900 ${fs}px ${FONT_U}`; }
+                c.fillStyle = t.color || '#fff';
+                c.fillText(t.value, x + 24, yy + 96, tw - 40);
+                if (t.sub) {
+                    c.font = `600 22px ${FONT_U}`; c.fillStyle = 'rgba(255,255,255,0.45)';
+                    c.fillText(wrap(c, t.sub, tw - 44, 1).lines[0], x + 24, yy + 134);
+                }
+            });
+            y = ty + rows * th + (rows - 1) * gap;
+
+            const dl = o.dlcs || [];
+            if (dl.length) {
+                const foot = H - 125, rowH = 54, rowGap = 8;
+                let dy = y + 56;
+                c.font = `800 26px ${FONT_U}`; c.fillStyle = 'rgba(255,255,255,0.6)';
+                c.fillText(`🧩 ДОПОЛНЕНИЯ · ${o.dlcOwned}/${dl.length}`, 90, dy);
+                dy += 22;
+                let fit = Math.max(1, Math.floor((foot - dy + rowGap) / (rowH + rowGap)));
+                const show = dl.length > fit ? fit - 1 : dl.length;     // последний слот — «ещё N»
+                dl.slice(0, Math.max(0, show)).forEach(d => {
+                    rrect(c, 90, dy, 900, rowH, 18);
+                    c.fillStyle = d.owned ? 'rgba(52,211,153,0.10)' : 'rgba(255,255,255,0.04)'; c.fill();
+                    c.lineWidth = 2; c.strokeStyle = d.owned ? 'rgba(52,211,153,0.4)' : 'rgba(255,255,255,0.12)';
+                    if (!d.owned) c.setLineDash([8, 8]);
+                    c.stroke(); c.setLineDash([]);
+                    c.font = `900 30px ${FONT_U}`; c.fillStyle = d.owned ? '#34d399' : 'rgba(255,255,255,0.35)';
+                    c.textAlign = 'left'; c.fillText(d.owned ? '✓' : '○', 114, dy + 37);
+                    c.font = `700 28px ${FONT_U}`; c.fillStyle = d.owned ? '#fff' : 'rgba(255,255,255,0.6)';
+                    let right = d.tag || '';
+                    c.font = `800 22px ${FONT_U}`;
+                    const rw = right ? c.measureText(right).width : 0;
+                    c.font = `700 28px ${FONT_U}`;
+                    c.fillText(wrap(c, d.title, 900 - 90 - rw - 40, 1).lines[0], 164, dy + 37);
+                    if (right) {
+                        c.font = `800 22px ${FONT_U}`; c.textAlign = 'right';
+                        c.fillStyle = d.done ? '#facc15' : 'rgba(255,255,255,0.5)';
+                        c.fillText(right, 990 - 24, dy + 36);
+                        c.textAlign = 'left';
+                    }
+                    dy += rowH + rowGap;
+                });
+                if (show < dl.length) {
+                    c.font = `700 24px ${FONT_U}`; c.fillStyle = 'rgba(255,255,255,0.5)'; c.textAlign = 'center';
+                    c.fillText(`+ ещё ${dl.length - Math.max(0, show)}`, W / 2, dy + 34);
+                }
+            }
+            c.textAlign = 'center';
+        }
+
+        /* подпись: ник из настроек (если не задан — название сайта) */
+        const nick = String(data.name || '').trim() || 'MIRVEL HUB';
+        let nfs = 30; c.textAlign = 'center';
+        try { c.letterSpacing = '4px'; } catch (_) {}
+        c.font = `800 ${nfs}px ${FONT_D}`;
+        while (nfs > 18 && c.measureText(nick).width > 820) { nfs -= 2; c.font = `800 ${nfs}px ${FONT_D}`; }
+        c.fillStyle = 'rgba(255,255,255,0.55)';
+        c.fillText(nick, W / 2 + 2, H - 70);
+        try { c.letterSpacing = '0px'; } catch (_) {}
         return cv;
     }
 
@@ -558,11 +632,68 @@
         return modal;
     }
 
+    /* ---------- статы и дополнения игры для карточки ---------- */
+    const G_STATUS = {
+        backlog: ['🗓', 'В планах'], playing: ['▶', 'В процессе'], completed: ['✔', 'Пройдено'], online: ['🌐', 'Онлайн-игра'],
+        sandbox: ['🏖', 'Песочница'], dropped: ['⏸', 'Заброшено'], skipped: ['💤', 'Не в планах'], app: ['🧩', 'Приложение']
+    };
+    const DLC_TYPE = { dlc: 'Дополнение', story: 'Сюжетное', pass: 'Пропуск', cosmetic: 'Косметика', ost: 'Саундтрек', other: 'Другое' };
+    const hrsTxt = h => `${Math.round((Number(h) || 0) * 10) / 10} ч`;
+    const dmy = s => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return m ? `${m[3]}.${m[2]}.${m[1]}` : ''; };
+    const dayDiff = (a, b) => Math.round((new Date(b) - new Date(a)) / 864e5);
+
+    function gameCardData(g) {
+        const stats = [];
+        const hrs = Number(g.hours) || 0;
+        const all = window.mhGameTotalHours ? Number(window.mhGameTotalHours(g)) || hrs : hrs;
+        if (all > 0) stats.push({ label: 'Часов в игре', value: hrsTxt(all), sub: all > hrs && hrs > 0 ? `эта версия: ${hrsTxt(hrs)}` : '', accent: '139, 92, 246' });
+
+        const st = G_STATUS[g.status];
+        if (st) stats.push({ label: 'Статус', value: `${st[0]} ${st[1]}`, color: g.status === 'completed' ? '#86efac' : '#fff' });
+
+        const tTotal = Number(g.trophyTotal) || 0, tDone = Number(g.trophyDone) || 0;
+        const tFull = g.trophy === 'full' || (tTotal > 0 && tDone >= tTotal);
+        if (g.trophy) {
+            const fam = ((window.mhGamePlat?.PLATFORMS || []).find(p => p[0] === g.platform) || [])[2];
+            stats.push({
+                label: fam === 'ps' ? 'Трофеи' : 'Достижения',
+                value: tFull ? (fam === 'ps' ? '🏆 Платина' : '🏆 100%') : tTotal ? `${Math.min(100, Math.round(tDone / tTotal * 100))}%` : String(tDone),
+                sub: tTotal ? `${Math.min(tDone, tTotal)} из ${tTotal}` : '', color: tFull ? '#facc15' : '#fff', accent: tFull ? '250, 204, 21' : ''
+            });
+        }
+
+        const dlcs = (Array.isArray(g.dlcs) ? g.dlcs : []).filter(d => d && d.title)
+            .map(d => {
+                const done = d.status === 'completed' || !!d.done;
+                const play = d.type === 'story' || d.type === 'dlc';
+                return { title: String(d.title), owned: !!d.owned, done: done && !!d.owned, tag: done && d.owned ? '✔ Пройдено' : (DLC_TYPE[d.type] || '') , play };
+            })
+            .sort((a, b) => (b.owned - a.owned) || (b.done - a.done));
+        const dlcOwned = dlcs.filter(d => d.owned).length;
+        if (dlcs.length) {
+            const pl = dlcs.filter(d => d.owned && d.play), pd = pl.filter(d => d.done).length;
+            stats.push({ label: 'Дополнения', value: `${dlcOwned} / ${dlcs.length}`, sub: pl.length ? `пройдено ${pd} из ${pl.length}` : 'есть / всего', accent: '52, 211, 153' });
+        }
+
+        if (g.finishedAt && dmy(g.finishedAt)) {
+            const d = g.startedAt && g.startedAt !== g.finishedAt ? dayDiff(g.startedAt, g.finishedAt) : 0;
+            stats.push({ label: 'Пройдено', value: dmy(g.finishedAt), sub: d > 0 ? `за ${d} дн.` : '' });
+        } else if (g.startedAt && dmy(g.startedAt)) stats.push({ label: 'Начато', value: dmy(g.startedAt) });
+
+        if (g.id && g.id > 1e12) {
+            const days = Math.max(0, Math.floor((Date.now() - g.id) / 864e5));
+            stats.push({ label: 'В коллекции', value: days < 1 ? 'сегодня' : days < 60 ? `${days} дн.` : `${Math.round(days / 30)} мес.`, sub: new Date(g.id).toLocaleDateString('ru-RU') });
+        }
+        stats.push({ label: 'Формат', value: g.digital ? '☁️ Цифра' : '💿 Диск', sub: [g.edition, g.hasOnline ? '🌐 онлайн' : '', g.coop ? '🤝 коп' : ''].filter(Boolean).join(' · ') });
+
+        return { stats: stats.slice(0, 6), dlcs, dlcOwned };
+    }
+
     async function share(item, key) {
         if (!item) return;
         const isGame = key === 'games';
         const o = isGame
-            ? { img: safeImg(item.img), icon: '🎮', badge: item.platform || 'Игра', title: item.title || 'Без названия', sub: '', meta: [item.year, item.developer].filter(Boolean).join(' • '), rating: item.rating }
+            ? { img: safeImg(item.img), icon: '🎮', badge: item.platform || 'Игра', title: item.title || 'Без названия', sub: '', meta: [item.year, item.developer, item.publisher].filter(Boolean).join(' • '), rating: item.rating, ...gameCardData(item) }
             : { img: safeImg(item.img), icon: key === 'cds' ? '💿' : '💽', badge: key === 'cds' ? 'CD' : 'VINYL', title: item.title || 'Без названия', sub: item.artist || '', meta: [item.year, item.label].filter(Boolean).join(' • '), rating: item.rating };
         try {
             showToast('Собираю карточку…');
