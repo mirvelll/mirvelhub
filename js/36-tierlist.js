@@ -38,6 +38,12 @@
     const newIds = new Set();
     const normT = t => String(t || '').replace(/[™®©℠]/g, '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/&/g, ' and ').replace(/[^\p{L}\p{N}]+/gu, '');
     const keyOf = it => { const i = info(it); if (!i) return ''; return it.src === 'games' ? normT(i.t) : normT((i.sub || '') + '|' + i.t); };
+    /* Платформа на карточке: «авто» — только у игр-повторок (одно название на разных платформах), чтобы их можно было различить */
+    const PLAT_MODES = ['auto', 'all', 'off'], PLAT_LBL = { auto: 'авто', all: 'все', off: 'выкл' };
+    const platMode = l => l?.plat === false ? 'off' : l?.plat === true ? 'all' : (PLAT_MODES.includes(l?.plat) ? l.plat : 'auto');
+    const dupKeysOf = l => { const c = new Map(); (l?.items || []).forEach(x => { if (x.src !== 'games') return; const k = keyOf(x); if (k) c.set(k, (c.get(k) || 0) + 1); }); return new Set([...c].filter(([, n]) => n > 1).map(([k]) => k)); };
+    let platDup = new Set();
+    const showPlat = (l, it) => { const m = platMode(l); return m === 'all' || (m === 'auto' && platDup.has(keyOf(it))); };
     const uniq = arr => { const seen = new Set(); return arr.filter(a => { const k = keyOf(a); if (!k) return true; if (seen.has(k)) return false; seen.add(k); return true; }); };
     const GROUPS = ['PlayStation', 'Xbox', 'Nintendo', 'Sega', 'Steam', 'Epic Games', 'GOG', 'PC (диск)', 'Другое'];
     const groupOf = p => {
@@ -203,7 +209,6 @@
     .tl-cap{padding:1.2rem .35rem .3rem;font-size:.62rem}
     .tl-x{backdrop-filter:blur(4px)}
     .tl-plat{position:absolute;left:4px;top:4px;max-width:calc(100% - 8px);padding:2px 6px;border-radius:99px;font-size:.55rem;font-weight:900;letter-spacing:.04em;line-height:1.2;color:#fff;background:rgba(0,0,0,.62);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.18);pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    #tiers.tl-noplat .tl-plat{display:none}
     .tl-pool{border-radius:1.4rem;border:1.5px dashed rgba(255,255,255,.16);background:rgba(255,255,255,.02)}
     .tl-pool .tl-ph{background:rgba(255,255,255,.03)}
     .tl-add{border-radius:1.4rem}
@@ -261,7 +266,7 @@
         return `<div class="tl-tile${pop ? ' tl-pop' : ''}" data-id="${it.id}" title="${E(i.t)}${i.sub ? ' — ' + E(i.sub) : ''}">
             <div class="tl-fb" style="background:linear-gradient(135deg,hsl(${h} 55% 38%),hsl(${(h + 50) % 360} 55% 20%))">${E(i.t)}</div>
             ${src ? `<img src="${E(src)}" alt="" draggable="false" loading="lazy" onerror="this.remove()">` : ''}
-            ${i.plat ? `<span class="tl-plat">${E(i.plat)}</span>` : ''}<span class="tl-cap">${E(i.t)}</span><button class="tl-x" data-a="rm" title="Убрать из тир-листа">✕</button></div>`;
+            ${i.plat && showPlat(L(), it) ? `<span class="tl-plat">${E(i.plat)}</span>` : ''}<span class="tl-cap">${E(i.t)}</span><button class="tl-x" data-a="rm" title="Убрать из тир-листа">✕</button></div>`;
     }
 
     let popId = null, renaming = false, delAsk = false, addT = 0, aq = '', hiddenDup = 0;
@@ -301,12 +306,14 @@
         data.tierActive = l.id;
         if (!l.sz) l.sz = SIZES.reduce((b, v, i) => Math.abs(v - (l.size || 92)) < Math.abs(SIZES[b] - (l.size || 92)) ? i : b, 0) + 1;
         sec.classList.toggle('tl-caps', !!l.caps);
-        sec.classList.toggle('tl-noplat', l.plat === false);
+        platDup = dupKeysOf(l);
         sec.style.setProperty('--tl-s', SIZES[l.sz - 1] + 'px');
         sec.style.setProperty('--tl-r', l.shape === 'pt' ? 1.33 : 1);
         $('tl-shape').textContent = l.shape === 'pt' ? '▯ Портрет' : '▢ Квадрат';
         $('tl-caps').classList.toggle('on', !!l.caps);
-        $('tl-plat').classList.toggle('on', l.plat !== false);
+        const pm = platMode(l), pb = $('tl-plat');
+        pb.classList.toggle('on', pm !== 'off'); pb.textContent = '🎮 Платформа: ' + PLAT_LBL[pm];
+        pb.title = 'Авто — плашка только у игр-повторок (одна игра на разных платформах). Все — у каждой игры. Выкл — скрыта.';
         $('tl-szg').innerHTML = SIZE_NAMES.map((n, i) => `<button class="tl-b${l.sz === i + 1 ? ' on' : ''}" data-a="size" data-v="${i + 1}" title="${n}${i === 2 ? ' (по умолчанию)' : ''}">${i + 1}</button>`).join('');
         const pop = id => popId === id || newIds.has(id);
         const pool = l.items.filter(x => !x.tier && (!q || (info(x)?.t || '').toLowerCase().includes(q.toLowerCase())));
@@ -529,7 +536,7 @@
             case 'delyes': { delAsk = false; if (l) { data.tierLists = lists().filter(x => x !== l); data.tierActive = ''; save(); } render(); if (addOpen) renderAdd(); return; }
             case 'shape': l.shape = l.shape === 'pt' ? 'sq' : 'pt'; break;
             case 'caps': l.caps = !l.caps; break;
-            case 'plat': l.plat = l.plat === false; break;
+            case 'plat': l.plat = PLAT_MODES[(PLAT_MODES.indexOf(platMode(l)) + 1) % PLAT_MODES.length]; break;
             case 'size': l.sz = +a.dataset.v; break;
             case 'export': return exportPng();
             case 'addtier': l.tiers.push({ id: uid(), label: 'Новый', color: COLORS[l.tiers.length % COLORS.length] }); break;
@@ -683,7 +690,7 @@
     }
     async function exportPng() {
         const l = L(); if (!l) return;
-        toast('Рисую картинку…', 'info');
+        toast('Рисую картинку…', 'info'); platDup = dupKeysOf(l);
         const S = 120, G = 6, LAB = 150, W = 1280, P = 32, RG = 12, TH = l.shape === 'pt' ? Math.round(S * 1.33) : S, cols = Math.floor((W - P * 2 - LAB - 12) / (S + G));
         const FD = "800 %spx 'Unbounded','Inter',system-ui,sans-serif", FU = "%s %spx 'Inter',system-ui,sans-serif";
         try { await Promise.all(['800 40px Unbounded', '700 20px Inter'].map(f => document.fonts.load(f, 'Аa').catch(() => {}))); } catch (_) {}
@@ -760,7 +767,7 @@
                     x.fillStyle = g; x.fillRect(px, py + TH - 38, S, 38); x.fillStyle = '#fff'; x.font = FU.replace('%s', '700').replace('%s', 11); x.textAlign = 'center';
                     x.fillText(wrap(x, inf.t, S - 8)[0], px + S / 2, py + TH - 10, S - 8); x.textAlign = 'left';
                 }
-                if (l.plat !== false && inf.plat) {
+                if (inf.plat && showPlat(l, it)) {
                     x.font = FU.replace('%s', '900').replace('%s', 12);
                     const pw = Math.min(S - 12, x.measureText(inf.plat).width + 16);
                     rr(px + 6, py + 6, pw, 20, 10); x.fillStyle = 'rgba(0,0,0,0.65)'; x.fill(); x.lineWidth = 1; x.strokeStyle = 'rgba(255,255,255,0.22)'; x.stroke();
