@@ -163,13 +163,59 @@
     @media (prefers-reduced-motion:reduce){.tl-tile,.tl-zone,.tl-cap{transition:none!important}.tl-tile.tl-pop,.tl-new,.tl-ed.flash{animation:none!important}.tl-addwrap{transition:none!important}}`;
     document.head.appendChild(css);
 
+    /* ---------- Редизайн (v3): перекрывает базовые стили выше ---------- */
+    const css3 = document.createElement('style');
+    css3.textContent = `
+    #tiers{--tl-ink:rgb(var(--theme-rgb,139,92,246))}
+    .tl-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+    .tl-hero h2{font-family:'Unbounded','Inter',system-ui,sans-serif;font-weight:800;letter-spacing:-.01em;background:linear-gradient(120deg,#fff 30%,var(--tl-ink));-webkit-background-clip:text;background-clip:text;color:transparent}
+    .tl-bar{position:relative;gap:.55rem;padding:.7rem .8rem;border-radius:1.4rem;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.09);box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .tl-b{border-radius:999px;padding:.5rem 1rem;font-weight:700;letter-spacing:.01em}
+    .tl-b.main{box-shadow:0 6px 18px rgba(var(--theme-rgb,139,92,246),.35)}
+    .tl-sel,.tl-in{border-radius:999px;padding:.5rem 1rem}
+    .tl-seg{border-radius:999px}
+    .tl-seg .tl-b{padding:.35rem .7rem}
+
+    .tl-sum{display:flex;align-items:center;gap:.9rem 1.2rem;flex-wrap:wrap;margin:.2rem 0 1rem;padding:.8rem 1rem;border-radius:1.2rem;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}
+    .tl-sum-t{font-size:.85rem;color:#9ca3af;white-space:nowrap}
+    .tl-sum-t b{font-size:1.35rem;font-weight:900;color:#fff;margin-right:.15rem}
+    .tl-prog{flex:1 1 160px;min-width:120px;height:8px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+    .tl-prog i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--tl-ink),#22d3ee);transition:width .6s cubic-bezier(.25,1,.35,1)}
+    .tl-chips{display:flex;gap:.35rem;flex-wrap:wrap}
+    .tl-chip{display:inline-flex;align-items:center;gap:.35rem;padding:.2rem .6rem .2rem .25rem;border-radius:99px;background:rgba(255,255,255,.05);font-size:.75rem;font-weight:800;color:#d1d5db}
+    .tl-chip u{text-decoration:none;display:grid;place-items:center;min-width:1.35rem;height:1.35rem;padding:0 .3rem;border-radius:99px;font-size:.7rem;font-weight:900}
+
+    .tl-board{display:flex;flex-direction:column;gap:.6rem;border:0;background:transparent;border-radius:0;overflow:visible}
+    .tl-row{--tc:#6366f1;position:relative;border:1px solid color-mix(in srgb,var(--tc) 28%,transparent);border-radius:1.3rem;overflow:hidden;background:linear-gradient(90deg,color-mix(in srgb,var(--tc) 14%,#0f0f16),color-mix(in srgb,var(--tc) 4%,#0c0c12) 70%);box-shadow:0 8px 24px rgba(0,0,0,.28);transition:border-color .25s,box-shadow .25s}
+    .tl-row:last-child{border-bottom:1px solid color-mix(in srgb,var(--tc) 28%,transparent)}
+    .tl-row:hover{border-color:color-mix(in srgb,var(--tc) 55%,transparent)}
+    .tl-lab{width:6.6rem;background:linear-gradient(160deg,color-mix(in srgb,var(--tc) 100%,#fff 22%),var(--tc) 45%,color-mix(in srgb,var(--tc) 72%,#000));box-shadow:6px 0 28px -6px color-mix(in srgb,var(--tc) 60%,transparent);text-shadow:0 2px 10px rgba(0,0,0,.25)}
+    .tl-lab::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 20% 0%,rgba(255,255,255,.28),transparent 55%);pointer-events:none}
+    .tl-lab-in{position:relative;z-index:1;font-family:'Unbounded','Inter',system-ui,sans-serif;font-weight:800;font-size:1.7rem}
+    .tl-ctl{z-index:2}
+    .tl-ctl button,.tl-ctl label{border-radius:99px;background:rgba(0,0,0,.45);backdrop-filter:blur(4px)}
+    .tl-zone{gap:7px;padding:9px 10px}
+    .tl-row .tl-zone:empty::before{content:"Перетащите карточки сюда";align-self:center;margin:auto;padding:.4rem 1rem;font-size:.75rem;font-weight:700;color:color-mix(in srgb,var(--tc) 55%,#9ca3af);opacity:.55}
+    .tl-zone.is-over{background:color-mix(in srgb,var(--tc,#8b5cf6) 22%,transparent);box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--tc,#8b5cf6) 80%,transparent)}
+    .tl-tile{border-radius:.85rem;box-shadow:0 4px 12px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.08)}
+    .tl-tile:hover{box-shadow:0 14px 28px rgba(0,0,0,.6),0 0 0 2px color-mix(in srgb,var(--tc,#fff) 70%,#fff)}
+    .tl-cap{padding:1.2rem .35rem .3rem;font-size:.62rem}
+    .tl-x{backdrop-filter:blur(4px)}
+    .tl-pool{border-radius:1.4rem;border:1.5px dashed rgba(255,255,255,.16);background:rgba(255,255,255,.02)}
+    .tl-pool .tl-ph{background:rgba(255,255,255,.03)}
+    .tl-add{border-radius:1.4rem}
+    @media (max-width:640px){.tl-lab{width:4.4rem}.tl-lab-in{font-size:1.15rem}.tl-sum{padding:.7rem .8rem}}`;
+    document.head.appendChild(css3);
+
     const main = $('main') || document.querySelector('main');
     const sec = document.createElement('section');
     sec.id = 'tiers';
     sec.className = 'page hidden';
     sec.innerHTML = `
-        <h2 class="text-4xl font-bold">Тир-листы 🏅</h2>
-        <p class="text-gray-500">Расставляйте игры и музыку по рангам — перетаскивайте карточки в нужный тир <span style="opacity:.4;font-size:.7rem">· тир-листы v2</span></p>
+        <div class="tl-hero"><div>
+            <h2 class="text-4xl font-bold">Тир-листы 🏅</h2>
+            <p class="text-gray-500">Расставляйте игры и музыку по рангам — перетаскивайте карточки в нужный тир</p>
+        </div></div>
         <div class="tl-bar glass no-hover">
             <span id="tl-namebox"></span>
             <button class="tl-b main" data-a="new">＋ Новый</button>
@@ -259,10 +305,14 @@
         const pop = id => popId === id || newIds.has(id);
         const pool = l.items.filter(x => !x.tier && (!q || (info(x)?.t || '').toLowerCase().includes(q.toLowerCase())));
         const poolAll = l.items.filter(x => !x.tier).length;
+        const total = l.items.length, placed = total - poolAll, pct = total ? Math.round(placed / total * 100) : 0;
         body.innerHTML = `
+        ${total ? `<div class="tl-sum"><div class="tl-sum-t"><b>${placed}</b> из ${total} размещено</div>
+            <div class="tl-prog" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>
+            <div class="tl-chips">${l.tiers.map(t => `<span class="tl-chip"><u style="background:${t.color};color:${fg(t.color)}">${E(t.label.slice(0, 3))}</u>${l.items.filter(x => x.tier === t.id).length}</span>`).join('')}</div></div>` : ''}
         <div class="tl-board">${l.tiers.map(t => `
-            <div class="tl-row" data-tid="${t.id}">
-                <div class="tl-lab" style="background:${t.color};color:${fg(t.color)}">
+            <div class="tl-row" data-tid="${t.id}" style="--tc:${t.color}">
+                <div class="tl-lab" style="color:${fg(t.color)}">
                     <input class="tl-lab-in" value="${E(t.label)}" maxlength="24" data-tl="${t.id}" aria-label="Название тира">
                     <div class="tl-ctl"><label title="Цвет">🎨<input type="color" value="${t.color}" data-col="${t.id}"></label><button data-a="up" title="Выше">↑</button><button data-a="dn" title="Ниже">↓</button><button data-a="deltier" title="Удалить тир">✕</button></div>
                 </div>
@@ -627,44 +677,96 @@
     async function exportPng() {
         const l = L(); if (!l) return;
         toast('Рисую картинку…', 'info');
-        const S = 120, G = 6, LAB = 150, W = 1280, TH = l.shape === 'pt' ? Math.round(S * 1.33) : S, cols = Math.floor((W - LAB - 12) / (S + G));
+        const S = 120, G = 6, LAB = 150, W = 1280, P = 32, RG = 12, TH = l.shape === 'pt' ? Math.round(S * 1.33) : S, cols = Math.floor((W - P * 2 - LAB - 12) / (S + G));
+        const FD = "800 %spx 'Unbounded','Inter',system-ui,sans-serif", FU = "%s %spx 'Inter',system-ui,sans-serif";
+        try { await Promise.all(['800 40px Unbounded', '700 20px Inter'].map(f => document.fonts.load(f, 'Аa').catch(() => {}))); } catch (_) {}
+        const rgb = (getComputedStyle(document.documentElement).getPropertyValue('--theme-rgb') || getComputedStyle(document.body).getPropertyValue('--theme-rgb') || '139, 92, 246').trim();
         const imgs = new Map();
         await Promise.all([...new Set(l.items.filter(x => x.tier).map(x => imgSrc(info(x)?.img)).filter(Boolean))].map(async s => imgs.set(s, await loadImg(s))));
         const rowH = n => Math.max(1, Math.ceil(n / cols)) * (TH + G) + G;
         const rows = l.tiers.map(t => ({ t, items: l.items.filter(x => x.tier === t.id) }));
-        const H = 80 + rows.reduce((s, r) => s + rowH(r.items.length) + 3, 0) + 36;
+        const HEAD = 128, FOOT = 64;
+        const H = HEAD + rows.reduce((s, r) => s + Math.max(rowH(r.items.length), 84) + RG, 0) - RG + FOOT;
         const c = document.createElement('canvas'); c.width = W; c.height = H;
         const x = c.getContext('2d');
-        x.fillStyle = '#0e0e14'; x.fillRect(0, 0, W, H);
-        x.fillStyle = '#fff'; x.font = '900 36px sans-serif'; x.textBaseline = 'middle'; x.fillText(l.name, 24, 42);
-        let y = 80, missed = 0;
+        const rr = (px, py, w, h, r) => { x.beginPath(); x.roundRect(px, py, w, h, r); };
+
+        /* фон + мягкое свечение цвета темы */
+        x.fillStyle = '#0b0b11'; x.fillRect(0, 0, W, H);
+        let g0 = x.createRadialGradient(W * 0.15, 0, 20, W * 0.15, 0, 760); g0.addColorStop(0, `rgba(${rgb}, 0.32)`); g0.addColorStop(1, `rgba(${rgb}, 0)`);
+        x.fillStyle = g0; x.fillRect(0, 0, W, H);
+        g0 = x.createRadialGradient(W, H, 20, W, H, 700); g0.addColorStop(0, 'rgba(6,182,212,0.16)'); g0.addColorStop(1, 'rgba(6,182,212,0)');
+        x.fillStyle = g0; x.fillRect(0, 0, W, H);
+
+        /* шапка: название + сводка */
+        const total = l.items.length, placed = l.items.filter(i => i.tier).length;
+        x.textBaseline = 'alphabetic'; x.textAlign = 'left';
+        let ts = 46; x.font = FD.replace('%s', ts);
+        while (ts > 26 && x.measureText(l.name).width > W - P * 2 - 260) { ts -= 2; x.font = FD.replace('%s', ts); }
+        x.fillStyle = '#fff'; x.fillText(l.name, P, 70);
+        x.font = FU.replace('%s', '600').replace('%s', 22); x.fillStyle = 'rgba(255,255,255,0.5)';
+        x.fillText(`${placed} из ${total} размещено · ${l.tiers.length} тиров`, P, 104);
+        if (total) {   // полоска прогресса справа
+            const bw = 220, bx = W - P - bw, by = 62;
+            rr(bx, by, bw, 10, 5); x.fillStyle = 'rgba(255,255,255,0.1)'; x.fill();
+            if (placed) { const gp = x.createLinearGradient(bx, 0, bx + bw, 0); gp.addColorStop(0, `rgb(${rgb})`); gp.addColorStop(1, '#22d3ee'); rr(bx, by, Math.max(10, bw * placed / total), 10, 5); x.fillStyle = gp; x.fill(); }
+            x.textAlign = 'right'; x.font = FU.replace('%s', '800').replace('%s', 22); x.fillStyle = '#fff';
+            x.fillText(`${Math.round(placed / total * 100)}%`, W - P, 48); x.textAlign = 'left';
+        }
+
+        let y = HEAD, missed = 0;
         rows.forEach(({ t, items }) => {
-            const h = rowH(items.length);
-            x.fillStyle = t.color; x.fillRect(0, y, LAB, h);
-            x.fillStyle = fg(t.color); x.font = '900 30px sans-serif'; x.textAlign = 'center';
-            const ls = wrap(x, t.label, LAB - 16); ls.forEach((s, i) => x.fillText(s, LAB / 2, y + h / 2 + (i - (ls.length - 1) / 2) * 34));
-            x.textAlign = 'left'; x.fillStyle = '#1a1a24'; x.fillRect(LAB, y, W - LAB, h);
+            const h = Math.max(rowH(items.length), 84), RW = W - P * 2, R = 24;
+            /* полоса тира: тонированный фон + рамка цвета тира */
+            x.save(); rr(P, y, RW, h, R); x.clip();
+            x.fillStyle = '#12121a'; x.fillRect(P, y, RW, h);
+            const tint = x.createLinearGradient(P, 0, P + RW, 0); tint.addColorStop(0, t.color + '30'); tint.addColorStop(0.7, t.color + '0d');
+            x.fillStyle = tint; x.fillRect(P, y, RW, h);
+            /* ярлык тира */
+            const lg = x.createLinearGradient(P, y, P + LAB, y + h); lg.addColorStop(0, t.color); lg.addColorStop(1, t.color);
+            x.fillStyle = lg; x.fillRect(P, y, LAB, h);
+            const sh = x.createLinearGradient(0, y, 0, y + h); sh.addColorStop(0, 'rgba(255,255,255,0.28)'); sh.addColorStop(0.5, 'rgba(255,255,255,0)'); sh.addColorStop(1, 'rgba(0,0,0,0.22)');
+            x.fillStyle = sh; x.fillRect(P, y, LAB, h);
+            x.restore();
+            rr(P + 1, y + 1, RW - 2, h - 2, R); x.lineWidth = 2; x.strokeStyle = t.color + '55'; x.stroke();
+
+            x.fillStyle = fg(t.color); x.textAlign = 'center'; x.textBaseline = 'middle';
+            const n = String(t.label).length, fs = n <= 2 ? 58 : n <= 5 ? 38 : 26;
+            x.font = FD.replace('%s', fs);
+            const ls = wrap(x, t.label, LAB - 20); ls.forEach((s, i) => x.fillText(s, P + LAB / 2, y + h / 2 + (i - (ls.length - 1) / 2) * (fs + 6)));
+            x.textAlign = 'left'; x.textBaseline = 'alphabetic';
+
             items.forEach((it, i) => {
-                const inf = info(it) || { t: '' }, px = LAB + G + (i % cols) * (S + G), py = y + G + Math.floor(i / cols) * (TH + G);
+                const inf = info(it) || { t: '' }, px = P + LAB + G + 6 + (i % cols) * (S + G), py = y + G + Math.floor(i / cols) * (TH + G);
                 const im = imgs.get(imgSrc(inf.img));
-                x.save(); x.beginPath(); x.roundRect(px, py, S, TH, 8); x.clip();
+                x.save(); x.shadowColor = 'rgba(0,0,0,0.5)'; x.shadowBlur = 10; x.shadowOffsetY = 3; rr(px, py, S, TH, 12); x.fillStyle = '#1a1a24'; x.fill(); x.restore();
+                x.save(); rr(px, py, S, TH, 12); x.clip();
                 if (im) { const k = Math.max(S / im.width, TH / im.height), w = im.width * k, hh = im.height * k; x.drawImage(im, px + (S - w) / 2, py + (TH - hh) / 2, w, hh); }
                 else {
                     if (imgSrc(inf.img)) missed++;
                     const g = x.createLinearGradient(px, py, px + S, py + TH), hh = hue(inf.t); g.addColorStop(0, `hsl(${hh} 55% 38%)`); g.addColorStop(1, `hsl(${(hh + 50) % 360} 55% 20%)`);
-                    x.fillStyle = g; x.fillRect(px, py, S, TH); x.fillStyle = '#fff'; x.font = '700 13px sans-serif'; x.textAlign = 'center';
-                    const ls = wrap(x, inf.t, S - 12).slice(0, 5); ls.forEach((s, k) => x.fillText(s, px + S / 2, py + TH / 2 + (k - (ls.length - 1) / 2) * 15)); x.textAlign = 'left';
+                    x.fillStyle = g; x.fillRect(px, py, S, TH); x.fillStyle = '#fff'; x.font = FU.replace('%s', '700').replace('%s', 13); x.textAlign = 'center';
+                    const ls2 = wrap(x, inf.t, S - 12).slice(0, 5); ls2.forEach((s, k) => x.fillText(s, px + S / 2, py + TH / 2 + (k - (ls2.length - 1) / 2) * 15)); x.textAlign = 'left';
                 }
                 if (l.caps && inf.t) {
-                    const g = x.createLinearGradient(0, py + TH - 34, 0, py + TH); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.85)');
-                    x.fillStyle = g; x.fillRect(px, py + TH - 34, S, 34); x.fillStyle = '#fff'; x.font = '700 11px sans-serif'; x.textAlign = 'center';
+                    const g = x.createLinearGradient(0, py + TH - 38, 0, py + TH); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.88)');
+                    x.fillStyle = g; x.fillRect(px, py + TH - 38, S, 38); x.fillStyle = '#fff'; x.font = FU.replace('%s', '700').replace('%s', 11); x.textAlign = 'center';
                     x.fillText(wrap(x, inf.t, S - 8)[0], px + S / 2, py + TH - 10, S - 8); x.textAlign = 'left';
                 }
                 x.restore();
+                rr(px + 0.5, py + 0.5, S - 1, TH - 1, 12); x.lineWidth = 1; x.strokeStyle = 'rgba(255,255,255,0.12)'; x.stroke();
             });
-            y += h + 3;
+            if (!items.length) { x.fillStyle = 'rgba(255,255,255,0.22)'; x.font = FU.replace('%s', '700').replace('%s', 18); x.textAlign = 'center'; x.fillText('пусто', P + LAB + (RW - LAB) / 2, y + h / 2 + 6); x.textAlign = 'left'; }
+            y += h + RG;
         });
-        x.fillStyle = '#6b7280'; x.font = '600 14px sans-serif'; x.textAlign = 'right'; x.fillText('MIRVEL HUB', W - 20, H - 16);
+        /* подпись: ник из настроек (если не задан — название сайта) */
+        const nick = String(data.name || '').trim() || 'MIRVEL HUB';
+        x.textAlign = 'center'; x.textBaseline = 'alphabetic';
+        try { x.letterSpacing = '4px'; } catch (_) {}
+        let nf = 20; x.font = FD.replace('%s', nf);
+        while (nf > 12 && x.measureText(nick).width > W - P * 2) { nf -= 1; x.font = FD.replace('%s', nf); }
+        x.fillStyle = 'rgba(255,255,255,0.5)'; x.fillText(nick, W / 2 + 2, H - 24);
+        try { x.letterSpacing = '0px'; } catch (_) {}
         c.toBlob(b => {
             if (!b) return toast('Не удалось создать картинку', 'error');
             const u = URL.createObjectURL(b), a = document.createElement('a');
