@@ -16,37 +16,61 @@
     const css = document.createElement('style');
     css.textContent = `
     #game-detail-modal .stm-hero{display:none}
-    #game-detail-modal .stm-switch{position:absolute;left:14px;top:12px;z-index:5;padding:5px 11px;border-radius:999px;font-size:11px;font-weight:800;color:#d1d5db;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(8px);cursor:pointer;transition:background .2s,color .2s}
+    #game-detail-modal .stm-switch{position:absolute;left:14px;top:12px;z-index:5;padding:6px 12px;border-radius:999px;font-size:11px;font-weight:800;color:#d1d5db;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(10px);cursor:pointer;transition:background .2s,color .2s}
     #game-detail-modal .stm-switch:hover{background:rgba(0,0,0,.75);color:#fff}
-    #game-detail-modal.mh-steam{--stm-rgb:139,92,246}
-    #game-detail-modal.mh-steam .gd-panel{position:relative;padding:0!important;overflow-x:hidden}
-    #game-detail-modal.mh-steam .stm-hero{display:block;position:absolute;left:0;right:0;top:0;height:310px;overflow:hidden;pointer-events:none;z-index:0}
-    .stm-bg{width:100%;height:100%;object-fit:cover;filter:blur(24px) saturate(1.4) brightness(.72);transform:scale(1.3)}
-    .stm-glow{position:absolute;inset:0;background:radial-gradient(110% 90% at 15% 0%,rgba(var(--stm-rgb),.6),transparent 62%),radial-gradient(70% 70% at 100% 0%,rgba(var(--stm-rgb),.25),transparent 70%)}
-    .stm-fade{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(8,8,14,.05),rgba(8,8,14,.5) 58%,rgba(13,13,20,.97) 100%)}
-    #game-detail-modal.mh-steam #gd-body{position:relative;z-index:1;padding:84px 28px 28px}
-    @media(max-width:640px){#game-detail-modal.mh-steam #gd-body{padding:70px 14px 20px}}
-    #game-detail-modal.mh-steam #gd-body .gd-cover{width:230px;height:230px;box-shadow:0 24px 60px rgba(0,0,0,.75),0 0 0 1px rgba(255,255,255,.14),0 0 50px rgba(var(--stm-rgb),.35)}
-    @media(max-width:640px){#game-detail-modal.mh-steam #gd-body .gd-cover{width:100%;height:auto;max-width:240px}}
-    #game-detail-modal.mh-steam #gd-body h3{text-shadow:0 2px 18px rgba(0,0,0,.75)}
-    /* кнопки действий — компактно в правом верхнем углу */
-    #game-detail-modal.mh-steam #gd-body > .flex > .flex.shrink-0{position:absolute;top:-62px;right:0;flex-direction:row!important;flex-wrap:wrap;justify-content:flex-end;max-width:72%;align-self:auto}
-    @media(max-width:640px){#game-detail-modal.mh-steam #gd-body > .flex > .flex.shrink-0{top:-56px;max-width:100%}}
-    #game-detail-modal.mh-steam #gd-body > .flex{position:relative}
-    #game-detail-modal.mh-steam .gd-tool{background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(8px);padding:6px 11px;font-size:12px}
-    #game-detail-modal.mh-steam .gd-tool:hover{background:rgba(var(--stm-rgb),.45);border-color:rgba(var(--stm-rgb),.7)}
+    #game-detail-modal.mh-steam{--stm-rgb:139,92,246;--stm-acc:color-mix(in srgb,rgb(var(--stm-rgb)) 62%,#fff)}
+    #game-detail-modal.mh-steam .gd-panel{position:relative;padding:0!important;overflow-x:hidden;background:#0b0b12!important}
+
+    /* ---------- баннер: высота подгоняется под шапку (см. fit() в JS), обложка всегда целиком внутри ---------- */
+    #game-detail-modal.mh-steam .stm-hero{display:block;position:absolute;left:0;right:0;top:0;height:340px;overflow:hidden;pointer-events:none;z-index:0}
+    .stm-bg{width:100%;height:100%;object-fit:cover;filter:blur(30px) saturate(1.5) brightness(.8);transform:scale(1.35)}
+    .stm-glow{position:absolute;inset:0;background:radial-gradient(90% 120% at 12% 0%,rgba(var(--stm-rgb),.55),transparent 62%),radial-gradient(60% 80% at 100% 0%,rgba(var(--stm-rgb),.22),transparent 70%)}
+    .stm-fade{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(8,8,14,.25) 0%,rgba(8,8,14,.15) 40%,rgba(11,11,18,.82) 82%,#0b0b12 100%)}
+    .stm-line{position:absolute;left:0;right:0;bottom:0;height:1px;background:linear-gradient(90deg,transparent,rgba(var(--stm-rgb),.8) 25%,rgba(var(--stm-rgb),.8) 75%,transparent);opacity:.7}
+
+    #game-detail-modal.mh-steam #gd-body{position:relative;z-index:1;padding:58px 30px 30px}
+    @media(max-width:640px){#game-detail-modal.mh-steam #gd-body{padding:58px 14px 20px}}
+    #game-detail-modal.mh-steam #gd-body > .flex:first-child{position:relative;align-items:stretch;gap:26px}
+
+    /* обложка */
+    #game-detail-modal.mh-steam #gd-body .gd-cover{width:220px;height:220px;flex:0 0 auto;border-radius:16px;overflow:hidden;
+        box-shadow:0 22px 50px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.16),0 0 46px rgba(var(--stm-rgb),.38);transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s}
+    #game-detail-modal.mh-steam #gd-body .gd-cover:hover{transform:translateY(-3px) scale(1.015);box-shadow:0 28px 60px rgba(0,0,0,.75),0 0 0 1px rgba(255,255,255,.22),0 0 60px rgba(var(--stm-rgb),.55)}
+    #game-detail-modal.mh-steam #gd-body .gd-cover img{width:100%;height:100%;object-fit:cover;display:block}
+    @media(max-width:640px){#game-detail-modal.mh-steam #gd-body .gd-cover{width:100%;height:auto;aspect-ratio:1/1;max-width:240px;margin:0 auto}}
+
+    /* инфо справа от обложки — по центру её высоты */
+    #game-detail-modal.mh-steam #gd-body > .flex:first-child > .min-w-0{align-self:stretch;display:flex;flex-direction:column;justify-content:center;gap:10px;padding-right:0}
+    #game-detail-modal.mh-steam #gd-body > .flex:first-child > .min-w-0 > *{margin:0!important}
+    #game-detail-modal.mh-steam #gd-body h3{font-size:clamp(1.9rem,4vw,2.9rem)!important;line-height:1.04;letter-spacing:-.025em;text-shadow:0 3px 22px rgba(0,0,0,.8)}
+    #game-detail-modal.mh-steam #gd-body h3::after{content:'';display:block;width:54px;height:4px;margin-top:12px;border-radius:999px;background:linear-gradient(90deg,rgb(var(--stm-rgb)),transparent);box-shadow:0 0 16px rgba(var(--stm-rgb),.6)}
+    #game-detail-modal.mh-steam #gd-body .text-purple-300.font-bold{font-size:1.15rem!important;color:var(--stm-acc)!important;font-weight:900;letter-spacing:.01em;text-shadow:0 2px 12px rgba(0,0,0,.6)}
+    #game-detail-modal.mh-steam .gd-chip{background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(8px)}
+
+    /* кнопки действий — в правом верхнем углу, на одной линии с переключателем вида */
+    #game-detail-modal.mh-steam #gd-body > .flex:first-child > .flex.shrink-0{position:absolute;top:-48px;right:0;flex-direction:row!important;flex-wrap:wrap;justify-content:flex-end;max-width:72%;align-self:auto}
+    @media(max-width:640px){#game-detail-modal.mh-steam #gd-body > .flex:first-child > .flex.shrink-0{top:-50px;max-width:100%}}
+    #game-detail-modal.mh-steam .gd-tool{background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(10px);padding:6px 12px;font-size:12px}
+    #game-detail-modal.mh-steam .gd-tool:hover{background:rgba(var(--stm-rgb),.45);border-color:rgba(var(--stm-rgb),.75)}
+
     /* статус — как кнопка «ИГРАТЬ» */
-    .stm-pill{pointer-events:none;display:inline-flex;align-items:center;gap:8px;padding:11px 26px!important;border-radius:10px!important;font-size:15px!important;font-weight:900!important;letter-spacing:.06em;text-transform:uppercase;box-shadow:0 8px 24px rgba(0,0,0,.35)}
-    /* плитки статистики одной полосой */
-    #game-detail-modal.mh-steam .gdx-tiles{display:flex;flex-wrap:wrap;gap:0;margin-top:22px;padding:14px 6px;border-radius:14px;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.07)}
-    #game-detail-modal.mh-steam .gdx-tile{flex:1 1 130px;background:none;border:0;border-left:1px solid rgba(255,255,255,.09);border-radius:0;padding:2px 18px;backdrop-filter:none}
+    .stm-pill{pointer-events:none;align-self:flex-start;display:inline-flex;align-items:center;gap:9px;padding:12px 28px!important;border-radius:10px!important;font-size:15px!important;font-weight:900!important;letter-spacing:.07em;text-transform:uppercase;
+        box-shadow:0 10px 28px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.2),inset 0 -2px 0 rgba(0,0,0,.18)}
+
+    /* плитки статистики — одной полосой под баннером */
+    #game-detail-modal.mh-steam .gdx-tiles{display:flex;flex-wrap:wrap;gap:0;margin-top:30px;padding:16px 8px;border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(0,0,0,.35));border:1px solid rgba(255,255,255,.09);box-shadow:0 14px 40px rgba(0,0,0,.35)}
+    #game-detail-modal.mh-steam .gdx-tile{flex:1 1 130px;background:none;border:0;border-left:1px solid rgba(255,255,255,.09);border-radius:0;padding:2px 20px;backdrop-filter:none}
     #game-detail-modal.mh-steam .gdx-tile:first-child{border-left:0}
+    #game-detail-modal.mh-steam .gdx-tile small{color:color-mix(in srgb,rgb(var(--stm-rgb)) 55%,#9ca3af)}
+    #game-detail-modal.mh-steam .gdx-tile b{font-size:1.55rem}
     @media(max-width:640px){#game-detail-modal.mh-steam .gdx-tile{flex-basis:45%;border-left:0;padding:8px 12px}}
-    .stm-bar{height:3px;border-radius:3px;background:rgba(255,255,255,.12);margin-top:7px;overflow:hidden}
-    .stm-bar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#fbbf24,#f59e0b)}
+    .stm-bar{height:4px;border-radius:4px;background:rgba(255,255,255,.12);margin-top:8px;overflow:hidden}
+    .stm-bar i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,#fbbf24,#f59e0b)}
+
     /* секции */
-    #game-detail-modal.mh-steam .gd-sec{background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:16px 18px}
-    #game-detail-modal.mh-steam .gd-sec-title{border-left:3px solid rgb(var(--stm-rgb));padding-left:10px}
+    #game-detail-modal.mh-steam .gd-sec{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:18px;padding:18px 20px}
+    #game-detail-modal.mh-steam .gd-sec-title{display:flex;align-items:center;gap:10px}
+    #game-detail-modal.mh-steam .gd-sec-title::before{content:'';width:4px;height:16px;border-radius:3px;background:linear-gradient(180deg,rgb(var(--stm-rgb)),transparent);flex:0 0 auto}
     `;
     document.head.appendChild(css);
 
@@ -59,7 +83,7 @@
         if (m.dataset.stm === '1') return true;
         m.dataset.stm = '1';
         hero = document.createElement('div'); hero.className = 'stm-hero'; hero.setAttribute('aria-hidden', 'true');
-        hero.innerHTML = '<img class="stm-bg" alt=""><div class="stm-glow"></div><div class="stm-fade"></div>';
+        hero.innerHTML = '<img class="stm-bg" alt=""><div class="stm-glow"></div><div class="stm-fade"></div><div class="stm-line"></div>';
         bg = hero.firstElementChild;
         sw = document.createElement('button'); sw.type = 'button'; sw.className = 'stm-switch';
         sw.addEventListener('click', () => { try { localStorage.setItem(KEY, on() ? '0' : '1'); } catch (_) {} apply(); });
@@ -68,10 +92,20 @@
         return true;
     }
 
+    // высота баннера = низ шапки (обложка + инфо) + запас: обложка всегда лежит целиком внутри баннера
+    function fit() {
+        const m = $('game-detail-modal'), body = $('gd-body');
+        if (!m || !body || !hero || !m.classList.contains('mh-steam')) return;
+        const hdr = body.firstElementChild;
+        if (!hdr) return;
+        hero.style.height = Math.min(560, Math.max(250, hdr.offsetTop + hdr.offsetHeight + 36)) + 'px';
+    }
+
     function apply() {
         const m = $('game-detail-modal'); if (!m) return;
         m.classList.toggle('mh-steam', on());
         if (sw) sw.textContent = on() ? '🎨 Классический вид' : '🎨 Steam-вид';
+        fit();
     }
 
     // средний насыщенный цвет обложки → акцент страницы
@@ -113,6 +147,9 @@
 
     function decorate() {
         const body = $('gd-body'); if (!body || !body.firstElementChild) return;
+        fit();
+        const ci = body.querySelector('.gd-cover img');
+        if (ci && !ci.complete) ci.addEventListener('load', fit, { once: true });
         // большая пилюля статуса под ценой
         if (!body.querySelector('.stm-pill')) {
             const st = body.querySelector('.gx-status.is-on');
@@ -136,6 +173,8 @@
         const body = $('gd-body'); if (!body) return;
         build();
         new MutationObserver(sync).observe(body, { childList: true });
+        window.addEventListener('resize', fit);
+        if (window.ResizeObserver) new ResizeObserver(fit).observe(body);
     }
     if ($('gd-body')) init(); else document.addEventListener('DOMContentLoaded', init);
 })();
