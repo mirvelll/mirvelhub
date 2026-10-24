@@ -103,4 +103,4 @@ input:not([type="range"]):not([type="checkbox"]):not([type="color"]), select, te
 }
 
 /* тир-листы: пока нет ни одного листа, прячем пустые кнопки вида/размера */
-.tl-nolist #tl-shape, .tl-nolist #tl-caps, .tl-nolist #tl-sizebox, .tl-nolist [data-a="export"] { display: none !important; }
+.tl-nolist #tl-shape, .tl-nolist #tl-caps, .tl-nolist #tl-plat, .tl-nolist #tl-sizebox, .tl-nolist [data-a="export"] { display: none !important; }
