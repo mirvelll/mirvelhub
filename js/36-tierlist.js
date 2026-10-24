@@ -26,10 +26,11 @@
     const pick = new Set();
 
     /* ---------- Предметы ---------- */
+    const platCode = p => { const m = (window.mhGamePlat?.PLATFORMS || []).find(x => x[0] === p); return m ? m[1] : String(p || '').slice(0, 5).toUpperCase(); };
     function info(it) {
         if (it.src === 'custom') return { t: it.t, sub: it.sub, img: it.img };
         const o = (data[it.src] || []).find(x => String(x.id) === String(it.ref));
-        return o ? { t: o.title, sub: it.src === 'games' ? o.platform : o.artist, img: o.img } : null;
+        return o ? { t: o.title, sub: it.src === 'games' ? o.platform : o.artist, img: o.img, plat: it.src === 'games' ? platCode(o.platform) : '' } : null;
     }
     const SIZES = [60, 76, 92, 112, 136];
     const SIZE_NAMES = ['Очень мелко', 'Мелко', 'Стандарт', 'Крупно', 'Очень крупно'];
@@ -201,6 +202,8 @@
     .tl-tile:hover{box-shadow:0 14px 28px rgba(0,0,0,.6),0 0 0 2px color-mix(in srgb,var(--tc,#fff) 70%,#fff)}
     .tl-cap{padding:1.2rem .35rem .3rem;font-size:.62rem}
     .tl-x{backdrop-filter:blur(4px)}
+    .tl-plat{position:absolute;left:4px;top:4px;max-width:calc(100% - 8px);padding:2px 6px;border-radius:99px;font-size:.55rem;font-weight:900;letter-spacing:.04em;line-height:1.2;color:#fff;background:rgba(0,0,0,.62);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.18);pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #tiers.tl-noplat .tl-plat{display:none}
     .tl-pool{border-radius:1.4rem;border:1.5px dashed rgba(255,255,255,.16);background:rgba(255,255,255,.02)}
     .tl-pool .tl-ph{background:rgba(255,255,255,.03)}
     .tl-add{border-radius:1.4rem}
@@ -225,6 +228,7 @@
             <button class="tl-b" data-a="mycards">✏️ Мои карточки</button>
             <button class="tl-b" data-a="shape" id="tl-shape"></button>
             <button class="tl-b" data-a="caps" id="tl-caps">🏷 Подписи</button>
+            <button class="tl-b" data-a="plat" id="tl-plat">🎮 Платформа</button>
             <span id="tl-sizebox" style="display:inline-flex;align-items:center;gap:.4rem;white-space:nowrap"><span class="tl-hint" style="margin:0">Размер</span><span class="tl-seg" id="tl-szg"></span></span>
             <button class="tl-b main" data-a="export">🖼 Скачать PNG</button>
             <div class="tl-new" id="tl-new">
@@ -257,7 +261,7 @@
         return `<div class="tl-tile${pop ? ' tl-pop' : ''}" data-id="${it.id}" title="${E(i.t)}${i.sub ? ' — ' + E(i.sub) : ''}">
             <div class="tl-fb" style="background:linear-gradient(135deg,hsl(${h} 55% 38%),hsl(${(h + 50) % 360} 55% 20%))">${E(i.t)}</div>
             ${src ? `<img src="${E(src)}" alt="" draggable="false" loading="lazy" onerror="this.remove()">` : ''}
-            <span class="tl-cap">${E(i.t)}</span><button class="tl-x" data-a="rm" title="Убрать из тир-листа">✕</button></div>`;
+            ${i.plat ? `<span class="tl-plat">${E(i.plat)}</span>` : ''}<span class="tl-cap">${E(i.t)}</span><button class="tl-x" data-a="rm" title="Убрать из тир-листа">✕</button></div>`;
     }
 
     let popId = null, renaming = false, delAsk = false, addT = 0, aq = '', hiddenDup = 0;
@@ -297,10 +301,12 @@
         data.tierActive = l.id;
         if (!l.sz) l.sz = SIZES.reduce((b, v, i) => Math.abs(v - (l.size || 92)) < Math.abs(SIZES[b] - (l.size || 92)) ? i : b, 0) + 1;
         sec.classList.toggle('tl-caps', !!l.caps);
+        sec.classList.toggle('tl-noplat', l.plat === false);
         sec.style.setProperty('--tl-s', SIZES[l.sz - 1] + 'px');
         sec.style.setProperty('--tl-r', l.shape === 'pt' ? 1.33 : 1);
         $('tl-shape').textContent = l.shape === 'pt' ? '▯ Портрет' : '▢ Квадрат';
         $('tl-caps').classList.toggle('on', !!l.caps);
+        $('tl-plat').classList.toggle('on', l.plat !== false);
         $('tl-szg').innerHTML = SIZE_NAMES.map((n, i) => `<button class="tl-b${l.sz === i + 1 ? ' on' : ''}" data-a="size" data-v="${i + 1}" title="${n}${i === 2 ? ' (по умолчанию)' : ''}">${i + 1}</button>`).join('');
         const pop = id => popId === id || newIds.has(id);
         const pool = l.items.filter(x => !x.tier && (!q || (info(x)?.t || '').toLowerCase().includes(q.toLowerCase())));
@@ -523,6 +529,7 @@
             case 'delyes': { delAsk = false; if (l) { data.tierLists = lists().filter(x => x !== l); data.tierActive = ''; save(); } render(); if (addOpen) renderAdd(); return; }
             case 'shape': l.shape = l.shape === 'pt' ? 'sq' : 'pt'; break;
             case 'caps': l.caps = !l.caps; break;
+            case 'plat': l.plat = l.plat === false; break;
             case 'size': l.sz = +a.dataset.v; break;
             case 'export': return exportPng();
             case 'addtier': l.tiers.push({ id: uid(), label: 'Новый', color: COLORS[l.tiers.length % COLORS.length] }); break;
@@ -752,6 +759,12 @@
                     const g = x.createLinearGradient(0, py + TH - 38, 0, py + TH); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.88)');
                     x.fillStyle = g; x.fillRect(px, py + TH - 38, S, 38); x.fillStyle = '#fff'; x.font = FU.replace('%s', '700').replace('%s', 11); x.textAlign = 'center';
                     x.fillText(wrap(x, inf.t, S - 8)[0], px + S / 2, py + TH - 10, S - 8); x.textAlign = 'left';
+                }
+                if (l.plat !== false && inf.plat) {
+                    x.font = FU.replace('%s', '900').replace('%s', 12);
+                    const pw = Math.min(S - 12, x.measureText(inf.plat).width + 16);
+                    rr(px + 6, py + 6, pw, 20, 10); x.fillStyle = 'rgba(0,0,0,0.65)'; x.fill(); x.lineWidth = 1; x.strokeStyle = 'rgba(255,255,255,0.22)'; x.stroke();
+                    x.fillStyle = '#fff'; x.textAlign = 'center'; x.fillText(inf.plat, px + 6 + pw / 2, py + 20, pw - 8); x.textAlign = 'left';
                 }
                 x.restore();
                 rr(px + 0.5, py + 0.5, S - 1, TH - 1, 12); x.lineWidth = 1; x.strokeStyle = 'rgba(255,255,255,0.12)'; x.stroke();
