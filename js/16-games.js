@@ -119,7 +119,7 @@
     const SORTS = [
         ['title', '🔤', 'Алфавиту'], ['platform', '🎮', 'Платформам'], ['status', '🚦', 'Статусу'],
         ['digital', '☁️', 'Цифровые'], ['price_desc', '💸', 'Дорогие'], ['year_desc', '📅', 'Новее'],
-        ['rating', '⭐', 'Оценке'], ['hours', '⏱', 'Часам'], ['recent', '🕒', 'Недавно добавлены']
+        ['rating', '⭐', 'Оценке'], ['fav', '💛', 'Любимые'], ['hours', '⏱', 'Часам'], ['recent', '🕒', 'Недавно добавлены']
     ];
     const byTitle = (a, b) => (a.title || '').localeCompare(b.title || '', 'ru');
     const COMPARE = {
@@ -130,6 +130,8 @@
         price_desc: (a, b) => (Number(b.price) || 0) - (Number(a.price) || 0) || byTitle(a, b),
         year_desc: (a, b) => (Number(b.year) || 0) - (Number(a.year) || 0) || byTitle(a, b),
         rating: (a, b) => (b.rating || 0) - (a.rating || 0) || byTitle(a, b),
+        // ⭐ из избранного — сверху (или снизу при смене порядка); остальные остаются, внутри групп — по алфавиту
+        fav: (a, b) => ((b.fav ? 1 : 0) - (a.fav ? 1 : 0)) * gs.dir || byTitle(a, b),
         hours: (a, b) => (Number(b.hours) || 0) - (Number(a.hours) || 0) || byTitle(a, b),
         recent: (a, b) => (b.id || 0) - (a.id || 0)
     };
@@ -442,7 +444,7 @@
         const dirBtn = $('game-sort-dir');
         if (dirBtn) {
             const L = { title: ['А → Я', 'Я → А'], hours: ['Больше часов сверху', 'Меньше часов сверху'], price_desc: ['Дорогие сверху', 'Дешёвые сверху'],
-                year_desc: ['Новее сверху', 'Старее сверху'], rating: ['Лучшие сверху', 'Худшие сверху'], recent: ['Новые сверху', 'Старые сверху'] };
+                year_desc: ['Новее сверху', 'Старее сверху'], fav: ['Любимые сверху', 'Любимые снизу'], rating: ['Лучшие сверху', 'Худшие сверху'], recent: ['Новые сверху', 'Старые сверху'] };
             const l = L[gs.sort] || ['По порядку', 'В обратном порядке'];
             dirBtn.textContent = (gs.dir < 0 ? '↑ ' : '↓ ') + l[gs.dir < 0 ? 1 : 0];
             dirBtn.title = 'Нажмите, чтобы перевернуть порядок';
@@ -549,7 +551,7 @@
         renderFilters(all);
 
         const items = filteredGames().sort(COMPARE[gs.sort] || byTitle);
-        if (gs.dir < 0 && gs.sort !== 'platform') items.reverse();
+        if (gs.dir < 0 && gs.sort !== 'platform' && gs.sort !== 'fav') items.reverse();
         const covers = data.gameViewMode === 'covers';
         grid.className = covers
             ? 'grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4 p-2'
@@ -571,6 +573,17 @@
                     const group = items.filter(x => (x.platform || 'Другое') === p);
                     const sum = group.reduce((s, x) => s + (Number(x.price) || 0), 0);
                     html += `<div class="col-span-full flex items-center gap-3 mt-2">${platBadge(p, true)}<span class="text-sm font-black">${esc(p)}</span><span class="text-xs text-gray-500">${group.length} шт. · ${sum} ₴</span><span class="h-px flex-1 bg-white/10"></span></div>`;
+                }
+            }
+            if (gs.sort === 'fav') {
+                // подписи групп — только если в списке есть и любимые, и остальные
+                const favN = items.filter(x => x.fav).length;
+                if (favN && favN < items.length) {
+                    const g = i.fav ? 'fav' : 'rest';
+                    if (g !== lastGroup) {
+                        lastGroup = g;
+                        html += `<div class="col-span-full flex items-center gap-3 mt-2"><span class="text-sm font-black">${g === 'fav' ? '⭐ Любимые' : 'Остальные'}</span><span class="text-xs text-gray-500">${g === 'fav' ? favN : items.length - favN} шт.</span><span class="h-px flex-1 bg-white/10"></span></div>`;
+                    }
                 }
             }
             html += cardHTML(i, covers);
