@@ -4,7 +4,12 @@
    • крупная обложка с размытым фоном
    • плитки: часы · дополнения · потрачено · ачивки · в коллекции с…
    • список дополнений: куплено / в планах, цена, дата, пройдено
-   Данные: game.dlcs = [{ id, title, type, price, owned, date, done, note }]
+   Данные: game.dlcs = [{ id, title, type, price, approx, owned, date, status, done, free, giftFrom, from, ... }]
+     status — статус прохождения (backlog | playing | completed | dropped | skipped), только у сюжетных/играбельных
+     free   — как получено, те же пометки, что у игр: free | gift | code | family | bundle | unknown | psplus
+              (пусто = куплено за деньги); старые записи читаются как раньше
+     done   — дублирует status === 'completed' (для совместимости со старыми данными и синхронизацией версий)
+   Платформы-источники берутся из настроек («Настройки → Игры → Платформы»): скрытые там не предлагаются.
    Поле необязательное — попадает в бэкап вместе с игрой.
    ========================================================= */
 (() => {
@@ -18,6 +23,30 @@
         ost:      { ico: '🎵', label: 'Саундтрек' },
         other:    { ico: '✨', label: 'Другое' }
     };
+    /* как получено — те же пометки, что у игр (js/15-price.js) */
+    const KINDS = {
+        free:    { ico: '🆓', short: 'Бесплатно',   label: 'Бесплатно' },
+        gift:    { ico: '🎁', short: 'Подарок',     label: 'Подарок' },
+        code:    { ico: '🔑', short: 'Кодом',       label: 'Активировано кодом' },
+        family:  { ico: '👨‍👩‍👧', short: 'Семья',       label: 'Семья / аккаунт друга' },
+        bundle:  { ico: '📦', short: 'В наборе',    label: 'В наборе' },
+        unknown: { ico: '❔', short: 'Не помню',    label: 'Не помню' },
+        psplus:  { ico: '➕', short: 'PS Plus',     label: 'PS Plus' }
+    };
+    /* статус прохождения — как у игр */
+    const ST = {
+        backlog:   { ico: '🗓', label: 'В планах' },
+        playing:   { ico: '▶',  label: 'В процессе' },
+        completed: { ico: '✔',  label: 'Пройдено' },
+        dropped:   { ico: '⏸',  label: 'Заброшено' },
+        skipped:   { ico: '💤', label: 'Не в планах' }
+    };
+    const PLAYABLE = ['story', 'dlc'];                 // у каких типов бывает прохождение
+    const NEED_OWNED = ['playing', 'completed', 'dropped'];   // без наличия дополнения невозможны
+    const PS_RE = /playstation|^ps\d?\b|\bpsp\b|vita/i;
+    const kindOf = d => (KINDS[d?.free] ? d.free : '');
+    const stOf = d => (ST[d?.status] ? d.status : (d?.done ? 'completed' : ''));
+    const playable = d => PLAYABLE.includes(d?.type);
     const gameById = id => (data.games || []).find(x => x.id === Number(id));
     const dlcsOf = g => (Array.isArray(g?.dlcs) ? g.dlcs : []);
     const num = v => Math.max(0, Number(v) || 0);
@@ -83,6 +112,23 @@
     .gdx-form .pic{display:flex;gap:10px;align-items:center}
     .gdx-form .pic img{width:96px;height:54px;object-fit:cover;border-radius:10px}
     @media(min-width:1100px){.gd-panel{max-width:1040px!important}}
+    .gdx-tag.k-free,.gdx-tag.st-completed{color:#86efac;border-color:rgba(134,239,172,.5)}
+    .gdx-tag.k-gift{color:#f9a8d4;border-color:rgba(249,168,212,.5)}
+    .gdx-tag.k-family{color:#c4b5fd;border-color:rgba(196,181,253,.5)}
+    .gdx-tag.k-code,.gdx-tag.k-bundle,.gdx-tag.k-psplus{color:#67e8f9;border-color:rgba(103,232,249,.45)}
+    .gdx-tag.k-unknown,.gdx-tag.st-skipped{color:#9ca3af}
+    .gdx-tag.st-playing{color:#60a5fa;border-color:rgba(96,165,250,.5)}
+    .gdx-tag.st-backlog{color:#fbbf24;border-color:rgba(251,191,36,.5)}
+    .gdx-tag.st-dropped{color:#f87171;border-color:rgba(248,113,113,.5)}
+    .gdx-card.is-done{border-color:rgba(250,204,21,.5);box-shadow:0 0 0 1px rgba(250,204,21,.15) inset}
+    .gdx-card.is-skipped{opacity:.62}
+    .gdx-card.is-skipped:hover{opacity:1}
+    .gdx-btn.plat{display:inline-flex;align-items:center;gap:6px}
+    .gdx-btn.plat svg,.gdx-btn.plat img{width:16px;height:16px;flex-shrink:0}
+    .gdx-flt{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+    .gdx-sum{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:11px;color:#9ca3af;margin:-4px 0 12px}
+    .gdx-bar{flex:1 1 120px;min-width:90px;max-width:220px;height:6px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+    .gdx-bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#34d399,#facc15)}
     `;
     document.head.appendChild(css);
 
@@ -105,7 +151,13 @@
                 if (sibs.length && all > hrs) return ['⏱ Часов во всех версиях', hoursText(all), `эта версия: ${hoursText(hrs)} · версий: ${sibs.length + 1}`];
                 return ['⏱ Часов в игре', hrs ? hoursText(hrs) : '—', hrs && owned ? `≈ ${money(spent / hrs)} за час` : ''];
             })(),
-            ['🧩 Дополнения', dl.length ? `${owned}<span class="text-gray-500 text-sm font-bold"> / ${dl.length}</span>` : '0', dl.length ? 'куплено / всего' : 'пока нет'],
+            ['🧩 Дополнения', dl.length ? `${owned}<span class="text-gray-500 text-sm font-bold"> / ${dl.length}</span>` : '0', dl.length ? 'есть / всего' : 'пока нет'],
+            ...(() => {
+                const pl = dl.filter(d => d.owned && playable(d));
+                if (!pl.length) return [];
+                const dn = pl.filter(d => stOf(d) === 'completed').length;
+                return [['🏁 Пройдено', `${dn}<span class="text-gray-500 text-sm font-bold"> / ${pl.length}</span>`, 'сюжетных и допов']];
+            })(),
             ['💰 Потрачено', spent ? money(spent) : '—', dlcSpent(g) ? `из них на DLC: ${money(dlcSpent(g))}` : 'игра + дополнения'],
             ...(g.trophy ? [['🏆 Ачивки', full ? '100%' : total ? `${Math.min(100, Math.round(done / total * 100))}%` : `${done}`, total ? `${done} из ${total}` : '']] : []),
             ...(days != null ? [['📅 В коллекции', days < 1 ? 'сегодня' : days < 60 ? `${days} дн.` : `${Math.round(days / 30)} мес.`, added.toLocaleDateString('ru-RU')]] : [])
@@ -114,31 +166,51 @@
     }
 
     /* ---------- дополнения ---------- */
+    // короткий список «по умолчанию»; кнопка «Все платформы» открывает остальные. Скрытые в настройках не показываются
     const SRC = ['Steam', 'Epic Games', 'GOG', 'PlayStation 4', 'PlayStation 5', 'Xbox One', 'Xbox Series', 'Nintendo Switch', 'PC CD/DVD', 'Другое'];
     const pill = n => window.mhPlatLogo ? window.mhPlatLogo.pill(n) : `<span class="gdx-tag">${esc(n)}</span>`;
     const stars = n => '★'.repeat(n) + '☆'.repeat(5 - n);
     let formImg = '';        // картинка в форме (dataURL)
     let formFrom = [];       // платформы-источники в форме
+    let formKind = '';       // как получено: '' = куплено, иначе ключ из KINDS
+    let formApprox = false;  // цена примерная
+    let formMore = false;    // показать все платформы
+    let flt = 'all';         // фильтр списка: all | owned | wish | ключ статуса
+
+    /** платформы для выбора — синхронно с «Настройки → Игры → Платформы» */
+    function platChoices(g) {
+        const G = window.mhGamePlat, pr = data.platPrefs || {};
+        const hidP = pr.hiddenPlats || [], hidF = pr.hiddenFams || [];
+        const all = G ? G.PLATFORMS.map(x => x[0]) : SRC;
+        const famOf = n => ((G ? G.PLATFORMS.find(x => x[0] === n) : null) || [])[2] || 'other';
+        const hidden = n => hidP.includes(n) || (famOf(n) !== 'other' && hidF.includes(famOf(n)));
+        const keep = [g.platform, ...formFrom].filter(Boolean);             // уже выбранные остаются, даже если платформу скрыли
+        const set = new Set([...(formMore ? all : SRC).filter(n => !hidden(n)), ...keep]);
+        return { list: [...all.filter(n => set.has(n)), ...[...set].filter(n => !all.includes(n))], hidden };
+    }
+    const priceText = d => { const n = num(d.price); return n ? `${d.approx ? '~' : ''}${money(n)}` : (d.owned && !kindOf(d) ? 'без цены' : ''); };
 
     function dlcItemHTML(d) {
         const t = TYPES[d.type] || TYPES.dlc;
         const from = Array.isArray(d.from) ? d.from : [];
-        const price = d.free === 'gift' ? '🎁 Подарок' : d.free === 'free' ? '🆓 Бесплатно' : (num(d.price) ? money(num(d.price)) : (d.owned ? 'без цены' : ''));
-        const meta = [t.label, price, d.date ? fmtDate(d.date) : ''].filter(Boolean).map(esc).join(' · ');
+        const k = kindOf(d), st = stOf(d), S = st ? ST[st] : null;
+        const meta = [t.label, k ? '' : priceText(d), d.date ? fmtDate(d.date) : ''].filter(Boolean).map(esc).join(' · ');
         const link = d.url && /^https?:\/\//i.test(d.url) ? d.url : '';
-        return `<div class="gdx-card ${d.owned ? 'is-owned' : 'is-wish'}" data-dlc="${esc(d.id)}">
+        const who = d.giftFrom && (k === 'gift' || k === 'family') ? `<p>${k === 'gift' ? '🎁 от' : '👨‍👩‍👧 аккаунт'}: ${esc(d.giftFrom)}</p>` : '';
+        const showSt = playable(d) || !!st;
+        return `<div class="gdx-card ${d.owned ? 'is-owned' : 'is-wish'}${st === 'completed' ? ' is-done' : ''}${st === 'skipped' ? ' is-skipped' : ''}" data-dlc="${esc(d.id)}">
             <div class="gdx-pic">${d.img ? `<img src="${esc(d.img)}" alt="" loading="lazy">` : t.ico}
-                <div class="gdx-badges">${d.owned ? '<span class="gdx-tag ok">✓ Куплено</span>' : '<span class="gdx-tag">🗓 В планах</span>'}${d.done ? '<span class="gdx-tag ok">🏁 Пройдено</span>' : ''}${d.free === 'gift' ? '<span class="gdx-tag gift">🎁</span>' : d.free === 'free' ? '<span class="gdx-tag free">🆓</span>' : ''}</div>
+                <div class="gdx-badges">${d.owned ? '<span class="gdx-tag ok">✓ Есть</span>' : '<span class="gdx-tag">🛒 Хочу купить</span>'}${S ? `<span class="gdx-tag st-${st}">${S.ico} ${S.label}</span>` : ''}${k ? `<span class="gdx-tag k-${k}">${KINDS[k].ico} ${KINDS[k].short}</span>` : ''}</div>
             </div>
             <div class="gdx-cbody">
                 <h4>${esc(d.title)}${d.rating ? ` <span class="text-yellow-400 text-xs">${stars(d.rating)}</span>` : ''}</h4>
                 <p>${meta}</p>
-                ${d.free === 'gift' && d.giftFrom ? `<p>🎁 от: ${esc(d.giftFrom)}</p>` : ''}
+                ${who}
                 ${from.length ? `<div class="gdx-from"><span class="text-[10px] text-gray-500">из</span>${from.map(pill).join('')}</div>` : ''}
                 ${d.note ? `<div class="gdx-note">${esc(d.note)}</div>` : ''}
                 <div class="gdx-acts mt-auto" style="justify-content:flex-start">
-                    <button type="button" class="gdx-btn${d.owned ? ' is-on' : ''}" data-act="dlc-own" aria-pressed="${!!d.owned}">${d.owned ? '✓ Куплено' : '🗓 В планах'}</button>
-                    ${d.owned ? `<button type="button" class="gdx-btn${d.done ? ' is-on' : ''}" data-act="dlc-done" aria-pressed="${!!d.done}" title="Прошёл это дополнение">🏁</button>` : ''}
+                    <button type="button" class="gdx-btn${d.owned ? ' is-on' : ''}" data-act="dlc-own" aria-pressed="${!!d.owned}" title="Есть ли дополнение в библиотеке">${d.owned ? '✓ Есть' : '🛒 Хочу купить'}</button>
+                    ${showSt ? `<button type="button" class="gdx-btn${st === 'completed' ? ' is-on' : ''}" data-act="dlc-status" title="Статус прохождения — нажми, чтобы сменить">${S ? `${S.ico} ${S.label}` : '＋ Статус'}</button>` : ''}
                     ${link ? `<a class="gdx-btn" href="${esc(link)}" target="_blank" rel="noopener noreferrer" title="Ссылка">🔗</a>` : ''}
                     <button type="button" class="gdx-btn" data-act="dlc-edit" aria-label="Изменить">✏️</button>
                     <button type="button" class="gdx-btn" data-act="dlc-del" aria-label="Удалить">✕</button>
@@ -147,38 +219,68 @@
 
     function formHTML(g) {
         const d = editId ? dlcsOf(g).find(x => x.id === editId) : null;
-        const srcAll = [...new Set([...SRC, g.platform, ...formFrom].filter(Boolean))];
-        const free = d?.free || '';
+        const cur = draft || {};
+        const type = cur.type ?? d?.type ?? 'dlc';
+        const owned = cur.owned ?? (!d || !!d.owned);
+        const stNow = cur.status ?? (d ? stOf(d) : '');
+        const canPlay = PLAYABLE.includes(type);
+        const stKeys = Object.keys(ST).filter(k => owned || !NEED_OWNED.includes(k));
+        const ps = [g.platform, ...formFrom].some(p => PS_RE.test(p || ''));
+        const kinds = Object.entries(KINDS).filter(([k]) => k !== 'psplus' || ps || formKind === 'psplus');
+        const who = formKind === 'gift' || formKind === 'family';
+        const L = window.mhPlatLogo, pc = platChoices(g);
         return `<div class="gdx-form" id="gdx-form">
             <input id="gdx-title" class="gd-input wide" maxlength="80" placeholder="Название дополнения" value="${esc(d?.title || '')}">
             <div class="wide pic">${formImg ? `<img src="${esc(formImg)}" alt="">` : '<span class="text-2xl">🖼️</span>'}
                 <button type="button" class="gd-tool" data-act="dlc-img">${formImg ? 'Заменить картинку' : '＋ Картинка / обложка'}</button>
                 ${formImg ? '<button type="button" class="gd-tool" data-act="dlc-imgdel">Убрать</button>' : ''}</div>
-            <select id="gdx-type" class="gd-input">${Object.entries(TYPES).map(([k, v]) => `<option value="${k}"${(d?.type || 'dlc') === k ? ' selected' : ''}>${v.ico} ${v.label}</option>`).join('')}</select>
-            <select id="gdx-free" class="gd-input"><option value=""${!free ? ' selected' : ''}>💳 Куплено за деньги</option><option value="gift"${free === 'gift' ? ' selected' : ''}>🎁 Подарок</option><option value="free"${free === 'free' ? ' selected' : ''}>🆓 Бесплатно</option></select>
-            <input id="gdx-price" class="gd-input" type="number" min="0" step="any" placeholder="Цена, ₴" value="${d?.price || ''}">
-            <input id="gdx-giftfrom" class="gd-input" maxlength="60" placeholder="От кого подарок" value="${esc(d?.giftFrom || '')}">
-            <input id="gdx-date" class="gd-input" type="date" value="${esc(d?.date || '')}" aria-label="Дата покупки">
+            <select id="gdx-type" class="gd-input" aria-label="Тип">${Object.entries(TYPES).map(([k, v]) => `<option value="${k}"${type === k ? ' selected' : ''}>${v.ico} ${v.label}</option>`).join('')}</select>
+            <select id="gdx-status" class="gd-input" aria-label="Статус прохождения"${canPlay ? '' : ' style="display:none"'}><option value="">🚦 Статус: не задан</option>${stKeys.map(k => `<option value="${k}"${stNow === k ? ' selected' : ''}>${ST[k].ico} ${ST[k].label}</option>`).join('')}</select>
+            <div class="wide"><p class="text-[11px] text-gray-500 mb-1">Как получено:</p>
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" class="gdx-btn${!formKind ? ' is-on' : ''}" data-act="dlc-kind" data-v="">💳 Куплено</button>
+                    ${kinds.map(([k, v]) => `<button type="button" class="gdx-btn${formKind === k ? ' is-on' : ''}" data-act="dlc-kind" data-v="${k}">${v.ico} ${esc(v.label)}</button>`).join('')}
+                    ${formKind ? '' : `<button type="button" class="gdx-btn${formApprox ? ' is-on' : ''}" data-act="dlc-approx">≈ Цена примерная</button>`}
+                </div></div>
+            <input id="gdx-price" class="gd-input" type="number" min="0" step="any" placeholder="${formKind ? esc(KINDS[formKind].label) : 'Цена, ₴'}" value="${d?.price || ''}"${formKind ? ' disabled' : ''}>
+            <input id="gdx-giftfrom" class="gd-input" maxlength="60" placeholder="${formKind === 'family' ? 'Чей аккаунт (друг)' : 'От кого подарок'}" value="${esc(d?.giftFrom || '')}"${who ? '' : ' style="display:none"'}>
+            <input id="gdx-date" class="gd-input" type="date" value="${esc(d?.date || '')}" aria-label="Дата получения">
             <select id="gdx-rating" class="gd-input"><option value="0">★ Оценка: нет</option>${[1, 2, 3, 4, 5].map(n => `<option value="${n}"${d?.rating === n ? ' selected' : ''}>${stars(n)}</option>`).join('')}</select>
             <input id="gdx-url" class="gd-input wide" placeholder="Ссылка (магазин, гайд…)" value="${esc(d?.url || '')}">
             <div class="wide"><p class="text-[11px] text-gray-500 mb-1">Откуда дополнение (платформы):</p>
-                <div class="flex flex-wrap gap-2">${srcAll.map(p => `<button type="button" class="gdx-btn${formFrom.includes(p) ? ' is-on' : ''}" data-act="dlc-from" data-v="${esc(p)}">${esc(p)}</button>`).join('')}</div></div>
+                <div class="flex flex-wrap gap-2">${pc.list.map(p => `<button type="button" class="gdx-btn plat${formFrom.includes(p) ? ' is-on' : ''}" data-act="dlc-from" data-v="${esc(p)}"${pc.hidden(p) ? ' title="Скрыта в настройках платформ"' : ''}>${L ? L.svg(p, 16) : ''}${esc(p)}</button>`).join('')}
+                    <button type="button" class="gdx-btn" data-act="dlc-more">${formMore ? '↑ Меньше' : '＋ Все платформы'}</button></div>
+                <p class="text-[10px] text-gray-600 mt-1">Список синхронизирован с «Настройки → Игры → Платформы».</p></div>
             <textarea id="gdx-note" class="gd-input wide" rows="2" maxlength="400" placeholder="Заметка">${esc(d?.note || '')}</textarea>
-            <label class="text-xs text-gray-400 flex items-center gap-2"><input id="gdx-owned" type="checkbox" ${!d || d.owned ? 'checked' : ''} style="accent-color:var(--theme-btn,#8b5cf6)"> Уже куплено / есть</label>
+            <label class="text-xs text-gray-400 flex items-center gap-2"><input id="gdx-owned" type="checkbox" ${owned ? 'checked' : ''} style="accent-color:var(--theme-btn,#8b5cf6)"> Уже есть в библиотеке</label>
             <div class="wide flex gap-2"><button type="button" class="gd-tool" data-act="dlc-save">${d ? '💾 Сохранить' : '＋ Добавить'}</button><button type="button" class="gd-tool" data-act="dlc-cancel">Отмена</button></div>
         </div>`;
     }
 
     function sectionHTML(g) {
         const dl = dlcsOf(g);
-        const sorted = [...dl].sort((a, b) => (b.owned - a.owned) || String(a.date || '9').localeCompare(String(b.date || '9')));
+        const ownedN = dl.filter(d => d.owned).length;
+        const play = dl.filter(d => d.owned && playable(d));
+        const doneN = play.filter(d => stOf(d) === 'completed').length;
+        const spent = dlcSpent(g);
+        const counts = { all: dl.length, owned: ownedN, wish: dl.length - ownedN };
+        Object.keys(ST).forEach(k => { counts[k] = dl.filter(d => stOf(d) === k).length; });
+        if (!(counts[flt] > 0)) flt = 'all';
+        const shown = dl.filter(d => flt === 'all' || (flt === 'owned' ? d.owned : flt === 'wish' ? !d.owned : stOf(d) === flt));
+        const sorted = [...shown].sort((a, b) => (b.owned - a.owned) || String(a.date || '9').localeCompare(String(b.date || '9')));
+        const chips = dl.length >= 3 ? [['all', 'Все'], ['owned', '✓ Есть'], ['wish', '🛒 Хочу купить'], ...Object.entries(ST).map(([k, v]) => [k, `${v.ico} ${v.label}`])]
+            .filter(([k]) => counts[k] > 0)
+            .map(([k, l]) => `<button type="button" class="gdx-btn${flt === k ? ' is-on' : ''}" data-act="dlc-flt" data-v="${k}">${esc(l)} <span style="opacity:.6">${counts[k]}</span></button>`).join('') : '';
+        const sum = [play.length ? `🏁 пройдено <b class="text-white">${doneN}</b> из ${play.length}` : '', spent ? `💰 на DLC: <b class="text-white">${money(spent)}</b>` : ''].filter(Boolean);
         return `<div class="gd-sec mt-5" id="gdx-dlc">
             <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
-                <p class="gd-sec-title mb-0">🧩 Дополнения и DLC${dl.length ? ` · ${dl.filter(d => d.owned).length}/${dl.length}` : ''}</p>
+                <p class="gd-sec-title mb-0">🧩 Дополнения и DLC${dl.length ? ` · ${ownedN}/${dl.length}` : ''}</p>
                 ${formOpen ? '' : '<button type="button" class="gd-tool" data-act="dlc-new">＋ Добавить дополнение</button>'}
             </div>
+            ${sum.length ? `<div class="gdx-sum">${sum.map(x => `<span>${x}</span>`).join('')}${play.length ? `<span class="gdx-bar" title="Пройдено ${doneN} из ${play.length}"><i style="width:${Math.round(doneN / play.length * 100)}%"></i></span>` : ''}</div>` : ''}
+            ${chips ? `<div class="gdx-flt">${chips}</div>` : ''}
             ${sorted.length ? `<div class="gdx-grid">${sorted.map(dlcItemHTML).join('')}</div>`
-                : '<p class="gdx-empty">Дополнений пока нет. Докупили DLC, сезонный пропуск или саундтрек — добавьте сюда, и они попадут в «потрачено» (подарки и бесплатные не считаются).</p>'}
+                : '<p class="gdx-empty">Дополнений пока нет. Появилось DLC, сезонный пропуск или саундтрек — добавьте сюда. Подарки, бесплатные, из семьи/аккаунта друга, по коду и из наборов в «потрачено» не считаются.</p>'}
             ${formOpen ? formHTML(g) : ''}
         </div>`;
     }
@@ -207,13 +309,15 @@
     let draft = null;
     function keepForm() {
         const f = $('gdx-form'); if (!f) return;
-        draft = { title: $('gdx-title').value, type: $('gdx-type').value, free: $('gdx-free').value, price: $('gdx-price').value, giftFrom: $('gdx-giftfrom').value,
+        draft = { title: $('gdx-title').value, type: $('gdx-type').value, status: $('gdx-status').value, price: $('gdx-price').value, giftFrom: $('gdx-giftfrom').value,
             date: $('gdx-date').value, rating: $('gdx-rating').value, url: $('gdx-url').value, note: $('gdx-note').value, owned: $('gdx-owned').checked };
     }
     function restoreForm() {
         if (!draft || !$('gdx-form')) return;
-        const m = { title: 'gdx-title', type: 'gdx-type', free: 'gdx-free', price: 'gdx-price', giftFrom: 'gdx-giftfrom', date: 'gdx-date', rating: 'gdx-rating', url: 'gdx-url', note: 'gdx-note' };
+        const m = { title: 'gdx-title', type: 'gdx-type', price: 'gdx-price', giftFrom: 'gdx-giftfrom', date: 'gdx-date', rating: 'gdx-rating', url: 'gdx-url', note: 'gdx-note' };
         Object.entries(m).forEach(([k, id]) => { $(id).value = draft[k]; });
+        const sel = $('gdx-status');
+        sel.value = [...sel.options].some(o => o.value === draft.status) ? draft.status : '';
         $('gdx-owned').checked = draft.owned;
     }
 
@@ -240,9 +344,10 @@
         return el ? gameById(el.dataset.id) : null;
     }
 
-    function refresh() {
+    function refresh(fresh) {
         const g = currentGame();
         if (!g) return;
+        if (formOpen && !fresh) keepForm();   // не терять набранное при любых перерисовках (кроме открытия новой формы)
         const old = $('gdx-dlc');
         const tiles = document.querySelector('#gd-body .gdx-tiles');
         if (tiles) tiles.outerHTML = tilesHTML(g);
@@ -273,13 +378,29 @@
                 case 'dlc-img': pickImage(); break;
                 case 'dlc-imgdel': keepForm(); formImg = ''; refresh(); break;
                 case 'dlc-from': { keepForm(); const v = a.dataset.v; formFrom = formFrom.includes(v) ? formFrom.filter(x => x !== v) : [...formFrom, v]; refresh(); break; }
-                case 'dlc-new': editId = null; formOpen = true; formImg = ''; draft = null; formFrom = g.platform ? [g.platform] : []; refresh(); $('gdx-title')?.focus(); break;
-                case 'dlc-cancel': editId = null; formOpen = false; draft = null; refresh(); break;
-                case 'dlc-edit': if (d) { editId = d.id; formOpen = true; draft = null; formImg = d.img || ''; formFrom = Array.isArray(d.from) ? [...d.from] : []; refresh(); $('gdx-title')?.focus(); } break;
+                case 'dlc-kind': { keepForm(); const v = a.dataset.v; formKind = v && formKind !== v ? v : ''; if (formKind) formApprox = false; refresh(); break; }
+                case 'dlc-approx': keepForm(); formApprox = !formApprox; refresh(); break;
+                case 'dlc-more': keepForm(); formMore = !formMore; refresh(); break;
+                case 'dlc-flt': flt = a.dataset.v || 'all'; refresh(); break;
+                case 'dlc-new': editId = null; formOpen = true; formImg = ''; draft = null; formKind = ''; formApprox = false; formMore = false; formFrom = g.platform ? [g.platform] : []; refresh(true); $('gdx-title')?.focus(); break;
+                case 'dlc-cancel': editId = null; formOpen = false; draft = null; refresh(true); break;
+                case 'dlc-edit': if (d) { editId = d.id; formOpen = true; draft = null; formImg = d.img || ''; formKind = kindOf(d); formApprox = !!d.approx && !formKind; formMore = false; formFrom = Array.isArray(d.from) ? [...d.from] : []; refresh(true); $('gdx-title')?.focus(); } break;
                 case 'dlc-own':
-                    if (d) { d.owned = !d.owned; if (d.owned && !d.date) d.date = todayISO(); if (!d.owned) d.done = false; persist(); refresh(); }
+                    if (d) {
+                        d.owned = !d.owned;
+                        if (d.owned && !d.date) d.date = todayISO();
+                        if (!d.owned && NEED_OWNED.includes(stOf(d))) { d.status = ''; d.done = false; }   // без дополнения его не пройти
+                        persist(); refresh();
+                    }
                     break;
-                case 'dlc-done': if (d) { d.done = !d.done; persist(); refresh(); } break;
+                case 'dlc-status':
+                    if (d) {
+                        const seq = ['', ...Object.keys(ST).filter(k => d.owned || !NEED_OWNED.includes(k))];
+                        const next = seq[(Math.max(0, seq.indexOf(stOf(d))) + 1) % seq.length];
+                        d.status = next; d.done = next === 'completed';
+                        persist(); refresh();
+                    }
+                    break;
                 case 'dlc-del':
                     if (d) {
                         const idx = g.dlcs.indexOf(d);
@@ -296,35 +417,42 @@
                         title,
                         type: $('gdx-type').value,
                         price: num($('gdx-price').value),
+                        approx: formApprox,
                         date: $('gdx-date').value || '',
                         owned: $('gdx-owned').checked,
                         img: formImg || '',
                         from: [...formFrom],
-                        free: $('gdx-free').value,
+                        free: formKind,
                         giftFrom: $('gdx-giftfrom').value.trim(),
                         rating: Math.min(5, num($('gdx-rating').value)),
                         url: $('gdx-url').value.trim(),
                         note: $('gdx-note').value.trim()
                     };
-                    if (rec.free) rec.price = 0;
-                    if (rec.free !== 'gift') rec.giftFrom = '';
+                    if (rec.free) { rec.price = 0; rec.approx = false; }
+                    if (rec.free !== 'gift' && rec.free !== 'family') rec.giftFrom = '';
+                    // статус прохождения — только у сюжетных/играбельных, и только если дополнение есть
+                    rec.status = playable(rec) ? $('gdx-status').value : '';
+                    if (!rec.owned && NEED_OWNED.includes(rec.status)) rec.status = '';
+                    rec.done = rec.status === 'completed';
                     if (rec.owned && !rec.date) rec.date = todayISO();
                     if (!Array.isArray(g.dlcs)) g.dlcs = [];
                     if (editId) { const ex = g.dlcs.find(x => x.id === editId); if (ex) Object.assign(ex, rec); }
                     else g.dlcs.push({ id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), ...rec });
                     editId = null; formOpen = false; draft = null; formImg = '';
-                    persist(); refresh();
+                    persist(); refresh(true);
                     showToast('Дополнение сохранено 🧩', 'success');
                     break;
                 }
             }
         });
+        // тип и «есть в библиотеке» меняют набор полей формы (статус прохождения)
+        modal.addEventListener('change', e => { if (e.target.id === 'gdx-type' || e.target.id === 'gdx-owned') { keepForm(); refresh(); } });
         // Enter в поле названия = добавить
         modal.addEventListener('keydown', e => {
             if (e.key === 'Enter' && e.target.id === 'gdx-title') { e.preventDefault(); modal.querySelector('[data-act="dlc-save"]')?.click(); }
         });
         // при закрытии страницы сбрасываем форму
-        new MutationObserver(() => { if (modal.classList.contains('hidden')) { editId = null; formOpen = false; } })
+        new MutationObserver(() => { if (modal.classList.contains('hidden')) { editId = null; formOpen = false; flt = 'all'; draft = null; } })
             .observe(modal, { attributes: true, attributeFilter: ['class'] });
     }
 

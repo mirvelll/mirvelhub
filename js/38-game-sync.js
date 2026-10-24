@@ -39,7 +39,7 @@
     function setPrimary(g, id) { groupOf(g).forEach(x => setOpt(x, { prio: id != null && x.id === id })); }
 
     /* ---------- слияние ---------- */
-    const DLC_FIELDS = ['title', 'type', 'price', 'date', 'owned', 'done', 'note', 'url', 'img', 'from', 'free', 'giftFrom', 'rating'];
+    const DLC_FIELDS = ['title', 'type', 'price', 'date', 'owned', 'done', 'note', 'url', 'img', 'from', 'free', 'giftFrom', 'rating', 'status', 'approx'];
     function copyDlc(src, from) { const r = { id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5) }; DLC_FIELDS.forEach(k => { if (src[k] !== undefined) r[k] = Array.isArray(src[k]) ? [...src[k]] : src[k]; }); if (!r.from || !r.from.length) r.from = from && from.platform ? [from.platform] : []; return r; }
 
     /** источник правды — g: добавляет недостающие дополнения и обновляет совпавшие по названию */
