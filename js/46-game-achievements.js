@@ -994,7 +994,7 @@
     window.mhRenderHomeAch = renderHomeAch;
 
     /* ================= G: карточка «🎯 Цель» на главной (день / месяц) =================
-       data.goals = { hidden, dayN (по умолчанию 1), dayNotified:'YYYY-MM-DD', month:{ gid, since:'YYYY-MM', doneAt }, history:[{ ts, text }] }
+       data.goals = { hidden, dayN (по умолчанию 1), dayNotified:'YYYY-MM-DD', month:{ gid, since:'YYYY-MM', mode:'random'|'manual', doneAt }, history:[{ ts, text }] }
        Без штрафов и напоминаний: только тост, когда цель выполнена. */
     const goalsOf = () => (data.goals && typeof data.goals === 'object') ? data.goals : (data.goals = {});
     const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -1004,6 +1004,28 @@
         const from = t0.getTime(), to = from + 864e5;
         return (data.games || []).reduce((n, g) => n + listOf(g).filter(a => a.done && a.ts >= from && a.ts < to).length, 0);
     }
+    /* G2: цель месяца выбирается сама (случайная игра без платины) или вручную; в новом месяце меняется сама.
+       Поле month.mode: 'random' | 'manual'. Платина считается по списку ачивок или по отметке trophy === 'full'. */
+    const isPlat = g => { if (!g) return false; const s = stats(g); return g.trophy === 'full' || (s.total > 0 && s.done >= s.total); };
+    const eligible = () => (data.games || []).filter(g => !g.hidden && !isPlat(g) && !['app', 'skipped'].includes(g.status));
+    function rollMonth(avoid, strict) {
+        const all = eligible();
+        let pool = all.filter(g => String(g.id) !== String(avoid));
+        if (!pool.length && !strict) pool = all;
+        const withList = pool.filter(g => listOf(g).length && stats(g).total > 0);
+        if (withList.length) pool = withList;
+        return pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
+    }
+    const monthNow = () => dayKey().slice(0, 7);
+    function ensureMonth(G) {
+        const cm = monthNow();
+        if (G.month && G.month.since === cm && gameById(G.month.gid)) return false;
+        const g = rollMonth(G.month && G.month.gid, false);
+        if (g) { G.month = { gid: g.id, since: cm, mode: 'random' }; return true; }
+        if (G.month) { delete G.month; return true; }
+        return false;
+    }
+    const ruPl = (n, a, b, c) => { const m = n % 100, k = n % 10; return (m > 10 && m < 20) ? c : k === 1 ? a : (k >= 2 && k <= 4) ? b : c; };
     function checkGoals() {
         const G = data.goals;
         if (!G || typeof G !== 'object') return;
@@ -1014,37 +1036,51 @@
             toast(`🎯 Цель дня выполнена: ${todayCount()} ${todayCount() === 1 ? 'ачивка' : 'ачивок'} сегодня. Отличная работа!`, 'success');
         }
         const m = G.month, g = m && gameById(m.gid);
-        if (m && g && !m.doneAt) {
-            const s = stats(g);
-            if (s.total > 0 && s.done >= s.total) {
-                m.doneAt = Date.now(); ch = true;
-                (G.history = Array.isArray(G.history) ? G.history : []).unshift({ ts: m.doneAt, text: `Платина в «${g.title}»` });
-                G.history = G.history.slice(0, 50);
-                toast(`🏆 Цель месяца достигнута: платина в «${esc(g.title)}»!`, 'success');
-            }
+        if (m && g && !m.doneAt && isPlat(g)) {
+            m.doneAt = Date.now(); ch = true;
+            (G.history = Array.isArray(G.history) ? G.history : []).unshift({ ts: m.doneAt, text: `Платина в «${g.title}»` });
+            G.history = G.history.slice(0, 50);
+            toast(`🏆 Цель месяца достигнута: платина в «${esc(g.title)}»!`, 'success');
         }
         if (ch) { try { persistData(); } catch (_) {} }
+    }
+    function monthBanner(G) {
+        const m = G.month, mg = m && gameById(m.gid), now = new Date();
+        const mname = MONTHS[now.getMonth()];
+        if (!mg) return `<div class="goal-ban is-empty"><div class="goal-ban-in"><span class="goal-cover"><i>🎯</i></span><div class="goal-ban-t"><p class="goal-k">Цель на ${esc(mname)}</p><p class="goal-gt">Нет подходящих игр</p><p class="goal-sub">Все игры уже с платиной или скрыты. Выбери игру сам.</p></div></div><div class="goal-btns"><button type="button" class="goal-btn is-main" data-goal="pick">Выбрать самому</button></div></div>`;
+        const cv = (typeof gbCover === 'function' ? gbCover(mg.img) : ''), done = !!m.doneAt, hasList = listOf(mg).length > 0;
+        const s = stats(mg), left = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate() + 1;
+        const kicker = done ? `Цель на ${esc(mname)} выполнена` : `У тебя есть месяц: ${esc(mname)} · осталось ${left} ${ruPl(left, 'день', 'дня', 'дней')}`;
+        let body, btns;
+        if (!hasList && !done) {
+            body = `<p class="goal-sub">Платина в этой игре. У неё ещё нет списка ачивок, прогресс считать не по чему.</p>`;
+            btns = `<button type="button" class="goal-btn is-main" data-goal="addlist">Добавить список</button><button type="button" class="goal-btn" data-goal="reroll">🎲 Другая</button><button type="button" class="goal-btn" data-goal="pick">Выбрать самому</button>`;
+        } else {
+            body = `<div class="goal-bar${done ? ' is-done' : ''}"><i style="width:${done ? 100 : s.pct}%"></i></div><p class="goal-sub">Платина: ${hasList ? `${s.done} / ${s.total} · ${s.pct}%${done ? '' : ` · осталось ${s.left}`}` : 'получена'}</p>`;
+            btns = done
+                ? `<button type="button" class="goal-btn is-main" data-goal="reroll">🎲 Новая цель</button><button type="button" class="goal-btn" data-goal="pick">Выбрать самому</button>`
+                : `<button type="button" class="goal-btn is-main" data-goal="open">Открыть список</button><button type="button" class="goal-btn" data-goal="reroll">🎲 Другая</button><button type="button" class="goal-btn" data-goal="pick">Выбрать самому</button>`;
+        }
+        return `<div class="goal-ban${done ? ' is-done' : ''}"><div class="goal-ban-bg">${cv ? `<img src="${esc(cv)}" alt="">` : ''}</div>
+            <div class="goal-ban-in"><span class="goal-cover">${cv ? `<img src="${esc(cv)}" alt="">` : '<i>🎮</i>'}</span>
+            <div class="goal-ban-t"><p class="goal-k">${kicker}</p><p class="goal-gt">${done ? '🏆 ' : ''}${esc(mg.title)}</p>${mg.platform ? `<p class="goal-pf">${esc(mg.platform)}</p>` : ''}${body}</div></div>
+            <div class="goal-btns">${btns}</div></div>`;
     }
     function renderGoal() {
         const host = $('home-goal');
         if (!host) return;
         if (!(data.games || []).some(g => !g.hidden)) { host.innerHTML = ''; return; }
-        checkGoals();
         const G = goalsOf();
+        if (ensureMonth(G)) { try { persistData(); } catch (_) {} }
+        checkGoals();
         if (G.hidden) { host.innerHTML = '<button type="button" class="goal-show" data-goal="show">🎯 Показать цели</button>'; return; }
-        const n = Math.max(1, G.dayN || 1), c = todayCount(), dpct = Math.min(100, Math.round(c / n * 100));
-        const m = G.month, mg = m && gameById(m.gid);
-        let mon;
-        if (!mg) mon = `<p class="goal-sub">Цель месяца не выбрана — например, закрыть платину в одной игре.</p><div class="goal-btns"><button type="button" class="goal-btn is-main" data-goal="pick">Выбрать игру</button></div>`;
-        else if (!listOf(mg).length) mon = `<p class="goal-t">${esc(mg.title)}</p><p class="goal-sub">У этой игры ещё нет списка ачивок, прогресс считать не по чему.</p><div class="goal-btns"><button type="button" class="goal-btn is-main" data-goal="addlist">Добавить список</button><button type="button" class="goal-btn" data-goal="pick">Выбрать другую игру</button></div>`;
-        else {
-            const s = stats(mg), done = !!m.doneAt;
-            mon = `<p class="goal-t">${done ? '🏆 ' : ''}Платина: ${esc(mg.title)}</p><div class="goal-bar${done ? ' is-done' : ''}"><i style="width:${s.pct}%"></i></div><p class="goal-sub">${s.done} / ${s.total} · ${s.pct}%${done ? ' · цель достигнута' : ` · осталось ${s.left}`}</p><div class="goal-btns"><button type="button" class="goal-btn" data-goal="open">Открыть список</button><button type="button" class="goal-btn" data-goal="pick">Сменить</button></div>`;
-        }
+        const n = Math.max(1, G.dayN || 1), c = todayCount(), dpct = Math.min(100, Math.round(c / n * 100)), ok = c >= n;
         const hist = (G.history || []).slice(0, 10);
-        host.innerHTML = `<div class="goal-card"><div class="goal-top"><p class="goal-h">🎯 Цель</p><div class="goal-tr"><button type="button" class="goal-ico" data-goal="hide" title="Скрыть карточку" aria-label="Скрыть">✕</button></div></div>
-            <div class="goal-cols"><div class="goal-col"><p class="goal-k">Сегодня</p><p class="goal-t">${c} / ${n} ${n === 1 ? 'ачивка' : 'ачивок'}${c >= n ? ' ✓' : ''}</p><div class="goal-bar${c >= n ? ' is-done' : ''}"><i style="width:${dpct}%"></i></div><div class="goal-btns"><button type="button" class="goal-btn" data-goal="dayn">Цель: ${n}</button></div></div>
-            <div class="goal-col"><p class="goal-k">${esc(MONTHS[new Date().getMonth()])}</p>${mon}</div></div>
+        host.innerHTML = `<div class="goal-card"><div class="goal-top"><p class="goal-h">🎯 Цели</p><div class="goal-tr"><button type="button" class="goal-ico" data-goal="hide" title="Скрыть карточку" aria-label="Скрыть">✕</button></div></div>
+            ${monthBanner(G)}
+            <div class="goal-day"><div class="goal-day-l"><p class="goal-k">Сегодня</p><p class="goal-t">${c} / ${n} ${n === 1 ? 'ачивка' : 'ачивок'}${ok ? ' ✓' : ''}</p></div>
+            <div class="goal-bar goal-day-bar${ok ? ' is-done' : ''}"><i style="width:${dpct}%"></i></div>
+            <div class="goal-step" title="Сколько ачивок в день"><button type="button" data-goal="dayminus" aria-label="Меньше">−</button><b>${n}</b><button type="button" data-goal="dayplus" aria-label="Больше">+</button></div></div>
             ${hist.length ? `<details class="goal-hist"><summary>История целей · ${hist.length}</summary>${hist.map(h => `<p><b>${fmt(h.ts)}</b> ${esc(h.text)}</p>`).join('')}</details>` : ''}</div>`;
     }
     /** Окно выбора игры с поиском */
@@ -1054,7 +1090,7 @@
             const all = (data.games || []).filter(g => !g.hidden).slice().sort((a, b) => (listOf(b).length > 0) - (listOf(a).length > 0) || String(a.title).localeCompare(String(b.title), 'ru'));
             const ov = document.createElement('div');
             ov.className = 'gl-ov';
-            const rowsHtml = q => all.filter(g => !q || nk(g.title).includes(nk(q))).slice(0, 40).map(g => `<button type="button" class="gl-item" data-gl="pick" data-id="${esc(g.id)}"><span>${esc(g.title)}</span><em>${esc(g.platform || '')}${listOf(g).length ? ` · ${stats(g).pct}%` : ' · нет списка'}</em></button>`).join('') || '<p class="gl-empty">Ничего не найдено</p>';
+            const rowsHtml = q => all.filter(g => !q || nk(g.title).includes(nk(q))).slice(0, 40).map(g => `<button type="button" class="gl-item" data-gl="pick" data-id="${esc(g.id)}"><span>${esc(g.title)}</span><em>${esc(g.platform || '')}${isPlat(g) ? ' · 🏆 платина' : listOf(g).length ? ` · ${stats(g).pct}%` : ' · нет списка'}</em></button>`).join('') || '<p class="gl-empty">Ничего не найдено</p>';
             ov.innerHTML = `<div class="gl-box" role="dialog" aria-modal="true" aria-label="Выбор игры"><p class="gl-title">🎯 Цель месяца: платина в игре</p><p class="gl-sub">Выбери игру. Лучше ту, у которой уже есть список ачивок.</p>
                 <input class="gd-input" id="goal-q" type="search" placeholder="Поиск по названию…" style="margin-bottom:8px"><div class="gl-list" id="goal-list">${rowsHtml('')}</div><div class="gl-row"><button type="button" class="gl-btn" data-gl="cancel">Отмена</button></div></div>`;
             const done = id => { ov.remove(); linkOv = null; resolve(id); };
@@ -1070,17 +1106,21 @@
         G.touched = true;
         if (act === 'hide') { G.hidden = true; persistData(); renderGoal(); }
         else if (act === 'show') { G.hidden = false; persistData(); renderGoal(); }
-        else if (act === 'dayn') {
-            const v = await mhPrompt('Сколько ачивок хочешь получать за день? (от 1 до 50)', { title: 'Цель дня', value: String(Math.max(1, G.dayN || 1)), okText: 'Сохранить', required: true, maxLength: 2 });
-            const n = parseInt(v, 10);
-            if (v === null) return;
-            if (!(n >= 1 && n <= 50)) { toast('Нужно число от 1 до 50', 'error'); return; }
+        else if (act === 'dayminus' || act === 'dayplus') {
+            const n = Math.min(50, Math.max(1, (G.dayN || 1) + (act === 'dayplus' ? 1 : -1)));
             G.dayN = n; if (G.dayNotified === dayKey() && todayCount() < n) delete G.dayNotified;
+            persistData(); renderGoal();
+        } else if (act === 'reroll') {
+            const g = rollMonth(G.month && G.month.gid, true);
+            if (!g) { toast('Других подходящих игр без платины нет. Можно выбрать самому.', 'info'); return; }
+            G.month = { gid: g.id, since: monthNow(), mode: 'random' };
             persistData(); renderGoal();
         } else if (act === 'pick') {
             const id = await pickGame();
             if (id == null) return;
-            G.month = { gid: Number(id), since: dayKey().slice(0, 7) };
+            const g = gameById(id);
+            if (isPlat(g)) { toast('У этой игры уже есть платина. Выбери другую.', 'info'); return; }
+            G.month = { gid: Number(id), since: monthNow(), mode: 'manual' };
             persistData(); renderGoal();
         } else if (act === 'addlist') { if (G.month) open(G.month.gid, 'import'); }
         else if (act === 'open') { if (G.month) open(G.month.gid); }

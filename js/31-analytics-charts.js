@@ -5,6 +5,7 @@
    2) все блоки страницы собраны в одну доску; их можно двигать (кнопка «Перемещать блоки»)
       с плавной анимацией, порядок запоминается: data.pageView.analytics.order
    3) шестерёнка «Настройки» (создаётся в 30-collection-ui.js) прячет ненужные блоки
+   H: календарь активности (ачивки + добавленные предметы), ачивки по месяцам, топ-5 игр; пустые блоки скрыты.
    Дата покупки берётся из id (момент добавления в хаб). Старые данные не затрагиваются.
    ========================================================= */
 (() => {
@@ -57,6 +58,20 @@
     .ac-cell{cursor:default}
     .ac-cell:hover{stroke:#fff;stroke-width:1}
     .ac-lbl{fill:#6b7280;font-size:9px;font-family:ui-monospace,monospace}
+    [data-an-empty]{display:none!important}
+    .ac-bars{display:flex;align-items:flex-end;gap:6px;height:150px;padding-top:18px}
+    .ac-bar{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px}
+    .ac-bar i{display:block;width:100%;border-radius:6px 6px 2px 2px;background:linear-gradient(180deg,var(--theme-btn,#a855f7),rgba(var(--theme-rgb,139,92,246),.35));min-height:2px;transition:height .5s}
+    .ac-bar b{font-size:10px;color:#e5e7eb;font-family:ui-monospace,monospace}
+    .ac-bar span{font-size:9px;color:#6b7280;font-family:ui-monospace,monospace}
+    .ac-top{display:flex;flex-direction:column;gap:10px}
+    .ac-top-row{display:grid;grid-template-columns:22px 1fr auto;align-items:center;gap:8px;font-size:12px;color:#d1d5db}
+    .ac-top-row .n{color:#6b7280;font-family:ui-monospace,monospace}
+    .ac-top-row .t{min-width:0}
+    .ac-top-row .t p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#fff;font-weight:700}
+    .ac-top-row .t div{height:5px;border-radius:999px;background:rgba(255,255,255,.08);margin-top:4px;overflow:hidden}
+    .ac-top-row .t div i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--theme-btn,#a855f7),#22d3ee)}
+    .ac-top-row b{font-family:ui-monospace,monospace;color:#fff}
     .ac-empty{padding:34px 10px;text-align:center;font-size:12px;font-style:italic;color:#6b7280}
 
     /* заголовок страницы с кнопками справа */
@@ -126,6 +141,18 @@
             <h3 class="text-lg font-black text-white">🔥 Когда я покупал</h3>
             <p class="ac-note mb-3">Каждая клетка — один день за последний год. Чем ярче, тем больше предметов добавлено.</p>
             <div id="ac-heat" class="ac-scroll"></div>`) },
+        { k: 'actcal',    t: 'Календарь активности',        span: 6, make: () => mk(`
+            <h3 class="text-lg font-black text-white">🟩 Календарь активности</h3>
+            <p class="ac-note mb-3">Каждая клетка — один день за последний год: полученные ачивки и добавленные предметы.</p>
+            <div id="ac-act" class="ac-scroll"></div>`) },
+        { k: 'achmonth',  t: 'Ачивки по месяцам',           span: 3, make: () => mk(`
+            <h3 class="text-lg font-black text-white">🏆 Ачивки по месяцам</h3>
+            <p class="ac-note mb-3">Сколько ачивок получено за последние 12 месяцев.</p>
+            <div id="ac-achm"></div>`) },
+        { k: 'achtop',    t: 'Топ игр по ачивкам',          span: 3, make: () => mk(`
+            <h3 class="text-lg font-black text-white">🎮 Топ-5 игр по ачивкам</h3>
+            <p class="ac-note mb-3">В каких играх получено больше всего ачивок.</p>
+            <div id="ac-achtop"></div>`) },
         { k: 'epochs',    t: 'Музыкальные эпохи',           span: 4, find: () => $('analytics-decades-chart') },
         { k: 'volume',    t: 'Физический объём полок',      span: 2, find: () => $('shelf-width-est') },
         { k: 'expensive', t: 'Самые дорогие приобретения',  span: 3, find: () => $('analytics-top-expensive') },
@@ -140,7 +167,7 @@
         return o;
     };
     let board = null, moveBtn = null, edit = false, drag = null;
-    const cardsInDom = () => [...board.children].filter(el => el.classList.contains('an-card') && !el.hasAttribute('data-mh-hidden'));
+    const cardsInDom = () => [...board.children].filter(el => el.classList.contains('an-card') && !el.hasAttribute('data-mh-hidden') && !el.hasAttribute('data-an-empty'));
 
     function applyHidden() {
         const hide = (data.pageView && data.pageView.analytics && data.pageView.analytics.hide) || {};
@@ -533,6 +560,77 @@
         <p class="ac-note">Дней с пополнением: <b style="color:#fff">${activeDays}</b> · чаще всего вы добавляете предметы в <b style="color:#fff">${['понедельник', 'вторник', 'среду', 'четверг', 'пятницу', 'субботу', 'воскресенье'][bestDow]}</b></p>`;
     }
 
+
+    /* ---------- H: активность (ачивки + добавленные предметы), ачивки по месяцам, топ игр ---------- */
+    const ruWord = (n, a, b, c) => { const m = n % 100, k = n % 10; return (m > 10 && m < 20) ? c : k === 1 ? a : (k >= 2 && k <= 4) ? b : c; };
+    function achEvents() {
+        const out = [];
+        (data.games || []).forEach(g => (Array.isArray(g.achList) ? g.achList : []).forEach(a => {
+            const ts = Number(a && a.ts);
+            if (a && a.done && ts > 946684800000 && ts <= Date.now() + 864e5) out.push({ ts, gid: g.id, title: g.title });
+        }));
+        return out;
+    }
+    function setEmpty(key, empty) { const c = CARDS.find(x => x.k === key); if (c && c.el) c.el.toggleAttribute('data-an-empty', !!empty); }
+    function drawActivity(items, ach) {
+        const box = $('ac-act');
+        if (!box) return;
+        const dk = d => d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+        const byDay = {};
+        ach.forEach(e => { const k = dk(new Date(e.ts)); (byDay[k] = byDay[k] || { a: 0, i: 0 }).a++; });
+        items.filter(i => i.ts).forEach(i => { const k = dk(new Date(i.ts)); (byDay[k] = byDay[k] || { a: 0, i: 0 }).i++; });
+        const keys = Object.keys(byDay);
+        setEmpty('actcal', !keys.length);
+        if (!keys.length) { box.innerHTML = ''; return; }
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const dow = (today.getDay() + 6) % 7;
+        const start = new Date(today); start.setDate(start.getDate() - dow - 52 * 7);
+        const cell = 11, gap = 3, left = 22, top = 16;
+        const W = left + 53 * (cell + gap), H = top + 7 * (cell + gap);
+        const tot = k => byDay[k].a + byDay[k].i;
+        const maxC = Math.max(...keys.map(tot), 1);
+        const shade = c => !c ? 'rgba(255,255,255,.06)' : `rgba(var(--theme-rgb,139,92,246),${(0.28 + 0.72 * Math.min(1, c / Math.max(maxC, 3))).toFixed(2)})`;
+        let rects = '', monthLbl = '', lastM = -1, inYear = 0, achYear = 0, activeDays = 0;
+        for (let w = 0; w < 53; w++) {
+            for (let d = 0; d < 7; d++) {
+                const dt = new Date(start); dt.setDate(start.getDate() + w * 7 + d);
+                if (dt > today) continue;
+                const v = byDay[dk(dt)], c = v ? v.a + v.i : 0;
+                if (c) { activeDays++; inYear += c; achYear += v.a; }
+                const label = dt.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+                const txt = c ? [v.a ? `${v.a} ${ruWord(v.a, 'ачивка', 'ачивки', 'ачивок')}` : '', v.i ? `${v.i} ${ruWord(v.i, 'предмет', 'предмета', 'предметов')}` : ''].filter(Boolean).join(', ') : 'ничего';
+                rects += `<rect class="ac-cell" x="${left + w * (cell + gap)}" y="${top + d * (cell + gap)}" width="${cell}" height="${cell}" rx="3" fill="${shade(c)}"><title>${label}: ${txt}</title></rect>`;
+            }
+            const first = new Date(start); first.setDate(start.getDate() + w * 7);
+            if (first.getMonth() !== lastM && first.getDate() <= 7) { lastM = first.getMonth(); monthLbl += `<text class="ac-lbl" x="${left + w * (cell + gap)}" y="10">${MONTHS[lastM]}</text>`; }
+        }
+        const dayLbl = [0, 2, 4].map(d => `<text class="ac-lbl" x="0" y="${top + d * (cell + gap) + cell - 2}">${DAYS[d]}</text>`).join('');
+        box.innerHTML = `<svg class="ac-heat" viewBox="0 0 ${W} ${H}" role="img" aria-label="Календарь активности">${monthLbl}${dayLbl}${rects}</svg>
+        <p class="ac-note">Активных дней: <b style="color:#fff">${activeDays}</b> · событий за год: <b style="color:#fff">${inYear}</b>${achYear ? ` (ачивок: ${achYear})` : ''}</p>`;
+    }
+    function drawAchMonths(ach) {
+        const box = $('ac-achm');
+        if (!box) return;
+        const now = new Date(), months = [];
+        for (let k = 11; k >= 0; k--) { const d = new Date(now.getFullYear(), now.getMonth() - k, 1); months.push({ y: d.getFullYear(), m: d.getMonth(), n: 0 }); }
+        ach.forEach(e => { const d = new Date(e.ts), r = months.find(x => x.y === d.getFullYear() && x.m === d.getMonth()); if (r) r.n++; });
+        const max = Math.max(...months.map(x => x.n), 0);
+        setEmpty('achmonth', !max);
+        if (!max) { box.innerHTML = ''; return; }
+        box.innerHTML = `<div class="ac-bars">${months.map(x => `<div class="ac-bar" title="${MONTHS[x.m]} ${x.y}: ${x.n}"><b>${x.n || ''}</b><i style="height:${Math.max(x.n ? 4 : 0, Math.round(x.n / max * 100))}%"></i><span>${MONTHS[x.m]}</span></div>`).join('')}</div>`;
+    }
+    function drawAchTop(ach) {
+        const box = $('ac-achtop');
+        if (!box) return;
+        const by = new Map();
+        ach.forEach(e => { const r = by.get(e.gid) || { title: e.title, n: 0 }; r.n++; by.set(e.gid, r); });
+        const top = [...by.values()].sort((a, b) => b.n - a.n).slice(0, 5);
+        setEmpty('achtop', !top.length);
+        if (!top.length) { box.innerHTML = ''; return; }
+        const max = top[0].n;
+        box.innerHTML = `<div class="ac-top">${top.map((r, i) => `<div class="ac-top-row"><span class="n">${i + 1}</span><div class="t"><p>${E(r.title)}</p><div><i style="width:${Math.round(r.n / max * 100)}%"></i></div></div><b>${r.n}</b></div>`).join('')}</div>`;
+    }
+
     /* ---------- общий рендер ---------- */
     function render() {
         try {
@@ -541,6 +639,10 @@
             drawDonut(items);
             drawLine(items);
             drawHeat(items);
+            const ach = achEvents();
+            drawActivity(items, ach);
+            drawAchMonths(ach);
+            drawAchTop(ach);
         } catch (e) { console.warn('[MIRVEL] Статистика:', e); }
     }
 
