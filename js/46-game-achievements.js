@@ -18,7 +18,8 @@
     const MAX_LIST = 1000;
 
     /* Промпт для нейросети: скриншоты ачивок → готовый текст для импорта (лежит и в Настройки → Промпты) */
-    window.MH_ACH_PROMPT = `Ты помогаешь перенести ачивки игры в мою коллекцию. Я пришлю скриншоты со списком ачивок. Перепиши КАЖДУЮ ачивку отдельной строкой строго в таком формате:
+    /* Предыдущий встроенный текст — нужен только чтобы понять, правил ли ты сохранённую копию в «Промптах» */
+    window.MH_ACH_PROMPT_OLD = `Ты помогаешь перенести ачивки игры в мою коллекцию. Я пришлю скриншоты со списком ачивок. Перепиши КАЖДУЮ ачивку отдельной строкой строго в таком формате:
 
 Название — Описание — ДД.ММ.ГГГГ
 
@@ -30,6 +31,52 @@
 5. Тексты оставляй такими, как на скриншоте, на языке оригинала. Ничего не придумывай и не пропускай. Проценты редкости («12.3% игроков») не пиши.
 6. Между скриншотами не должно быть повторов: если ачивка попала на два скрина, оставь её один раз.
 7. Весь ответ дай одним блоком кода, чтобы я мог скопировать его целиком.`;
+    window.MH_ACH_PROMPT = `Ты переносишь ачивки игры в мою коллекцию. Я пришлю скриншоты со списком ачивок. Твоя задача — переписать их в текст СТРОГО по правилам ниже. Время не ограничено: работай внимательно, лучше медленно, но точно.
+
+ШАГ 0 — ПРОВЕРКА В ИНТЕРНЕТЕ (ОБЯЗАТЕЛЬНО, если у тебя есть доступ к поиску):
+На скриншотах часто НЕ написано, что ачивка относится к DLC (например, «Завершить оба пути» может быть из дополнения). Поэтому:
+1. Определи игру по скриншотам и найди в интернете полный список её ачивок с разбивкой на основную игру и DLC (Steam: страница ачивок игры, PSNProfiles, TrueAchievements, Exophase, Steam Community Guides, wiki игры).
+2. Узнай, какие у игры есть DLC и сколько в них ачивок.
+3. Сверь КАЖДУЮ ачивку со скриншотов с этим списком по названию и описанию и определи, к какой группе она принадлежит. Не полагайся на то, что на скриншоте нет пометки «DLC».
+4. Если интернета нет или данные не нашлись — действуй по правилам ниже и в конце ответа (ВНЕ блока кода) одной строкой напиши, что группы не удалось проверить.
+
+ФОРМАТ ОДНОЙ АЧИВКИ (одна строка):
+Название — Описание — ДД.ММ.ГГГГ
+
+ГРУППЫ (ОСНОВНАЯ ИГРА И DLC) — ОБЯЗАТЕЛЬНО:
+Перед каждой группой ачивок пиши строку-заголовок, начинающуюся с символа # и пробела:
+# Основная игра
+# DLC: <название дополнения>
+Правила для групп:
+- Ачивки DLC НЕ смешивай с основной игрой: на каждое дополнение свой заголовок «# DLC: …» и его ачивки под ним — даже если на скриншоте нет никакой пометки, но проверка в интернете показала, что ачивка из DLC.
+- Платиновый трофей / ачивку «получить все» относи к той группе, к которой она принадлежит (платина DLC — к DLC, платина игры — к основной игре).
+- Если ты не смог определить группу — отнеси к «# Основная игра».
+- Если у игры нет DLC, всё равно начни ответ со строки «# Основная игра».
+- Заголовки с # пиши всегда.
+
+ДРУГИЕ ПРАВИЛА:
+1. Одна ачивка = одна строка, без нумерации и маркеров.
+2. Дата — когда ачивка получена, формат ДД.ММ.ГГГГ. Если на скриншоте дата в другом виде («12 мар. 2024», «March 12, 2024»), переведи её.
+3. Не получена (серая, закрытая, без даты) — дату не пиши: «Название — Описание».
+4. Описание скрыто или отсутствует — оставь «Название» (в интернете можно уточнить описание, но не выдумывай).
+5. Тексты оставляй как на скриншоте, на языке оригинала. Не пропускай ачивки со скриншотов. Проценты редкости («12.3% игроков») не пиши.
+6. Если ачивка попала на два скриншота, оставь её один раз.
+7. Не добавляй пояснений, приветствий и итогов (кроме строки из шага 0, если группы не удалось проверить).
+8. Основной ответ дай ОДНИМ блоком кода (тройные обратные кавычки), чтобы символы # не превратились в заголовки.`;
+    /* Шаблон «Гайд по оставшимся ачивкам»: {игра} {платформа} {памятка} {список} подставляет кнопка «Скопировать оставшиеся для гайда» (этап F2) */
+    window.MH_ACH_GUIDE = `Помоги мне добить платину в игре {игра} ({платформа}).
+
+Моя памятка: {памятка или «нет»}
+
+Оставшиеся ачивки (группа — название — описание, счётчик если есть):
+{список}
+
+Что нужно:
+1. Проверь в интернете (гайды, Steam/PSNProfiles/TrueAchievements, wiki), какие из этих ачивок можно ПРОПУСТИТЬ БЕЗ ВОЗВРАТА (привязаны к главе, выбору, одноразовому событию) и отметь их ⚠️.
+2. Составь короткий маршрут добивания: что и в каком порядке выгоднее делать (что можно совместить, что отдельным прохождением, что сначала).
+3. Для сложных ачивок дай конкретные советы (как получить, где искать), без воды.
+4. Если часть ачивок относится к DLC, которое у меня не куплено («DLC не куплено»), вынеси их в отдельный блок в конце.
+5. Ответь по шагам, коротко, без вступлений.`;
     const norm = s => String(s || '').toLowerCase().replace(/[™®©’'"“”«»\s]+/g, ' ').trim();
     const uid = () => 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
     const dateVal = ts => { try { const d = new Date(ts); const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; } catch (_) { return ''; } };
@@ -151,6 +198,27 @@
         return s;
     }
 
+    /* ================= F1: тип трофея, очки, уровень ================= */
+    const TT = { bronze: { pts: 15, ico: '🥉', name: 'Бронза' }, silver: { pts: 30, ico: '🥈', name: 'Серебро' }, gold: { pts: 90, ico: '🥇', name: 'Золото' }, platinum: { pts: 300, ico: '💎', name: 'Платина' } };
+    const TT_ALIAS = { bronze: 'bronze', bronz: 'bronze', 'бронза': 'bronze', silver: 'silver', 'серебро': 'silver', gold: 'gold', 'золото': 'gold', platinum: 'platinum', plat: 'platinum', 'платина': 'platinum' };
+    const ttOf = a => (a && TT[a.tt] ? a.tt : '');
+    const lvlCum = L => Math.round(100 * Math.pow(Math.max(0, L - 1), 1.6));        // сколько очков нужно, чтобы достичь уровня L
+    /** Очки считаются каждый раз из текущего состояния: сумма по полученным ачивкам с типом (группы некупленных DLC не считаются) */
+    function trophyPoints(g) {
+        let pts = 0, max = 0;
+        const by = { bronze: 0, silver: 0, gold: 0, platinum: 0 };
+        (g ? [g] : (data.games || [])).forEach(x => listOf(x).forEach(a => {
+            const t = ttOf(a); if (!t || lockedKey(x, keyOf(a))) return;
+            max += TT[t].pts;
+            if (a.done) { pts += TT[t].pts; by[t]++; }
+        }));
+        let L = Math.min(999, Math.floor(Math.pow(pts / 100, 1 / 1.6)) + 1);
+        const lo = lvlCum(L), hi = lvlCum(L + 1);
+        return { pts, max, by, level: L, pct: hi > lo ? Math.max(0, Math.min(100, Math.round((pts - lo) / (hi - lo) * 100))) : 100, next: hi - pts, any: max > 0 };
+    }
+    window.mhTrophyPoints = trophyPoints;
+    const ttTagRe = /\s*[\[(]\s*(bronze|bronz|silver|gold|platinum|plat|бронза|серебро|золото|платина)\s*[\])]\s*$/i;
+
     /* ================= Разбор импорта ================= */
     const SEP = /\s+[—–-]\s+|\s*\|\s*|\t+|\s*;\s+/;
 
@@ -201,11 +269,13 @@
             } else {
                 seg.lines.forEach(line => {
                     line = line.replace(/^\s*(?:\d{1,3}[.)]|[-•*▪●○☐☑✔✓])\s+/, '');   // «1.» «- » «☐ »
+                    let tt = '';
+                    line = line.replace(ttTagRe, (_, w) => { tt = TT_ALIAS[w.toLowerCase()] || ''; return ''; });   // «… — 12.03.2024 [gold]»
                     const parts = line.split(SEP);
                     const n = (parts.shift() || '').trim();
                     let ts = 0;
                     if (parts.length && (ts = parseDate(parts[parts.length - 1]))) parts.pop();
-                    push({ n, d: parts.join(' — ').trim(), ts });
+                    push({ n, d: parts.join(' — ').trim(), ts, ...(tt ? { tt } : {}) });
                 });
             }
         });
@@ -240,7 +310,9 @@
             const old = replace ? keep.get(k) : null;     // при замене сохраняем уже отмеченные
             const ts = old?.ts || it.ts || 0;
             list.push({ id: old?.id || uid(), n: it.n.slice(0, 120), d: (it.d || '').slice(0, 300), done: !!(old?.done || ts), ts,
-                        ...(key !== BASE ? { g: key } : {}), ...((old?.img || it.img) ? { img: old?.img || it.img } : {}) });
+                        ...(key !== BASE ? { g: key } : {}), ...((old?.img || it.img) ? { img: old?.img || it.img } : {}),
+                        ...((old?.tt || it.tt) && TT[old?.tt || it.tt] ? { tt: old?.tt || it.tt } : {}),
+                        ...((old?.pm || it.pm) ? { pm: old?.pm || it.pm, p: old?.p || 0 } : {}) });
             st.added++;
             if (ts) st.dated++;
         });
@@ -321,17 +393,20 @@
                     <input class="gd-input" id="ga-en" value="${esc(a.n)}" maxlength="120" placeholder="Название">
                     <input class="gd-input" id="ga-ed" value="${esc(a.d)}" maxlength="300" placeholder="Описание">
                     <label class="ga-edit-date">Группа <select id="ga-eg" class="gd-input">${groupsOf(g).map(x => `<option value="${esc(x.key)}"${x.key === keyOf(a) ? ' selected' : ''}>${esc(x.title)}</option>`).join('')}<option value="__new">➕ Новая группа…</option></select></label>
+                    <label class="ga-edit-date">Тип трофея <select id="ga-ett" class="gd-input"><option value="">— не задан —</option>${Object.keys(TT).map(k => `<option value="${k}"${a.tt === k ? ' selected' : ''}>${TT[k].ico} ${TT[k].name} · ${TT[k].pts}</option>`).join('')}</select></label>
+                    <label class="ga-edit-date">Счётчик (необязательно) <span class="ga-cin"><input type="number" min="0" max="999999" id="ga-ep" class="gd-input" value="${a.pm ? (a.p || 0) : ''}" placeholder="сейчас"> / <input type="number" min="0" max="999999" id="ga-epm" class="gd-input" value="${a.pm || ''}" placeholder="нужно"></span></label>
                     ${a.done ? `<label class="ga-edit-date">Получено <input type="date" id="ga-edt" class="gd-input" value="${a.ts ? dateVal(a.ts) : ''}"></label>` : ''}
                     <div class="ga-edit-img">${a.img ? `<img src="${esc(a.img)}" alt="">` : ''}<button type="button" class="gd-tool" data-ga="pick-img">🖼 ${a.img ? 'Заменить' : 'Добавить'} картинку</button>${a.img ? '<button type="button" class="gd-tool" data-ga="rm-img">Убрать</button>' : ''}</div>
                 </div>
                 <div class="ga-actions"><button type="button" class="gd-tool" data-ga="save-edit">Сохранить</button><button type="button" class="gd-tool" data-ga="cancel-edit">Отмена</button></div>
             </li>` : `
-            <li class="ga-row${a.done ? ' is-done' : ''}${lockedKey(g, keyOf(a)) ? ' is-locked' : ''}" data-aid="${esc(a.id)}">
+            <li class="ga-row${a.done ? ' is-done' : ''}${lockedKey(g, keyOf(a)) ? ' is-locked' : ''}${ttOf(a) ? ' tt-' + a.tt : ''}" data-aid="${esc(a.id)}">
                 <button type="button" class="ga-tick" data-ga="toggle" role="checkbox" aria-checked="${!!a.done}" aria-label="Получено: ${esc(a.n)}"${lockedKey(g, keyOf(a)) ? ' aria-disabled="true" title="Сначала отметь DLC купленным"' : ''}>${a.done ? '✓' : (lockedKey(g, keyOf(a)) ? '🔒' : '')}</button>
                 ${a.img ? `<img class="ga-thumb" src="${esc(a.img)}" alt="" loading="lazy">` : ''}
                 <div class="flex-1 min-w-0">
-                    <p class="ga-name">${esc(a.n)}</p>
+                    <p class="ga-name">${ttOf(a) ? `<span class="ga-tt" title="${TT[a.tt].name} · ${TT[a.tt].pts} очков">${TT[a.tt].ico}</span> ` : ''}${esc(a.n)}</p>
                     ${a.d ? `<p class="ga-desc">${esc(a.d)}</p>` : ''}
+                    ${a.pm > 0 ? `<div class="ga-cnt"><span class="ga-cbar"><i style="width:${Math.min(100, Math.round((a.p || 0) / a.pm * 100))}%"></i></span><b>${a.p || 0} / ${a.pm}</b>${editMode && !a.done ? '<button type="button" class="ga-cb" data-ga="p-dec" aria-label="Минус">−</button><button type="button" class="ga-cb" data-ga="p-inc" aria-label="Плюс">+</button>' : ''}</div>` : ''}
                     ${a.done && a.ts ? `<p class="ga-date">Получено ${fmt(a.ts)}</p>` : ''}
                 </div>
                 ${editMode ? '<div class="ga-actions"><button type="button" class="ga-ico" data-ga="edit" title="Изменить" aria-label="Изменить">✏️</button><button type="button" class="ga-ico" data-ga="del" title="Удалить" aria-label="Удалить">🗑</button></div>' : ''}
@@ -470,13 +545,25 @@
                     nkey = nk(t) === nk(BASE_TITLE) ? BASE : ensureGroup(g, { title: t, dlc: false }, { groups: 0, dlcs: 0 });
                 } else if (gv && groupsOf(g).some(x => x.key === gv)) nkey = gv;
                 item.n = n.slice(0, 120); item.d = dsc;
+                const ttv = $('ga-ett')?.value;
+                if (TT[ttv]) item.tt = ttv; else delete item.tt;
+                const pmv = Math.max(0, Math.min(999999, parseInt($('ga-epm')?.value, 10) || 0)), pv = Math.max(0, Math.min(999999, parseInt($('ga-ep')?.value, 10) || 0));
+                if (pmv > 0) { item.pm = pmv; item.p = pv; } else { delete item.pm; delete item.p; }
                 if (item.done && dv) { const t = new Date(dv + 'T12:00:00').getTime(); if (isFinite(t)) item.ts = t; }
                 const moved = nkey !== keyOf(item);
                 if (moved) { if (nkey === BASE) delete item.g; else item.g = nkey; collapsed.delete(nkey); }
                 editId = null;
                 if (moved) commit(g, wasFull); else persistData();
-                paint(); break;
+                paint();
+                await offerDone(g, item);
+                break;
             }
+            case 'p-inc': case 'p-dec':
+                if (!item || !(item.pm > 0)) break;
+                item.p = Math.max(0, Math.min(item.pm, (item.p || 0) + (act === 'p-inc' ? 1 : -1)));
+                persistData(); paint();
+                if (act === 'p-inc') await offerDone(g, item);
+                break;
             case 'del':
                 if (!item) break;
                 g.achList = listOf(g).filter(a => a !== item);
@@ -523,6 +610,8 @@
         const n = ($('ga-en')?.value || '').trim(), d = $('ga-ed')?.value;
         if (n) item.n = n.slice(0, 120);
         if (typeof d === 'string') item.d = d.trim().slice(0, 300);
+        const tv = $('ga-ett')?.value; if (tv !== undefined) { if (TT[tv]) item.tt = tv; else delete item.tt; }
+        const pmv = parseInt($('ga-epm')?.value, 10) || 0; if ($('ga-epm')) { if (pmv > 0) { item.pm = pmv; item.p = parseInt($('ga-ep')?.value, 10) || 0; } else { delete item.pm; delete item.p; } }
         const gv = $('ga-eg')?.value, g = gameById(gid);
         if (g && gv && gv !== '__new' && gv !== keyOf(item) && groupsOf(g).some(x => x.key === gv)) { if (gv === BASE) delete item.g; else item.g = gv; sync(g); }
     }
@@ -538,7 +627,7 @@
             out.push(grp.key === BASE ? '# ' + BASE_TITLE : (dlcOfGroup(g, grp) ? '# DLC: ' : '# ') + grp.title);
             items.forEach(a => {
                 const n = String(a.n).replace(/^#+\s*/, '').replace(/\s+[—–-]\s+/g, ', '), d = String(a.d || '').replace(/\s*\n+\s*/g, ' ').trim();
-                out.push([n, d, a.done && a.ts ? dmy(a.ts) : ''].filter((x, i) => i === 0 || x).join(' — '));
+                out.push([n, d, a.done && a.ts ? dmy(a.ts) : ''].filter((x, i) => i === 0 || x).join(' — ') + (ttOf(a) ? ' [' + a.tt + ']' : ''));
             });
         });
         return out.join('\n');
@@ -546,7 +635,7 @@
     /** Структура списка источника для addMany: без отметок и дат; DLC-группы перепривязываются по названию */
     const copyItems = src => groupsOf(src).flatMap(grp => {
         const gp = grp.key === BASE ? { base: true } : { title: grp.title, dlc: !!dlcOfGroup(src, grp) };
-        return listOf(src).filter(a => keyOf(a) === grp.key).map(a => ({ n: a.n, d: a.d || '', ts: 0, img: a.img, grp: gp }));
+        return listOf(src).filter(a => keyOf(a) === grp.key).map(a => ({ n: a.n, d: a.d || '', ts: 0, img: a.img, ...(ttOf(a) ? { tt: a.tt } : {}), ...(a.pm ? { pm: a.pm } : {}), grp: gp }));
     });
     /** Небольшое окно выбора из нескольких вариантов → id или null (Esc / клик по фону) */
     function pickOverlay(title, sub, rowsArr) {
@@ -650,6 +739,15 @@
         catch (_) { toast('Не удалось прочитать картинку', 'error'); }
     });
 
+    /** Счётчик дошёл до нужного — предлагаем отметить полученной (не молча) */
+    async function offerDone(g, item) {
+        if (!item || item.done || !(item.pm > 0) || (item.p || 0) < item.pm || lockedKey(g, keyOf(item))) return;
+        if (!(await mhConfirm(`Счётчик «${item.n}» дошёл до ${item.p} / ${item.pm}. Отметить ачивку полученной?`, { title: 'Ачивка выполнена?', okText: 'Отметить', cancelText: 'Пока нет' }))) return;
+        const wasFull = g.trophy === 'full';
+        item.done = true; item.ts = Date.now();
+        commit(g, wasFull); paint();
+    }
+
     async function copyText(t) {
         try { await navigator.clipboard.writeText(t); return true; } catch (_) {}
         try { const ta = document.createElement('textarea'); ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok; } catch (_) { return false; }
@@ -684,6 +782,7 @@
             <div class="ga-card-top"><p class="gd-sec-title !mb-0">🏆 Список ачивок</p><div class="ga-card-num"><b>${s.done}</b> / ${s.total}</div></div>
             <div class="gs-bar mt-2" role="img" aria-label="Ачивки: ${s.pct}%"><span class="gs-seg" style="width:${s.pct}%;--sc:${full ? '#facc15' : '#fbbf24'}"></span></div>
             ${plats.length ? `<div class="ga-plats">${plats.map(t => `<span class="ga-plat-chip">${esc(t)}</span>`).join('')}</div>` : ''}
+            ${(() => { const t = trophyPoints(g); return t.any ? `<p class="ga-tp">🏅 Трофейные очки: <b>${t.pts}</b> из ${t.max}</p>` : ''; })()}
             <p class="text-xs text-gray-400 mt-2">${s.left ? `Осталось ${s.left}` : '✓ Все ачивки получены'}${s.locked ? ` · 🔒 ${s.locked} в некупленных DLC — не в зачёте` : ''}</p>
             <button type="button" class="ga-open-big ga-open" data-gaopen="${g.id}">Открыть список</button>` : `
             <div class="ga-card-top"><p class="gd-sec-title !mb-0">🏆 Список ачивок</p><span class="text-xs text-gray-600">необязательно</span></div>
@@ -739,9 +838,13 @@
                 <span class="agb-cover">${cv ? `<img src="${esc(cv)}" alt="" loading="lazy">` : '<i>🎮</i>'}${r.plats ? `<b class="agb-plat">🏆${r.plats > 1 ? ' ×' + r.plats : ''}</b>` : ''}</span>
                 <span class="agb-info"><b class="agb-t">${esc(r.g.title)}</b><em class="agb-p">${esc(r.g.platform || '')}</em>
                 <span class="agb-bar"><i style="width:${r.s.pct}%"></i></span>
-                <span class="agb-n">${r.s.done} / ${r.s.total} · ${r.s.pct}%${r.s.locked ? ` · 🔒 ${r.s.locked}` : ''}</span>${dl}</span></button>`;
+                <span class="agb-n">${r.s.done} / ${r.s.total} · ${r.s.pct}%${r.s.locked ? ` · 🔒 ${r.s.locked}` : ''}${(() => { const t = trophyPoints(r.g); return t.any ? ` · 🏅 ${t.pts}` : ''; })()}</span>${dl}</span></button>`;
         };
-        host.innerHTML = `<div class="agb-head"><div><h3 class="agb-h">🎮 Ачивки игр</h3><p class="agb-sub">Платин: <b>${totalPlat}</b> · игр со списком: <b>${rows.length}</b>${fullGames ? ` · закрыто полностью: <b>${fullGames}</b>` : ''}</p></div>
+        const tp = trophyPoints();
+        const lvl = tp.any ? `<div class="agb-lvl"><div class="agb-lv-n"><span>Трофейный уровень</span><b>${tp.level}</b></div>
+            <div class="agb-lv-m"><div class="agb-bar"><i style="width:${tp.pct}%"></i></div><p><b>${tp.pts}</b> очков · до следующего уровня ${tp.next}</p>
+            <p class="agb-tt">${Object.keys(TT).filter(k => tp.by[k]).map(k => `<span>${TT[k].ico} ${tp.by[k]}</span>`).join('')}</p></div></div>` : '';
+        host.innerHTML = lvl + `<div class="agb-head"><div><h3 class="agb-h">🎮 Ачивки игр</h3><p class="agb-sub">Платин: <b>${totalPlat}</b> · игр со списком: <b>${rows.length}</b>${fullGames ? ` · закрыто полностью: <b>${fullGames}</b>` : ''}</p></div>
             <div class="ach-chips">${chip('all', 'Все')}${chip('prog', 'В процессе')}${chip('full', 'С платиной')}</div></div>
             <div class="agb-grid">${shown.length ? shown.map(card).join('') : '<div class="ach-empty">Здесь пока пусто — попробуйте другой фильтр 🔎</div>'}</div>`;
     }
@@ -852,6 +955,18 @@
     .ga-open-big{display:block;width:100%;margin-top:12px;padding:12px;border-radius:14px;font-size:14px;font-weight:800;cursor:pointer;color:#fff;background:var(--theme-btn,#8b5cf6);border:0;transition:filter .15s,transform .1s}
     .ga-open-big:hover{filter:brightness(1.12)}.ga-open-big:active{transform:scale(.99)}
     @media (max-width:640px){.ga-menu{right:auto;left:0}#game-ach-modal{padding:0}#game-ach-modal .ga-panel{max-width:none;width:100%;height:100dvh;max-height:100dvh;border-radius:0;padding:14px}.ga-hero{gap:10px}}
+    .ga-tt{font-size:13px}
+    .ga-row.tt-bronze{box-shadow:inset 0 0 0 1px rgba(205,127,50,.5)}
+    .ga-row.tt-silver{box-shadow:inset 0 0 0 1px rgba(203,213,225,.5)}
+    .ga-row.tt-gold{box-shadow:inset 0 0 0 1px rgba(250,204,21,.55)}
+    .ga-row.tt-platinum{box-shadow:inset 0 0 0 1px rgba(103,232,249,.65)}
+    .ga-cnt{display:flex;align-items:center;gap:8px;margin-top:6px}
+    .ga-cbar{flex:1;max-width:220px;height:5px;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden}
+    .ga-cbar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--theme-btn,#a855f7),#22d3ee)}
+    .ga-cnt b{font:700 11px ui-monospace,monospace;color:#9ca3af}
+    .ga-cb{width:26px;height:26px;border-radius:8px;font-weight:900;color:#fff;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12)}
+    .ga-cin{display:flex;align-items:center;gap:6px}.ga-cin input{width:100px}
+    .ga-tp{font-size:12px;color:#fbbf24;margin-top:8px}
     .ga-row.is-locked{opacity:.55}
     .ga-row.is-locked .ga-tick{cursor:not-allowed;font-size:13px;background:rgba(255,255,255,.04)}
     .ga-row.is-locked .ga-tick:hover{transform:none;border-color:rgba(255,255,255,.25)}`;

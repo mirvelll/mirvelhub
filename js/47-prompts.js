@@ -20,6 +20,21 @@
         try { persistData(); } catch (_) {}
     }
 
+    /* Этап E: обновление встроенных промптов без перезаписи твоих правок (один раз, флаг data.promptsV2) */
+    function upgrade() {
+        if (data.promptsV2 || !window.MH_ACH_PROMPT) return;
+        data.promptsV2 = true;
+        const n = s => String(s || '').replace(/\s+/g, ' ').trim();
+        const cur = list().find(p => p.id === 'ach-screens');
+        let kept = false;
+        if (cur && n(cur.text) === n(window.MH_ACH_PROMPT_OLD)) cur.text = window.MH_ACH_PROMPT;
+        else if (cur) kept = true;
+        else if (!data.promptsSeeded) list().unshift({ id: 'ach-screens', title: 'Ачивки по скриншотам', text: window.MH_ACH_PROMPT });
+        if (!list().some(p => p.id === 'ach-guide') && window.MH_ACH_GUIDE) list().push({ id: 'ach-guide', title: 'Гайд по оставшимся ачивкам', text: window.MH_ACH_GUIDE });
+        try { persistData(); } catch (_) {}
+        if (kept) setTimeout(() => toast('📝 Промпт «Ачивки по скриншотам» ты правил — я его не трогал. Новый текст всё равно копируется кнопкой в окне импорта ачивок.', 'info'), 2500);
+    }
+
     async function copy(t) {
         try { await navigator.clipboard.writeText(t); return true; } catch (_) {}
         try { const ta = document.createElement('textarea'); ta.value = t; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok; } catch (_) { return false; }
@@ -51,7 +66,7 @@
         if ($('prompts-card')) return true;
         const host = document.querySelector('#profile .grid > div.space-y-6:not(.glass)');
         if (!host) return false;
-        seed();
+        seed(); upgrade();
         const card = document.createElement('div');
         card.id = 'prompts-card';
         card.className = 'glass p-8 rounded-3xl space-y-4';
