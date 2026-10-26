@@ -226,3 +226,14 @@
 .agb-g { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px; color: #9ca3af; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.07); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .agb-g.is-full { color: #fbbf24; border-color: rgba(251,191,36,.4); background: rgba(251,191,36,.08); }
 @media (max-width: 480px) { .agb { padding: 14px; border-radius: 20px; } }
+
+/* ---------- F1: трофейный уровень ---------- */
+.agb-lvl { display: flex; gap: 16px; align-items: center; padding: 14px 16px; margin-bottom: 18px; border-radius: 18px; background: rgba(251,191,36,.07); border: 1px solid rgba(251,191,36,.25); }
+.agb-lv-n { flex: none; text-align: center; min-width: 64px; }
+.agb-lv-n span { display: block; font-size: 9px; text-transform: uppercase; letter-spacing: .08em; color: #9ca3af; font-weight: 800; }
+.agb-lv-n b { font-size: 34px; font-weight: 900; color: #fbbf24; line-height: 1.1; }
+.agb-lv-m { flex: 1; min-width: 0; }
+.agb-lv-m p { font-size: 11px; color: #9ca3af; margin-top: 6px; }
+.agb-lv-m p b { color: #fff; }
+.agb-tt { display: flex; gap: 12px; }
+.agb-lvl .agb-bar i { background: linear-gradient(90deg, #f59e0b, #fde68a); }
