@@ -153,3 +153,46 @@
 
 /* на телефоне поднимаем карточку над нижней панелью навигации */
 @media (max-width: 900px) { #ach-pop-host { bottom: 84px; } }
+
+/* ===== Список ачивок внутри игры (46-game-achievements.js) ===== */
+.ga-panel { max-width: 640px; }
+.ga-textarea { width: 100%; resize: vertical; min-height: 140px; font-size: 13px; line-height: 1.45; }
+.ga-check { display: flex; align-items: flex-start; gap: 8px; margin-top: 8px; font-size: 12px; color: #9ca3af; cursor: pointer; }
+.ga-check input { margin-top: 2px; accent-color: var(--theme-btn, #fbbf24); }
+.ga-help { font-size: 12px; color: #9ca3af; }
+.ga-help summary { cursor: pointer; font-weight: 700; color: #d1d5db; }
+.ga-help ul { margin: 8px 0 0 16px; list-style: disc; display: grid; gap: 6px; }
+.ga-search { flex: 1; min-width: 120px; padding: 6px 12px !important; font-size: 13px; }
+.ga-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 52vh; overflow-y: auto; }
+.ga-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); }
+.ga-row.is-done { background: rgba(250, 204, 21, 0.07); border-color: rgba(250, 204, 21, 0.28); }
+.ga-row.is-edit { align-items: stretch; flex-wrap: wrap; }
+.ga-tick { flex: none; width: 28px; height: 28px; border-radius: 9px; border: 2px solid rgba(255, 255, 255, 0.25); background: transparent; color: #111; font-weight: 900; font-size: 15px; line-height: 1; cursor: pointer; transition: background .15s, border-color .15s, transform .15s; }
+.ga-tick:hover { border-color: #facc15; transform: scale(1.06); }
+.ga-row.is-done .ga-tick { background: #facc15; border-color: #facc15; }
+.ga-name { font-size: 14px; font-weight: 700; color: #fff; word-break: break-word; }
+.ga-row.is-done .ga-name { color: #fde68a; }
+.ga-desc { font-size: 12px; color: #9ca3af; margin-top: 1px; word-break: break-word; }
+.ga-date { font-size: 11px; color: #a3a3a3; margin-top: 2px; }
+.ga-actions { display: flex; gap: 4px; flex: none; }
+.ga-ico { width: 30px; height: 30px; border-radius: 9px; background: transparent; border: 0; color: #9ca3af; cursor: pointer; opacity: .75; }
+.ga-ico:hover { background: rgba(255, 255, 255, 0.08); opacity: 1; color: #fff; }
+@media (hover: hover) { .ga-row:not(.is-edit) .ga-actions { opacity: 0; transition: opacity .15s; } .ga-row:hover .ga-actions, .ga-row:focus-within .ga-actions { opacity: 1; } }
+
+/* ===== Картинки ачивок ===== */
+.ga-thumb { flex: none; width: 40px; height: 40px; border-radius: 10px; object-fit: cover; border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(0, 0, 0, 0.3); }
+.ga-row.is-done .ga-thumb { border-color: rgba(250, 204, 21, 0.5); }
+.ga-edit-img { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ga-edit-img img { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; }
+.ga-edit-date { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #9ca3af; }
+.ga-edit-date input { width: auto; padding: 4px 10px; font-size: 12px; }
+
+/* ===== Вкладка «Промпты» в настройках ===== */
+.pr-item { border: 1px solid rgba(255, 255, 255, 0.08); background: rgba(255, 255, 255, 0.03); border-radius: 14px; padding: 12px 14px; }
+.pr-item summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; list-style: none; }
+.pr-item summary::-webkit-details-marker { display: none; }
+.pr-title { font-weight: 700; color: #fff; }
+.pr-meta { font-size: 11px; color: #6b7280; }
+.pr-pre { white-space: pre-wrap; word-break: break-word; font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; color: #d1d5db; margin-top: 10px; max-height: 260px; overflow: auto; }
+.pr-item.is-edit { display: grid; gap: 8px; }
+.pr-text { width: 100%; resize: vertical; font-size: 13px; line-height: 1.45; }
