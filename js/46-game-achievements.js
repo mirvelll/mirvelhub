@@ -240,7 +240,7 @@
             const old = replace ? keep.get(k) : null;     // при замене сохраняем уже отмеченные
             const ts = old?.ts || it.ts || 0;
             list.push({ id: old?.id || uid(), n: it.n.slice(0, 120), d: (it.d || '').slice(0, 300), done: !!(old?.done || ts), ts,
-                        ...(key !== BASE ? { g: key } : {}), ...(old?.img ? { img: old.img } : {}) });
+                        ...(key !== BASE ? { g: key } : {}), ...((old?.img || it.img) ? { img: old?.img || it.img } : {}) });
             st.added++;
             if (ts) st.dated++;
         });
@@ -361,6 +361,8 @@
         const menu = menuOpen ? `<div class="ga-menu" role="menu">
             <button type="button" role="menuitem" data-ga="to-import">📥 Добавить списком</button>
             <button type="button" role="menuitem" data-ga="add-one">➕ Добавить одну</button>
+            <button type="button" role="menuitem" data-ga="copy-from">📑 Скопировать с другой версии</button>
+            <button type="button" role="menuitem" data-ga="copy-text">📋 Скопировать список текстом</button>
             <button type="button" role="menuitem" data-ga="mark-all">✓ Отметить все</button>
             <button type="button" role="menuitem" data-ga="reset">↺ Сбросить отметки</button>
             <button type="button" role="menuitem" class="is-danger" data-ga="clear">🗑 Удалить список</button></div>` : '';
@@ -433,6 +435,13 @@
             case 'pick-file': fileInput.value = ''; fileInput.click(); break;
             case 'do-import': doImport(parseText($('ga-text')?.value, $('ga-pairs')?.checked), false); break;
             case 'filter': filter = b.dataset.v; paint(); break;
+            case 'copy-text': {
+                const t = exportText(g);
+                if (!t) { toast('Список пуст — копировать нечего', 'info'); break; }
+                copyText(t).then(ok => toast(ok ? `Список скопирован 📋 (${listOf(g).length} ачивок) — формат как у импорта, его можно вставить обратно` : 'Не удалось скопировать', ok ? 'success' : 'error'));
+                break;
+            }
+            case 'copy-from': await copyFrom(g); break;
             case 'tab': tab = b.dataset.gk; paint(); break;
             case 'menu': menuOpen = !menuOpen; paint(); break;
             case 'edit-mode': editMode = !editMode; if (!editMode) editId = null; paint(); break;
@@ -516,8 +525,66 @@
         if (g && gv && gv !== '__new' && gv !== keyOf(item) && groupsOf(g).some(x => x.key === gv)) { if (gv === BASE) delete item.g; else item.g = gv; sync(g); }
     }
 
+    /* ---------- C2: экспорт текстом и копирование списка с другой версии ---------- */
+    const dmy = ts => { const d = new Date(ts), p = n => String(n).padStart(2, '0'); return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()}`; };
+    /** Список в том же формате, что и импорт: «# группа» + «Название — Описание — ДД.ММ.ГГГГ» */
+    function exportText(g) {
+        const out = [];
+        groupsOf(g).forEach(grp => {
+            const items = listOf(g).filter(a => keyOf(a) === grp.key);
+            if (!items.length) return;
+            out.push(grp.key === BASE ? '# ' + BASE_TITLE : (dlcOfGroup(g, grp) ? '# DLC: ' : '# ') + grp.title);
+            items.forEach(a => {
+                const n = String(a.n).replace(/^#+\s*/, '').replace(/\s+[—–-]\s+/g, ', '), d = String(a.d || '').replace(/\s*\n+\s*/g, ' ').trim();
+                out.push([n, d, a.done && a.ts ? dmy(a.ts) : ''].filter((x, i) => i === 0 || x).join(' — '));
+            });
+        });
+        return out.join('\n');
+    }
+    /** Структура списка источника для addMany: без отметок и дат; DLC-группы перепривязываются по названию */
+    const copyItems = src => groupsOf(src).flatMap(grp => {
+        const gp = grp.key === BASE ? { base: true } : { title: grp.title, dlc: !!dlcOfGroup(src, grp) };
+        return listOf(src).filter(a => keyOf(a) === grp.key).map(a => ({ n: a.n, d: a.d || '', ts: 0, img: a.img, grp: gp }));
+    });
+    /** Небольшое окно выбора из нескольких вариантов → id или null (Esc / клик по фону) */
+    function pickOverlay(title, sub, rowsArr) {
+        return new Promise(resolve => {
+            closeLink();
+            const ov = document.createElement('div');
+            ov.className = 'gl-ov';
+            ov.innerHTML = `<div class="gl-box" role="dialog" aria-modal="true" aria-label="${esc(title)}"><p class="gl-title">${esc(title)}</p><p class="gl-sub">${esc(sub)}</p>
+                <div class="gl-list">${rowsArr.map(r => `<button type="button" class="gl-item" data-gl="pick" data-id="${esc(r.id)}"><span>${esc(r.label)}</span><em>${esc(r.hint)}</em></button>`).join('')}</div>
+                <div class="gl-row"><button type="button" class="gl-btn" data-gl="cancel">Отмена</button></div></div>`;
+            ov._done = resolve;
+            ov.addEventListener('click', e => {
+                const b = e.target.closest('[data-gl]');
+                if (e.target !== ov && !b) return;
+                const id = b && b.dataset.gl === 'pick' ? b.dataset.id : null;
+                const cb = ov._done; ov._done = null; closeLink(); cb(id);
+            });
+            document.body.appendChild(ov); linkOv = ov;
+            ov.querySelector('.gl-item')?.focus();
+        });
+    }
+    async function copyFrom(g) {
+        const cands = (data.games || []).filter(x => x.id !== g.id && listOf(x).length && nk(x.title) === nk(g.title));
+        if (!cands.length) { toast('Не нашёл другую версию этой игры со списком ачивок (ищу игры с тем же названием)', 'info'); return; }
+        const lbl = x => `${x.platform || x.platforms || 'без платформы'}`;
+        let src = cands[0];
+        if (cands.length > 1) {
+            const id = await pickOverlay('Откуда скопировать?', 'Отметки и даты не переносятся', cands.map(x => ({ id: String(x.id), label: `${x.title} · ${lbl(x)}`, hint: `${listOf(x).length} ачивок` })));
+            src = id && cands.find(x => String(x.id) === id);
+            if (!src) return;
+        } else if (!(await mhConfirm(`Скопировать список с версии «${src.title}» (${lbl(src)}): ${listOf(src).length} ачивок?\nОтметки и даты не переносятся, DLC-группы привяжутся к дополнениям этой версии по названию.`, { title: 'Скопировать список?', okText: 'Скопировать' }))) return;
+        const wasFull = g.trophy === 'full';
+        const r = addMany(g, copyItems(src), false);
+        commit(g, wasFull);
+        toast(`Скопировано ачивок: <b>${r.added}</b>${r.dup ? `, уже были: ${r.dup}` : ''}${r.dlcs ? `<br>🧩 Создано дополнений «в планах»: ${r.dlcs}` : ''}`, 'success');
+        view = 'list'; tab = 'all'; paint();
+    }
+
     /* ---------- окно «Привязать группу к DLC» ---------- */
-    function closeLink() { if (linkOv) { linkOv.remove(); linkOv = null; } }
+    function closeLink() { if (linkOv) { const cb = linkOv._done; linkOv.remove(); linkOv = null; if (cb) cb(null); } }
     function openLink(key) {
         const g = gameById(gid);
         const grp = g && key !== BASE ? groupsOf(g).find(x => x.key === key) : null;
