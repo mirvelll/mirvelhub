@@ -23,7 +23,7 @@
     <link rel="stylesheet" href="css/settings.css?v=16.4">
     <link rel="stylesheet" href="css/features.css?v=16.4">
     <link rel="stylesheet" href="css/wishlist.css?v=16.4">
-    <link rel="stylesheet" href="css/achievements.css?v=1.2">
+    <link rel="stylesheet" href="css/achievements.css?v=1.3">
     <link rel="stylesheet" href="css/tailwind.css?v=18.2">
     <link rel="stylesheet" href="css/motion.css?v=18.3"><!-- вместо cdn.tailwindcss.com: готовый CSS, браузер больше не собирает стили на каждой загрузке -->
 </head>
@@ -288,16 +288,17 @@
             <div class="glass p-6 rounded-3xl mb-10">
                 <div class="flex justify-between items-center mb-2">
                     <span class="text-sm font-bold text-gray-300">Прогресс открытий</span>
-                    <span id="achievements-progress-text" class="text-sm font-bold text-purple-400">0 / 0 (0%)</span>
+                    <span id="achievements-progress-text" class="text-sm font-bold" style="color:var(--theme-btn,#a78bfa)">0 / 0 (0%)</span>
                 </div>
                 <div class="w-full bg-white/5 h-3.5 rounded-full overflow-hidden p-0.5 border border-white/5">
-                    <div id="achievements-progress-bar" class="bg-gradient-to-r from-purple-500 to-cyan-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                    <div id="achievements-progress-bar" class="h-full rounded-full transition-all duration-500" style="width: 0%;background:linear-gradient(90deg,var(--theme-btn,#a855f7),#22d3ee)"></div>
                 </div>
             </div>
 
             <div id="achievements-summary" class="ach-summary"></div>
             <div id="achievements-filters" class="ach-filters"></div>
             <div id="achievements-grid" class="ach-grid"></div>
+            <div id="ach-games-block" class="agb"></div>
         </section>
 
         <!-- СТРАНИЦА: CD КОЛЛЕКЦИЯ -->
