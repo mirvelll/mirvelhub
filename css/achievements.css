@@ -237,3 +237,47 @@
 .agb-lv-m p b { color: #fff; }
 .agb-tt { display: flex; gap: 12px; }
 .agb-lvl .agb-bar i { background: linear-gradient(90deg, #f59e0b, #fde68a); }
+
+/* ---------- F3: главная — платины / в процессе / этот день ---------- */
+.hach:empty { display: none; }
+.hach { margin-bottom: 40px; }
+.hach-grid { display: grid; gap: 16px; grid-template-columns: 1fr; }
+@media (min-width: 900px) { .hach-grid { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); } }
+.hach-card { padding: 16px 18px; border-radius: 24px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.hach-card.is-plat { background: linear-gradient(135deg, rgba(251,191,36,.12), rgba(103,232,249,.07)); border-color: rgba(251,191,36,.3); }
+.hach-h { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: #9ca3af; margin-bottom: 10px; display: flex; justify-content: space-between; }
+.hach-h b { font-size: 20px; color: #fbbf24; letter-spacing: 0; }
+.hach-row { width: 100%; display: flex; gap: 10px; align-items: center; padding: 8px 10px; margin-top: 4px; border-radius: 12px; text-align: left; color: inherit; font: inherit; background: rgba(0,0,0,.18); transition: background .2s; cursor: pointer; }
+.hach-row:hover { background: rgba(255,255,255,.08); }
+.hach-t { flex: 1; min-width: 0; font-size: 13px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hach-row em { font: 700 11px ui-monospace, monospace; font-style: normal; color: #9ca3af; flex: none; }
+.hach-bar { flex: none; width: 70px; height: 5px; border-radius: 999px; background: rgba(255,255,255,.1); overflow: hidden; }
+.hach-bar i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--theme-btn, #a855f7), #22d3ee); }
+.hach-ev { font-size: 12px; color: #d1d5db; margin-top: 6px; line-height: 1.4; }
+.hach-ev b { color: var(--theme-btn, #a78bfa); margin-right: 4px; }
+
+/* ---------- G: карточка «Цель» на главной ---------- */
+.goal:empty { display: none; }
+.goal { margin-bottom: 24px; }
+.goal-card { padding: 16px 18px; border-radius: 24px; background: rgba(var(--theme-rgb, 139, 92, 246), .08); border: 1px solid rgba(var(--theme-rgb, 139, 92, 246), .3); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.goal-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.goal-h { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: #9ca3af; }
+.goal-ico { width: 26px; height: 26px; border-radius: 8px; color: #9ca3af; font-size: 12px; }
+.goal-ico:hover { color: #fff; background: rgba(255,255,255,.08); }
+.goal-cols { display: grid; gap: 14px; grid-template-columns: 1fr; }
+@media (min-width: 700px) { .goal-cols { grid-template-columns: 1fr 1.4fr; gap: 24px; } }
+.goal-k { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--theme-btn, #a78bfa); margin-bottom: 4px; }
+.goal-t { font-size: 15px; font-weight: 800; color: #fff; }
+.goal-sub { font-size: 12px; color: #9ca3af; margin-top: 4px; line-height: 1.45; }
+.goal-bar { height: 7px; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,.08); margin-top: 8px; }
+.goal-bar i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--theme-btn, #a855f7), #22d3ee); transition: width .5s; }
+.goal-bar.is-done i { background: linear-gradient(90deg, #fbbf24, #fde68a); }
+.goal-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.goal-btn { padding: 6px 12px; border-radius: 999px; font-size: 11px; font-weight: 700; color: #d1d5db; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); }
+.goal-btn:hover { color: #fff; background: rgba(255,255,255,.12); }
+.goal-btn.is-main { color: #fff; background: rgba(var(--theme-rgb, 139, 92, 246), .35); border-color: var(--theme-btn, #8b5cf6); }
+.goal-hist { margin-top: 12px; font-size: 12px; color: #9ca3af; }
+.goal-hist summary { cursor: pointer; font-weight: 700; }
+.goal-hist p { margin-top: 4px; } .goal-hist b { color: #fbbf24; margin-right: 6px; }
+.goal-show { font-size: 11px; font-weight: 700; color: #6b7280; padding: 6px 4px; }
+.goal-show:hover { color: #fff; }
