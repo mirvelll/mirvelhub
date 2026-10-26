@@ -250,6 +250,7 @@
 
     /* ================= Окно со списком ================= */
     let gid = null, filter = 'all', query = '', editId = null, view = 'list';
+    let tab = 'all', sort = 'list', editMode = false, menuOpen = false;   // вкладка группы, сортировка, режим правки, меню «⋯»
     const collapsed = new Set();      // ключи свёрнутых групп (только на время, пока окно открыто)
     let linkOv = null;                // окно «Привязать к DLC»
     const modal = document.createElement('div');
@@ -258,7 +259,7 @@
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
     modal.setAttribute('aria-label', 'Список ачивок игры');
-    modal.innerHTML = '<div class="glass no-hover ga-panel w-full rounded-3xl p-5 sm:p-6 max-h-[94vh] overflow-y-auto border border-white/10 shadow-2xl"><div id="ga-body"></div></div>';
+    modal.innerHTML = '<div class="glass no-hover ga-panel w-full border border-white/10 shadow-2xl"><div id="ga-body"></div></div>';
     document.body.appendChild(modal);
     const body = modal.querySelector('#ga-body');
 
@@ -269,7 +270,7 @@
     function open(id, v) {
         const g = gameById(id);
         if (!g) return;
-        gid = g.id; filter = 'all'; query = ''; editId = null; collapsed.clear(); closeLink();
+        gid = g.id; filter = 'all'; query = ''; editId = null; collapsed.clear(); closeLink(); tab = 'all'; sort = 'list'; editMode = false; menuOpen = false;
         try { if (listOf(g).length && syncAll()) persistData(); } catch (_) {}   // «куплено» у DLC могли поменять после прошлого открытия
         view = v || (listOf(g).length ? 'list' : 'import');
         paint();
@@ -331,50 +332,75 @@
                     ${a.d ? `<p class="ga-desc">${esc(a.d)}</p>` : ''}
                     ${a.done && a.ts ? `<p class="ga-date">Получено ${fmt(a.ts)}</p>` : ''}
                 </div>
-                <div class="ga-actions"><button type="button" class="ga-ico" data-ga="edit" title="Изменить" aria-label="Изменить">✏️</button><button type="button" class="ga-ico" data-ga="del" title="Удалить" aria-label="Удалить">🗑</button></div>
+                ${editMode ? '<div class="ga-actions"><button type="button" class="ga-ico" data-ga="edit" title="Изменить" aria-label="Изменить">✏️</button><button type="button" class="ga-ico" data-ga="del" title="Удалить" aria-label="Удалить">🗑</button></div>' : ''}
             </li>`;
         const grps = groupsOf(g);
         const multi = grps.length > 1;
-        const groupBlock = grp => {
-            const inGroup = rows.filter(a => keyOf(a) === grp.key);
+        if (tab !== 'all' && !grps.some(x => x.key === tab)) tab = 'all';
+        const solo = multi && tab !== 'all' ? grps.find(x => x.key === tab) : null;
+        const ordered = arr => sort === 'date' ? [...arr].sort((a, b) => (b.done ? (b.ts || 1) : 0) - (a.done ? (a.ts || 1) : 0)) : arr;
+        const groupBlock = (grp, single) => {
+            const inGroup = ordered(rows.filter(a => keyOf(a) === grp.key));
             if (!inGroup.length) return '';
             if (!multi) return inGroup.map(row).join('');
             const gs = groupStats(g, grp), dlc = dlcOfGroup(g, grp);
-            const hide = collapsed.has(grp.key) && !q;      // при поиске группы раскрываются сами
+            const hide = !single && collapsed.has(grp.key) && !q;      // при поиске группы раскрываются сами
             const badge = dlc ? `<span class="ga-gtag ${gs.locked ? 'is-lock' : 'is-own'}">${gs.locked ? '🔒' : '🧩'} ${esc(dlc.title)} · ${dlc.owned === true ? 'куплено' : 'в планах'}</span>` : '';
             const link = grp.key === BASE ? '' : `<button type="button" class="ga-glink" data-ga="glink" data-gk="${esc(grp.key)}">🔗 ${grp.dlcId ? 'Сменить DLC' : 'Привязать к DLC'}</button>`;
             const note = gs.locked && !hide ? `<p class="ga-gnote">В общий зачёт не входит. Чтобы отмечать ачивки, отметь дополнение «${esc(dlc.title)}» купленным в блоке «Дополнения» на странице игры.</p>` : '';
-            return `<li class="ga-group${gs.locked ? ' is-locked' : ''}${gs.full ? ' is-full' : ''}"><div class="ga-ghead"><button type="button" class="ga-gtoggle" data-ga="gtoggle" data-gk="${esc(grp.key)}" aria-expanded="${!hide}" title="${hide ? 'Развернуть' : 'Свернуть'}"><span class="ga-garrow">${hide ? '▸' : '▾'}</span><span class="ga-gtitle">${esc(grp.title)}</span></button>${badge}${link}<span class="ga-gcount">${gs.full ? '🏆 ' : ''}${gs.done} / ${gs.total}</span></div>${note}</li>`
+            const ttl = single ? `<span class="ga-gtitle">${esc(grp.title)}</span>`
+                : `<button type="button" class="ga-gtoggle" data-ga="gtoggle" data-gk="${esc(grp.key)}" aria-expanded="${!hide}" title="${hide ? 'Развернуть' : 'Свернуть'}"><span class="ga-garrow">${hide ? '▸' : '▾'}</span><span class="ga-gtitle">${esc(grp.title)}</span></button>`;
+            return `<li class="ga-group${gs.locked ? ' is-locked' : ''}${gs.full ? ' is-full' : ''}"><div class="ga-ghead">${ttl}${badge}${link}<span class="ga-gcount">${gs.full ? '🏆 ' : ''}${gs.done} / ${gs.total}</span></div>${note}</li>`
                 + (hide ? '' : inGroup.map(row).join(''));
         };
+        const full = s.total > 0 && s.done >= s.total;
+        const sc = solo ? groupStats(g, solo) : s;
         const lockedLine = s.locked ? ` · 🔒 ещё ${s.locked} в некупленных DLC (не в зачёте)` : '';
+        const tabBtn = (k, label, gs) => `<button type="button" class="ga-tab${tab === k ? ' is-on' : ''}" data-ga="tab" data-gk="${esc(k)}">${gs && gs.locked ? '🔒 ' : ''}${gs && gs.full ? '🏆 ' : ''}${esc(label)}${gs ? ` <em>${gs.done}/${gs.total}</em>` : ''}</button>`;
+        const tabs = multi ? `<div class="ga-tabs" role="tablist">${tabBtn('all', 'Все', null)}${grps.filter(x => groupStats(g, x).total).map(x => tabBtn(x.key, x.title, groupStats(g, x))).join('')}</div>` : '';
+        const menu = menuOpen ? `<div class="ga-menu" role="menu">
+            <button type="button" role="menuitem" data-ga="to-import">📥 Добавить списком</button>
+            <button type="button" role="menuitem" data-ga="add-one">➕ Добавить одну</button>
+            <button type="button" role="menuitem" data-ga="mark-all">✓ Отметить все</button>
+            <button type="button" role="menuitem" data-ga="reset">↺ Сбросить отметки</button>
+            <button type="button" role="menuitem" class="is-danger" data-ga="clear">🗑 Удалить список</button></div>` : '';
+        const list = solo ? groupBlock(solo, true) : grps.map(x => groupBlock(x, false)).join('');
         return `
-        <div class="gs-bar" role="img" aria-label="Ачивки: ${s.pct}%"><span class="gs-seg" style="width:${s.pct}%;--sc:${s.done >= s.total && s.total ? '#facc15' : '#fbbf24'}"></span></div>
-        <p class="text-xs text-gray-400 mt-1.5">${s.total && s.done >= s.total ? '🏆 Платина! Все ачивки получены' : `Получено <b class="text-white">${s.done}</b> из ${s.total} · осталось ${s.left}`}${lockedLine}</p>
-        <div class="flex flex-wrap items-center gap-2 mt-3">
-            ${chip('all', 'Все', s.total)}${chip('left', 'Осталось', s.left)}${chip('done', 'Получено', s.done)}
-            <input id="ga-search" class="gd-input ga-search" type="search" placeholder="Поиск…" value="${esc(query)}" aria-label="Поиск по ачивкам">
+        <div class="ga-top">
+            <div class="min-w-0"><p class="gd-sec-title !mb-1">Список ачивок</p><h3 class="ga-h">${esc(g.title)}</h3></div>
+            <div class="ga-topbtns">
+                <button type="button" class="ga-pill${editMode ? ' is-on' : ''}" data-ga="edit-mode">${editMode ? '✓ Готово' : '✏️ Редактировать'}</button>
+                <div class="ga-menuwrap"><button type="button" class="ga-pill" data-ga="menu" aria-haspopup="true" aria-expanded="${menuOpen}" aria-label="Ещё действия">⋯</button>${menu}</div>
+                <button type="button" class="ga-ico" data-ga="close" aria-label="Закрыть">✕</button>
+            </div>
         </div>
-        <ul class="ga-list mt-3">${rows.length ? grps.map(groupBlock).join('') : `<li class="text-sm text-gray-500 py-6 text-center">${l.length ? 'Ничего не найдено' : 'Список пуст'}</li>`}</ul>
-        <div class="flex flex-wrap gap-2 mt-4 pt-3 border-t border-white/5">
-            <button type="button" class="gd-tool" data-ga="to-import">📥 Добавить списком</button>
-            <button type="button" class="gd-tool" data-ga="add-one">➕ Добавить одну</button>
-            <button type="button" class="gd-tool" data-ga="mark-all">✓ Отметить все</button>
-            <button type="button" class="gd-tool" data-ga="reset">↺ Сбросить отметки</button>
-            <button type="button" class="gd-tool" data-ga="clear">🗑 Удалить список</button>
-        </div>`;
+        <div class="ga-hero${full ? ' is-plat' : ''}">
+            <div class="ga-big"><b>${s.done}</b><span> / ${s.total}</span></div>
+            <div class="ga-hero-r">
+                <div class="gs-bar" role="img" aria-label="Ачивки: ${s.pct}%"><span class="gs-seg" style="width:${s.pct}%;--sc:${full ? '#facc15' : '#fbbf24'}"></span></div>
+                <p class="text-xs text-gray-400 mt-1.5">${full ? '🏆 Платина! Все ачивки получены' : `${s.pct}% · осталось ${s.left}`}${lockedLine}</p>
+            </div>
+            ${full ? '<span class="ga-plat">🏆 Платина</span>' : ''}
+        </div>
+        ${tabs}
+        <div class="ga-tools">
+            ${chip('all', 'Все', sc.total)}${chip('left', 'Осталось', sc.left)}${chip('done', 'Получено', sc.done)}
+            <input id="ga-search" class="gd-input ga-search" type="search" placeholder="Поиск…" value="${esc(query)}" aria-label="Поиск по ачивкам">
+            <select id="ga-sort" class="gd-input ga-sort" aria-label="Сортировка"><option value="list"${sort === 'list' ? ' selected' : ''}>По списку</option><option value="date"${sort === 'date' ? ' selected' : ''}>По дате получения</option></select>
+        </div>
+        <div class="ga-scroll"><ul class="ga-list">${rows.length && list ? list : `<li class="text-sm text-gray-500 py-6 text-center">${l.length ? 'Ничего не найдено' : 'Список пуст'}</li>`}</ul></div>`;
     }
 
     function paint() {
         const g = gameById(gid);
         if (!g) { modal.classList.add('hidden'); return; }
         const keepSearch = document.activeElement?.id === 'ga-search';
-        body.innerHTML = `
-        <div class="flex items-start justify-between gap-3 mb-4">
-            <div class="min-w-0"><p class="gd-sec-title !mb-1">Список ачивок</p><h3 class="text-lg sm:text-xl font-extrabold text-white truncate">${esc(g.title)}</h3></div>
-            <button type="button" class="ga-ico" data-ga="close" aria-label="Закрыть">✕</button>
-        </div>
-        ${view === 'import' ? importHTML() : listHTML(g)}`;
+        const sc = body.querySelector('.ga-scroll'), top = sc ? sc.scrollTop : 0;
+        body.innerHTML = view === 'import' ? `
+        <div class="ga-top"><div class="min-w-0"><p class="gd-sec-title !mb-1">Список ачивок</p><h3 class="ga-h">${esc(g.title)}</h3></div>
+            <div class="ga-topbtns"><button type="button" class="ga-ico" data-ga="close" aria-label="Закрыть">✕</button></div></div>
+        <div class="ga-scroll">${importHTML()}</div>` : listHTML(g);
+        const sc2 = body.querySelector('.ga-scroll'); if (sc2 && view !== 'import') sc2.scrollTop = top;
         if (keepSearch) { const el = $('ga-search'); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }
     }
 
@@ -392,8 +418,9 @@
     modal.addEventListener('click', async e => {
         if (e.target === modal) { close(); return; }
         const b = e.target.closest('[data-ga]');
-        if (!b) return;
+        if (!b) { if (menuOpen) { menuOpen = false; paint(); } return; }
         const act = b.dataset.ga;
+        if (menuOpen && act !== 'menu') { menuOpen = false; paint(); }
         const g = gameById(gid);
         if (!g) return;
         const aid = b.closest('[data-aid]')?.dataset.aid;
@@ -406,6 +433,9 @@
             case 'pick-file': fileInput.value = ''; fileInput.click(); break;
             case 'do-import': doImport(parseText($('ga-text')?.value, $('ga-pairs')?.checked), false); break;
             case 'filter': filter = b.dataset.v; paint(); break;
+            case 'tab': tab = b.dataset.gk; paint(); break;
+            case 'menu': menuOpen = !menuOpen; paint(); break;
+            case 'edit-mode': editMode = !editMode; if (!editMode) editId = null; paint(); break;
             case 'gtoggle': { const k = b.dataset.gk; if (collapsed.has(k)) collapsed.delete(k); else collapsed.add(k); paint(); break; }
             case 'glink': openLink(b.dataset.gk); break;
             case 'toggle':
@@ -463,13 +493,14 @@
         }
     });
 
+    body.addEventListener('change', e => { if (e.target.id === 'ga-sort') { sort = e.target.value; paint(); } });
     body.addEventListener('input', e => {
         if (e.target.id === 'ga-search') { query = e.target.value; paint(); }
     });
     body.addEventListener('keydown', e => {
         if (e.key === 'Enter' && (e.target.id === 'ga-en' || e.target.id === 'ga-ed')) { e.preventDefault(); body.querySelector('[data-ga="save-edit"]')?.click(); }
     });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.classList.contains('hidden')) { e.stopPropagation(); if (linkOv) closeLink(); else close(); } }, true);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.classList.contains('hidden')) { e.stopPropagation(); if (linkOv) closeLink(); else if (menuOpen) { menuOpen = false; paint(); } else close(); } }, true);
 
     /* ---------- картинки ачивок (необязательно) ---------- */
     const imgInput = document.createElement('input');
@@ -574,19 +605,20 @@
     };
 
     function secEl(g) {
-        const s = stats(g);
-        const missing = listOf(g).filter(a => !a.done && !lockedKey(g, keyOf(a))).slice(0, 3);
+        const s = stats(g), full = s.total > 0 && s.done >= s.total;
+        const plats = (full ? ['🏆 Платина игры'] : []).concat(groupsOf(g).filter(x => x.key !== BASE).map(x => ({ x, st: groupStats(g, x) })).filter(o => o.st.full && !o.st.locked).map(o => `🏆 ${o.x.title}`));
         const sec = document.createElement('div');
-        sec.className = 'gd-sec mt-5';
+        sec.className = 'gd-sec mt-5 ga-card' + (full ? ' is-plat' : '');
         sec.id = 'ga-sec';
         sec.innerHTML = (s.total || s.locked) ? `
-            <p class="gd-sec-title">Список ачивок <span class="normal-case tracking-normal font-semibold text-gray-600">· ${s.done} из ${s.total}</span></p>
-            <div class="gs-bar" role="img" aria-label="Ачивки: ${s.pct}%"><span class="gs-seg" style="width:${s.pct}%;--sc:${s.left ? '#fbbf24' : '#facc15'}"></span></div>
-            ${s.left ? `<p class="text-xs text-gray-500 mt-1.5">Осталось ${s.left}${missing.length ? ': ' + missing.map(a => esc(a.n)).join(', ') + (s.left > missing.length ? '…' : '') : ''}</p>` : (s.total ? '<p class="text-xs text-gray-500 mt-1.5">🏆 Платина! Все ачивки получены ✓</p>' : '')}${s.locked ? `<p class="text-xs text-gray-600 mt-1">🔒 ${s.locked} ачивок в некупленных DLC — не в зачёте</p>` : ''}
-            <button type="button" class="gd-tool mt-3 ga-open" data-gaopen="${g.id}">🏆 Открыть список</button>` : `
-            <p class="gd-sec-title">Список ачивок <span class="normal-case tracking-normal font-semibold text-gray-600">· необязательно</span></p>
-            <p class="text-xs text-gray-500">Добавь ачивки игры списком и отмечай их по мере прохождения — потом сразу видно, чего не хватает до платины.</p>
-            <button type="button" class="gd-tool mt-3 ga-open" data-gaopen="${g.id}">📥 Добавить список ачивок</button>`;
+            <div class="ga-card-top"><p class="gd-sec-title !mb-0">🏆 Список ачивок</p><div class="ga-card-num"><b>${s.done}</b> / ${s.total}</div></div>
+            <div class="gs-bar mt-2" role="img" aria-label="Ачивки: ${s.pct}%"><span class="gs-seg" style="width:${s.pct}%;--sc:${full ? '#facc15' : '#fbbf24'}"></span></div>
+            ${plats.length ? `<div class="ga-plats">${plats.map(t => `<span class="ga-plat-chip">${esc(t)}</span>`).join('')}</div>` : ''}
+            <p class="text-xs text-gray-400 mt-2">${s.left ? `Осталось ${s.left}` : '✓ Все ачивки получены'}${s.locked ? ` · 🔒 ${s.locked} в некупленных DLC — не в зачёте` : ''}</p>
+            <button type="button" class="ga-open-big ga-open" data-gaopen="${g.id}">Открыть список</button>` : `
+            <div class="ga-card-top"><p class="gd-sec-title !mb-0">🏆 Список ачивок</p><span class="text-xs text-gray-600">необязательно</span></div>
+            <p class="text-xs text-gray-500 mt-2">Добавь ачивки игры списком и отмечай их по мере прохождения — потом сразу видно, чего не хватает до платины.</p>
+            <button type="button" class="ga-open-big ga-open" data-gaopen="${g.id}">＋ Добавить список</button>`;
         return sec;
     }
 
@@ -667,6 +699,46 @@
     .gl-btn:hover{background:rgba(255,255,255,.12)}
     .gl-danger{background:#dc2626;border-color:transparent;color:#fff}
     @media (max-width:480px){.gl-ov{align-items:flex-end;padding:10px}.gl-box{max-width:none}.gl-row .gl-btn{flex:1}}
+    #game-ach-modal{padding:16px;align-items:center}
+    #game-ach-modal .ga-panel{max-width:min(1080px,96vw);width:100%;height:min(94vh,980px);max-height:94vh;display:flex;flex-direction:column;overflow:hidden;border-radius:26px;padding:20px 22px}
+    #ga-body{display:flex;flex-direction:column;flex:1;min-height:0}
+    .ga-scroll{flex:1;min-height:0;overflow-y:auto;margin:10px -6px 0;padding:0 6px 8px}
+    #game-ach-modal .ga-list{max-height:none;overflow:visible;gap:8px}
+    .ga-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .ga-h{font-size:clamp(18px,3vw,26px);font-weight:900;color:#fff;line-height:1.15;word-break:break-word}
+    .ga-topbtns{display:flex;align-items:center;gap:8px;flex:none}
+    .ga-pill{padding:7px 14px;border-radius:99px;font-size:12px;font-weight:800;cursor:pointer;color:#e5e7eb;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);transition:background .15s}
+    .ga-pill:hover{background:rgba(255,255,255,.14)}
+    .ga-pill.is-on{background:var(--theme-btn,#8b5cf6);border-color:transparent;color:#fff}
+    .ga-menuwrap{position:relative}
+    .ga-menu{position:absolute;right:0;top:calc(100% + 6px);z-index:5;min-width:210px;display:flex;flex-direction:column;padding:6px;border-radius:14px;background:rgba(24,24,32,.98);border:1px solid rgba(255,255,255,.12);box-shadow:0 14px 40px rgba(0,0,0,.55)}
+    .ga-menu button{padding:10px 12px;border-radius:9px;font-size:13px;font-weight:600;text-align:left;cursor:pointer;color:#e5e7eb;background:none;border:0}
+    .ga-menu button:hover{background:rgba(255,255,255,.08)}
+    .ga-menu .is-danger{color:#fca5a5}
+    .ga-hero{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-top:14px;padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
+    .ga-hero.is-plat{background:linear-gradient(135deg,rgba(250,204,21,.16),rgba(250,204,21,.04));border-color:rgba(250,204,21,.4)}
+    .ga-big{font-size:clamp(30px,6vw,44px);font-weight:900;color:#fbbf24;line-height:1;white-space:nowrap}
+    .ga-big span{font-size:.5em;color:#9ca3af;font-weight:800}
+    .ga-hero-r{flex:1;min-width:160px}
+    .ga-plat{padding:6px 14px;border-radius:99px;font-size:13px;font-weight:900;color:#422006;background:linear-gradient(135deg,#fde68a,#facc15)}
+    .ga-tabs{display:flex;gap:6px;overflow-x:auto;margin-top:12px;padding-bottom:2px}
+    .ga-tab{flex:none;padding:8px 14px;border-radius:12px;font-size:12px;font-weight:800;cursor:pointer;color:#cbd5e1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);white-space:nowrap}
+    .ga-tab em{font-style:normal;color:#9ca3af;margin-left:4px}
+    .ga-tab.is-on{color:#fff;border-color:var(--theme-btn,#8b5cf6);background:color-mix(in srgb,var(--theme-btn,#8b5cf6) 22%,transparent)}
+    .ga-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px}
+    .ga-sort{padding:6px 10px !important;font-size:12px;width:auto}
+    #game-ach-modal .ga-row{padding:12px 14px;border-radius:16px}
+    #game-ach-modal .ga-row.is-done{border-left:4px solid #facc15}
+    #game-ach-modal .ga-actions{opacity:1}
+    .ga-card{padding:16px;border-radius:18px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
+    .ga-card.is-plat{background:linear-gradient(135deg,rgba(250,204,21,.14),rgba(250,204,21,.03));border-color:rgba(250,204,21,.4)}
+    .ga-card-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+    .ga-card-num{font-size:14px;color:#9ca3af}.ga-card-num b{font-size:24px;color:#fbbf24;font-weight:900}
+    .ga-plats{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+    .ga-plat-chip{padding:3px 10px;border-radius:99px;font-size:11px;font-weight:800;color:#422006;background:linear-gradient(135deg,#fde68a,#facc15)}
+    .ga-open-big{display:block;width:100%;margin-top:12px;padding:12px;border-radius:14px;font-size:14px;font-weight:800;cursor:pointer;color:#fff;background:var(--theme-btn,#8b5cf6);border:0;transition:filter .15s,transform .1s}
+    .ga-open-big:hover{filter:brightness(1.12)}.ga-open-big:active{transform:scale(.99)}
+    @media (max-width:640px){.ga-menu{right:auto;left:0}#game-ach-modal{padding:0}#game-ach-modal .ga-panel{max-width:none;width:100%;height:100dvh;max-height:100dvh;border-radius:0;padding:14px}.ga-hero{gap:10px}}
     .ga-row.is-locked{opacity:.55}
     .ga-row.is-locked .ga-tick{cursor:not-allowed;font-size:13px;background:rgba(255,255,255,.04)}
     .ga-row.is-locked .ga-tick:hover{transform:none;border-color:rgba(255,255,255,.25)}`;
