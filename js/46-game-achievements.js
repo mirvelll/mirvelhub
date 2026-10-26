@@ -98,6 +98,26 @@
     window.mhAchSync = g => (g ? sync(g) : syncAll());
     window.mhAchSyncAll = syncAll;
 
+    /** Создаёт дополнение «в планах» (не куплено); поля как у формы в 37-game-dlc.js */
+    function newDlc(g, title) {
+        const d = { id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), title: String(title).slice(0, 120), type: 'dlc', price: 0, approx: false,
+                    date: '', owned: false, img: '', from: [], free: '', giftFrom: '', rating: 0, url: '', note: '', status: '', done: false };
+        if (!Array.isArray(g.dlcs)) g.dlcs = [];
+        g.dlcs.push(d);
+        return d;
+    }
+    /** Запись группы в g.achGroups (создаётся, если группа пока «осиротевшая»); для «Основной игры» не нужна */
+    function storedGroup(g, key) {
+        if (!Array.isArray(g.achGroups)) g.achGroups = [];
+        let x = g.achGroups.find(y => y.key === key);
+        if (!x) {
+            const src = groupsOf(g).find(y => y.key === key);
+            x = { key, title: src ? src.title : 'Группа', dlcId: null };
+            g.achGroups.push(x);
+        }
+        return x;
+    }
+
     /* Находит (или создаёт) группу по названию и возвращает её ключ; для DLC-группы ещё привязывает/создаёт дополнение */
     function ensureGroup(g, grp, stat) {
         if (!grp || grp.base) return BASE;
@@ -114,11 +134,7 @@
         if (grp.dlc && !(ex.dlcId && dlcList(g).some(d => d.id === ex.dlcId))) {
             let d = dlcList(g).find(x => nk(x.title) === k);
             if (!d) {
-                // дополнения ещё нет — создаём «в планах» (не куплено), поля как у формы в 37-game-dlc.js
-                d = { id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), title: grp.title.slice(0, 120), type: 'dlc', price: 0, approx: false,
-                      date: '', owned: false, img: '', from: [], free: '', giftFrom: '', rating: 0, url: '', note: '', status: '', done: false };
-                if (!Array.isArray(g.dlcs)) g.dlcs = [];
-                g.dlcs.push(d);
+                d = newDlc(g, grp.title);   // дополнения ещё нет — создаём «в планах»
                 stat.dlcs++;
             }
             ex.dlcId = d.id;
@@ -234,6 +250,8 @@
 
     /* ================= Окно со списком ================= */
     let gid = null, filter = 'all', query = '', editId = null, view = 'list';
+    const collapsed = new Set();      // ключи свёрнутых групп (только на время, пока окно открыто)
+    let linkOv = null;                // окно «Привязать к DLC»
     const modal = document.createElement('div');
     modal.id = 'game-ach-modal';
     modal.className = 'hidden fixed inset-0 bg-black/75 backdrop-blur-md flex items-start sm:items-center justify-center z-[58] p-3 sm:p-4';
@@ -251,7 +269,7 @@
     function open(id, v) {
         const g = gameById(id);
         if (!g) return;
-        gid = g.id; filter = 'all'; query = ''; editId = null;
+        gid = g.id; filter = 'all'; query = ''; editId = null; collapsed.clear(); closeLink();
         try { if (listOf(g).length && syncAll()) persistData(); } catch (_) {}   // «куплено» у DLC могли поменять после прошлого открытия
         view = v || (listOf(g).length ? 'list' : 'import');
         paint();
@@ -259,6 +277,7 @@
     }
 
     function close() {
+        closeLink();
         modal.classList.add('hidden');
         const g = gameById(gid);
         gid = null;
@@ -298,6 +317,7 @@
                 <div class="flex-1 min-w-0 space-y-2">
                     <input class="gd-input" id="ga-en" value="${esc(a.n)}" maxlength="120" placeholder="Название">
                     <input class="gd-input" id="ga-ed" value="${esc(a.d)}" maxlength="300" placeholder="Описание">
+                    <label class="ga-edit-date">Группа <select id="ga-eg" class="gd-input">${groupsOf(g).map(x => `<option value="${esc(x.key)}"${x.key === keyOf(a) ? ' selected' : ''}>${esc(x.title)}</option>`).join('')}<option value="__new">➕ Новая группа…</option></select></label>
                     ${a.done ? `<label class="ga-edit-date">Получено <input type="date" id="ga-edt" class="gd-input" value="${a.ts ? dateVal(a.ts) : ''}"></label>` : ''}
                     <div class="ga-edit-img">${a.img ? `<img src="${esc(a.img)}" alt="">` : ''}<button type="button" class="gd-tool" data-ga="pick-img">🖼 ${a.img ? 'Заменить' : 'Добавить'} картинку</button>${a.img ? '<button type="button" class="gd-tool" data-ga="rm-img">Убрать</button>' : ''}</div>
                 </div>
@@ -320,11 +340,12 @@
             if (!inGroup.length) return '';
             if (!multi) return inGroup.map(row).join('');
             const gs = groupStats(g, grp), dlc = dlcOfGroup(g, grp);
-            const badge = gs.locked ? '<span class="ga-gtag is-lock">🔒 не куплено</span>'
-                : dlc ? '<span class="ga-gtag is-own">🧩 куплено</span>' : '';
-            const note = gs.locked ? `<p class="ga-gnote">В общий зачёт не входит. Чтобы отмечать ачивки, отметь дополнение «${esc(dlc.title)}» купленным в блоке «Дополнения» на странице игры.</p>` : '';
-            return `<li class="ga-group${gs.locked ? ' is-locked' : ''}${gs.full ? ' is-full' : ''}"><div class="ga-ghead"><span class="ga-gtitle">${esc(grp.title)}</span>${badge}<span class="ga-gcount">${gs.full ? '🏆 ' : ''}${gs.done} / ${gs.total}</span></div>${note}</li>`
-                + inGroup.map(row).join('');
+            const hide = collapsed.has(grp.key) && !q;      // при поиске группы раскрываются сами
+            const badge = dlc ? `<span class="ga-gtag ${gs.locked ? 'is-lock' : 'is-own'}">${gs.locked ? '🔒' : '🧩'} ${esc(dlc.title)} · ${dlc.owned === true ? 'куплено' : 'в планах'}</span>` : '';
+            const link = grp.key === BASE ? '' : `<button type="button" class="ga-glink" data-ga="glink" data-gk="${esc(grp.key)}">🔗 ${grp.dlcId ? 'Сменить DLC' : 'Привязать к DLC'}</button>`;
+            const note = gs.locked && !hide ? `<p class="ga-gnote">В общий зачёт не входит. Чтобы отмечать ачивки, отметь дополнение «${esc(dlc.title)}» купленным в блоке «Дополнения» на странице игры.</p>` : '';
+            return `<li class="ga-group${gs.locked ? ' is-locked' : ''}${gs.full ? ' is-full' : ''}"><div class="ga-ghead"><button type="button" class="ga-gtoggle" data-ga="gtoggle" data-gk="${esc(grp.key)}" aria-expanded="${!hide}" title="${hide ? 'Развернуть' : 'Свернуть'}"><span class="ga-garrow">${hide ? '▸' : '▾'}</span><span class="ga-gtitle">${esc(grp.title)}</span></button>${badge}${link}<span class="ga-gcount">${gs.full ? '🏆 ' : ''}${gs.done} / ${gs.total}</span></div>${note}</li>`
+                + (hide ? '' : inGroup.map(row).join(''));
         };
         const lockedLine = s.locked ? ` · 🔒 ещё ${s.locked} в некупленных DLC (не в зачёте)` : '';
         return `
@@ -385,12 +406,14 @@
             case 'pick-file': fileInput.value = ''; fileInput.click(); break;
             case 'do-import': doImport(parseText($('ga-text')?.value, $('ga-pairs')?.checked), false); break;
             case 'filter': filter = b.dataset.v; paint(); break;
+            case 'gtoggle': { const k = b.dataset.gk; if (collapsed.has(k)) collapsed.delete(k); else collapsed.add(k); paint(); break; }
+            case 'glink': openLink(b.dataset.gk); break;
             case 'toggle':
                 if (!item) break;
                 if (lockedKey(g, keyOf(item))) { toast('🔒 Сначала отметь DLC купленным (блок «Дополнения» на странице игры)', 'info'); break; }
                 item.done = !item.done; item.ts = item.done ? Date.now() : 0;
                 commit(g, wasFull); paint(); break;
-            case 'edit': editId = aid; paint(); $('ga-en')?.focus(); break;
+            case 'edit': editId = aid; if (item) collapsed.delete(keyOf(item)); paint(); $('ga-en')?.focus(); break;
             case 'pick-img': keepEdit(item); imgInput.value = ''; imgInput.click(); break;
             case 'rm-img': keepEdit(item); delete item.img; persistData(); paint(); break;
             case 'copy-prompt': copyText(window.MH_ACH_PROMPT || '').then(ok => toast(ok ? 'Промпт скопирован 📋 — вставь его в нейросеть вместе со скриншотами' : 'Не удалось скопировать — открой Настройки → Промпты', ok ? 'success' : 'error')); break;
@@ -398,10 +421,20 @@
             case 'save-edit': {
                 const n = ($('ga-en')?.value || '').trim();
                 if (!item || !n) { toast('Название не может быть пустым', 'error'); break; }
-                item.n = n.slice(0, 120); item.d = ($('ga-ed')?.value || '').trim().slice(0, 300);
-                const dv = $('ga-edt')?.value;
+                const dsc = ($('ga-ed')?.value || '').trim().slice(0, 300), dv = $('ga-edt')?.value, gv = $('ga-eg')?.value;
+                let nkey = keyOf(item);
+                if (gv === '__new') {
+                    const t = ((await mhPrompt('Название новой группы', { title: 'Новая группа', placeholder: 'Например: Season Pass', required: true, maxLength: 80 })) || '').trim();
+                    if (!t) break;                                  // отменили — остаёмся в правке, ничего не меняется
+                    nkey = nk(t) === nk(BASE_TITLE) ? BASE : ensureGroup(g, { title: t, dlc: false }, { groups: 0, dlcs: 0 });
+                } else if (gv && groupsOf(g).some(x => x.key === gv)) nkey = gv;
+                item.n = n.slice(0, 120); item.d = dsc;
                 if (item.done && dv) { const t = new Date(dv + 'T12:00:00').getTime(); if (isFinite(t)) item.ts = t; }
-                editId = null; persistData(); paint(); break;
+                const moved = nkey !== keyOf(item);
+                if (moved) { if (nkey === BASE) delete item.g; else item.g = nkey; collapsed.delete(nkey); }
+                editId = null;
+                if (moved) commit(g, wasFull); else persistData();
+                paint(); break;
             }
             case 'del':
                 if (!item) break;
@@ -436,7 +469,7 @@
     body.addEventListener('keydown', e => {
         if (e.key === 'Enter' && (e.target.id === 'ga-en' || e.target.id === 'ga-ed')) { e.preventDefault(); body.querySelector('[data-ga="save-edit"]')?.click(); }
     });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.classList.contains('hidden')) { e.stopPropagation(); close(); } }, true);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.classList.contains('hidden')) { e.stopPropagation(); if (linkOv) closeLink(); else close(); } }, true);
 
     /* ---------- картинки ачивок (необязательно) ---------- */
     const imgInput = document.createElement('input');
@@ -448,6 +481,50 @@
         const n = ($('ga-en')?.value || '').trim(), d = $('ga-ed')?.value;
         if (n) item.n = n.slice(0, 120);
         if (typeof d === 'string') item.d = d.trim().slice(0, 300);
+        const gv = $('ga-eg')?.value, g = gameById(gid);
+        if (g && gv && gv !== '__new' && gv !== keyOf(item) && groupsOf(g).some(x => x.key === gv)) { if (gv === BASE) delete item.g; else item.g = gv; sync(g); }
+    }
+
+    /* ---------- окно «Привязать группу к DLC» ---------- */
+    function closeLink() { if (linkOv) { linkOv.remove(); linkOv = null; } }
+    function openLink(key) {
+        const g = gameById(gid);
+        const grp = g && key !== BASE ? groupsOf(g).find(x => x.key === key) : null;
+        if (!grp) return;
+        closeLink();
+        const cur = dlcOfGroup(g, grp), dl = dlcList(g);
+        const hasSame = dl.some(d => nk(d.title) === nk(grp.title));
+        const ov = document.createElement('div');
+        ov.className = 'gl-ov';
+        ov.innerHTML = `<div class="gl-box" role="dialog" aria-modal="true" aria-label="Привязать группу к DLC">
+            <p class="gl-title">🔗 Привязать к DLC</p>
+            <p class="gl-sub">Группа «${esc(grp.title)}»${cur ? ` · сейчас: ${esc(cur.title)}` : ''}</p>
+            <div class="gl-list">
+                ${dl.map(d => `<button type="button" class="gl-item${cur && cur.id === d.id ? ' is-cur' : ''}" data-gl="pick" data-id="${esc(d.id)}"><span>🧩 ${esc(d.title)}</span><em>${cur && cur.id === d.id ? '✓ ' : ''}${d.owned === true ? 'куплено' : 'в планах'}</em></button>`).join('') || '<p class="gl-empty">В этой игре пока нет дополнений</p>'}
+                ${hasSame ? '' : `<button type="button" class="gl-item gl-new" data-gl="new"><span>➕ Создать DLC «${esc(grp.title)}»</span><em>в планах</em></button>`}
+            </div>
+            <div class="gl-row">${grp.dlcId ? '<button type="button" class="gl-btn gl-danger" data-gl="unlink">Отвязать</button>' : ''}<button type="button" class="gl-btn" data-gl="cancel">Отмена</button></div></div>`;
+        ov.addEventListener('click', e => {
+            if (e.target === ov) { closeLink(); return; }
+            const b = e.target.closest('[data-gl]');
+            if (!b) return;
+            const gg = gameById(gid);
+            if (!gg) { closeLink(); return; }
+            const act = b.dataset.gl, wasFull = gg.trophy === 'full', sg = storedGroup(gg, key);
+            if (act === 'cancel') { closeLink(); return; }
+            let msg = '';
+            if (act === 'pick') { sg.dlcId = b.dataset.id; msg = 'Группа привязана к дополнению'; }
+            else if (act === 'new') { sg.dlcId = newDlc(gg, sg.title).id; msg = `🧩 Создано дополнение «${esc(sg.title)}» в планах — отметь его купленным в блоке «Дополнения»`; }
+            else if (act === 'unlink') { sg.dlcId = null; msg = 'Группа отвязана от DLC и снова входит в зачёт'; }
+            else return;
+            closeLink();
+            commit(gg, wasFull);
+            toast(msg, 'success');
+            paint();
+        });
+        document.body.appendChild(ov);
+        linkOv = ov;
+        (ov.querySelector('.gl-item.is-cur') || ov.querySelector('.gl-item') || ov.querySelector('.gl-btn'))?.focus();
     }
 
     async function smallImage(file) {
@@ -568,6 +645,28 @@
     .ga-gtag.is-lock{color:#fca5a5;border-color:rgba(248,113,113,.35);background:rgba(248,113,113,.1)}
     .ga-gtag.is-own{color:#6ee7b7;border-color:rgba(52,211,153,.35);background:rgba(52,211,153,.1)}
     .ga-gnote{font-size:11px;color:#9ca3af;padding:0 4px 4px;line-height:1.4}
+    .ga-gtoggle{display:inline-flex;align-items:center;gap:6px;background:none;border:0;padding:2px 4px 2px 0;cursor:pointer;color:inherit;min-width:0;text-align:left}
+    .ga-gtoggle:focus-visible,.ga-glink:focus-visible,.gl-item:focus-visible,.gl-btn:focus-visible{outline:2px solid var(--theme-btn,#8b5cf6);outline-offset:2px}
+    .ga-garrow{font-size:11px;color:#9ca3af;width:12px;flex:none}
+    .ga-gtag{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .ga-glink{font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;cursor:pointer;color:#c4b5fd;background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.3)}
+    .ga-glink:hover{background:rgba(139,92,246,.22)}
+    .gl-ov{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.62);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+    .gl-box{width:100%;max-width:420px;max-height:88vh;overflow:auto;border-radius:20px;padding:20px;color:#e5e7eb;background:rgba(24,24,32,.96);border:1px solid rgba(255,255,255,.1);box-shadow:0 20px 60px rgba(0,0,0,.55)}
+    .gl-title{font-size:15px;font-weight:800;color:#fff;margin:0}
+    .gl-sub{font-size:12px;color:#9ca3af;margin:4px 0 12px;word-break:break-word}
+    .gl-list{display:flex;flex-direction:column;gap:6px}
+    .gl-item{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:10px 12px;border-radius:12px;font-size:13px;font-weight:600;text-align:left;cursor:pointer;color:#e5e7eb;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)}
+    .gl-item:hover{background:rgba(255,255,255,.1)}
+    .gl-item em{font-style:normal;font-size:11px;color:#9ca3af;flex:none}
+    .gl-item.is-cur{border-color:var(--theme-btn,#8b5cf6);background:rgba(139,92,246,.14)}
+    .gl-new{border-style:dashed}
+    .gl-empty{font-size:12px;color:#9ca3af;padding:4px 2px}
+    .gl-row{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+    .gl-btn{padding:9px 16px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;color:#e5e7eb;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12)}
+    .gl-btn:hover{background:rgba(255,255,255,.12)}
+    .gl-danger{background:#dc2626;border-color:transparent;color:#fff}
+    @media (max-width:480px){.gl-ov{align-items:flex-end;padding:10px}.gl-box{max-width:none}.gl-row .gl-btn{flex:1}}
     .ga-row.is-locked{opacity:.55}
     .ga-row.is-locked .ga-tick{cursor:not-allowed;font-size:13px;background:rgba(255,255,255,.04)}
     .ga-row.is-locked .ga-tick:hover{transform:none;border-color:rgba(255,255,255,.25)}`;

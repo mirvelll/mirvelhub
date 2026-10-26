@@ -219,7 +219,10 @@
     .tl-lab-in[data-len="2"]{font-size:1.25rem}.tl-lab-in[data-len="3"]{font-size:.95rem}.tl-lab-in[data-len="4"]{font-size:.8rem}
     @media (max-width:640px){.tl-lab-in[data-len="2"]{font-size:.95rem}.tl-lab-in[data-len="3"]{font-size:.8rem}.tl-lab-in[data-len="4"]{font-size:.7rem}}
     /* сворачивание тира */
-    .tl-fold{position:absolute;top:3px;left:50%;transform:translateX(-50%);z-index:3;width:1.6rem;height:1.2rem;display:grid;place-items:center;border:0;border-radius:99px;background:rgba(0,0,0,.35);color:#fff;font-size:.7rem;cursor:pointer;opacity:.8;transition:opacity .15s,background .15s}
+    .tl-tb{position:absolute;top:3px;left:50%;transform:translateX(-50%);z-index:3;display:flex;gap:3px}
+    .tl-eye.is-off{opacity:1;background:rgba(220,38,38,.55)}
+    .tl-row.is-nopng .tl-zone,.tl-row.is-nopng .tl-foldinfo{opacity:.45}
+    .tl-fold{width:1.6rem;height:1.2rem;display:grid;place-items:center;border:0;border-radius:99px;background:rgba(0,0,0,.35);color:#fff;font-size:.7rem;cursor:pointer;opacity:.8;transition:opacity .15s,background .15s}
     .tl-fold:hover,.tl-fold:focus-visible{opacity:1;background:rgba(0,0,0,.6)}
     .tl-foldinfo{display:none;flex:1;align-items:center;min-width:0;padding:.5rem .9rem;border:0;background:transparent;color:#9ca3af;font-size:.78rem;font-weight:700;text-align:left;cursor:pointer}
     .tl-foldinfo:hover{color:#fff}
@@ -344,9 +347,9 @@
             <div class="tl-prog" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>
             <div class="tl-chips">${l.tiers.map(t => `<span class="tl-chip"><u style="background:${t.color};color:${fg(t.color)}">${E(t.label.slice(0, 3))}</u>${l.items.filter(x => x.tier === t.id).length}</span>`).join('')}</div></div>` : ''}
         <div class="tl-board">${l.tiers.map(t => `
-            <div class="tl-row${t.fold ? ' is-folded' : ''}" data-tid="${t.id}" style="--tc:${t.color}">
+            <div class="tl-row${t.fold ? ' is-folded' : ''}${t.hide ? ' is-nopng' : ''}" data-tid="${t.id}" style="--tc:${t.color}">
                 <div class="tl-lab" style="color:${fg(t.color)}">
-                    <button type="button" class="tl-fold" data-a="fold" aria-expanded="${!t.fold}" title="${t.fold ? 'Развернуть' : 'Свернуть'}">${t.fold ? '▸' : '▾'}</button>
+                    <div class="tl-tb"><button type="button" class="tl-fold" data-a="fold" aria-expanded="${!t.fold}" title="${t.fold ? 'Развернуть' : 'Свернуть'}">${t.fold ? '▸' : '▾'}</button><button type="button" class="tl-fold tl-eye${t.hide ? ' is-off' : ''}" data-a="eye" aria-pressed="${!t.hide}" title="${t.hide ? 'Не попадёт в PNG — нажми, чтобы показать' : 'Попадёт в PNG — нажми, чтобы скрыть'}">${t.hide ? '🙈' : '👁'}</button></div>
                     <textarea class="tl-lab-in" rows="1" maxlength="60" data-len="${labLen(t.label)}" data-tl="${t.id}" aria-label="Название тира" spellcheck="false">${E(t.label)}</textarea>
                     <div class="tl-ctl"><label title="Цвет">🎨<input type="color" value="${t.color}" data-col="${t.id}"></label><button data-a="up" title="Выше">↑</button><button data-a="dn" title="Ниже">↓</button><button data-a="deltier" title="Удалить тир">✕</button></div>
                 </div>
@@ -563,6 +566,7 @@
             case 'size': l.sz = +a.dataset.v; break;
             case 'export': return exportPng();
             case 'fold': if (tier) tier.fold = !tier.fold; break;
+            case 'eye': if (tier) tier.hide = !tier.hide; break;
             case 'addtier': l.tiers.push({ id: uid(), label: 'Новый', color: COLORS[l.tiers.length % COLORS.length] }); break;
             case 'deltier': { if (l.tiers.length <= 1) return toast('Нужен хотя бы один тир', 'error'); l.items.forEach(x => { if (x.tier === tier.id) x.tier = ''; }); l.tiers = l.tiers.filter(x => x !== tier); break; }
             case 'up': case 'dn': { const i = l.tiers.indexOf(tier), j = act === 'up' ? i - 1 : i + 1; if (j < 0 || j >= l.tiers.length) return; [l.tiers[i], l.tiers[j]] = [l.tiers[j], l.tiers[i]]; break; }
@@ -625,7 +629,11 @@
     async function onChange(e) {
         const t = e.target, l = L();
         if (t.id === 'tl-sel') { data.tierActive = t.value; save(); return render(); }
-        if (t.dataset.tl) { const x = l.tiers.find(z => z.id === t.dataset.tl); if (x) { x.label = t.value.replace(/\s*\n+\s*/g, ' ').trim() || x.label; save(); render(); } return; }
+        if (t.dataset.tl) { const x = l.tiers.find(z => z.id === t.dataset.tl); if (x) {   // без полной перерисовки: иначе она «съедает» клик по соседней кнопке (стрелке сворачивания)
+                x.label = t.value.replace(/\s*\n+\s*/g, ' ').trim() || x.label; save();
+                t.value = x.label; t.dataset.len = labLen(x.label); fitLabel(t);
+                const u = sec.querySelectorAll('.tl-chip u')[l.tiers.indexOf(x)]; if (u) u.textContent = x.label.slice(0, 3);
+            } return; }
         if (t.dataset.col) { const x = l.tiers.find(z => z.id === t.dataset.col); if (x) { x.color = t.value; save(); render(); } return; }
         if (t.dataset.ef) {
             const it = itemOf(t); if (!it) return;
@@ -719,15 +727,16 @@
     }
     async function exportPng() {
         const l = L(); if (!l) return;
+        if (!l.tiers.some(t => !t.hide)) return toast('Все тиры скрыты из PNG (кнопка 👁) — покажи хотя бы один', 'error');
         toast('Рисую картинку…', 'info'); platDup = dupKeysOf(l);
-        const S = 120, G = 6, LAB = 150, W = 1280, P = 32, RG = 12, TH = l.shape === 'pt' ? Math.round(S * 1.33) : S, cols = Math.floor((W - P * 2 - LAB - 12) / (S + G));
+        const S = 120, G = 6, LAB = 150, W = 1600, P = 32, RG = 12, TH = l.shape === 'pt' ? Math.round(S * 1.33) : S, cols = Math.floor((W - P * 2 - LAB - 12) / (S + G));
         const FD = "800 %spx 'Unbounded','Inter',system-ui,sans-serif", FU = "%s %spx 'Inter',system-ui,sans-serif";
         try { await Promise.all(['800 40px Unbounded', '700 20px Inter'].map(f => document.fonts.load(f, 'Аa').catch(() => {}))); } catch (_) {}
         const rgb = (getComputedStyle(document.documentElement).getPropertyValue('--theme-rgb') || getComputedStyle(document.body).getPropertyValue('--theme-rgb') || '139, 92, 246').trim();
         const imgs = new Map();
-        await Promise.all([...new Set(l.items.filter(x => x.tier).map(x => imgSrc(info(x)?.img)).filter(Boolean))].map(async s => imgs.set(s, await loadImg(s))));
+        await Promise.all([...new Set(l.items.filter(x => x.tier && !l.tiers.some(t => t.id === x.tier && t.hide)).map(x => imgSrc(info(x)?.img)).filter(Boolean))].map(async s => imgs.set(s, await loadImg(s))));
         const rowH = n => Math.max(1, Math.ceil(n / cols)) * (TH + G) + G;
-        const rows = l.tiers.map(t => ({ t, items: l.items.filter(x => x.tier === t.id) }));
+        const rows = l.tiers.filter(t => !t.hide).map(t => ({ t, items: l.items.filter(x => x.tier === t.id) }));
         const HEAD = 128, FOOT = 64;
         const H = HEAD + rows.reduce((s, r) => s + Math.max(rowH(r.items.length), 84) + RG, 0) - RG + FOOT;
         const c = document.createElement('canvas'); c.width = W; c.height = H;
