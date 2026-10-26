@@ -280,6 +280,7 @@
     function close() {
         closeLink();
         modal.classList.add('hidden');
+        try { renderGamesBlock(); } catch (_) {}
         const g = gameById(gid);
         gid = null;
         if (g) { try { const d = $('game-detail-modal'); if (d && !d.classList.contains('hidden')) window.openGameDetail?.(g.id); } catch (_) {} }
@@ -293,6 +294,7 @@
         <div class="flex flex-wrap items-center gap-2 mt-3">
             <button type="button" class="gx-status st-completed is-on" data-ga="do-import">Добавить в список</button>
             <button type="button" class="gx-status st-none" data-ga="pick-file">📄 Из файла (.txt / .csv / .json)</button>
+            ${copyCands(gameById(gid)).length ? '<button type="button" class="gx-status st-none" data-ga="copy-from">📑 Скопировать с другой версии</button>' : ''}
             <button type="button" class="gx-status st-none" data-ga="copy-prompt">📝 Скопировать промпт для скриншотов</button>
             ${listOf(gameById(gid)).length ? '<button type="button" class="gx-status st-none" data-ga="back">← К списку</button>' : ''}
         </div>
@@ -566,8 +568,9 @@
             ov.querySelector('.gl-item')?.focus();
         });
     }
+    const copyCands = g => g ? (data.games || []).filter(x => x.id !== g.id && listOf(x).length && nk(x.title) === nk(g.title)) : [];
     async function copyFrom(g) {
-        const cands = (data.games || []).filter(x => x.id !== g.id && listOf(x).length && nk(x.title) === nk(g.title));
+        const cands = copyCands(g);
         if (!cands.length) { toast('Не нашёл другую версию этой игры со списком ачивок (ищу игры с тем же названием)', 'info'); return; }
         const lbl = x => `${x.platform || x.platforms || 'без платформы'}`;
         let src = cands[0];
@@ -710,6 +713,49 @@
         });
         new MutationObserver(() => injectSection()).observe(detailBody, { childList: true });
     }
+
+    /* ================= D: блок «Ачивки игр» на вкладке «Достижения» ================= */
+    let gbFilter = 'all';
+    const gbCover = v => { v = String(v || ''); return /^data:image\//i.test(v) || /^https?:\/\//i.test(v) ? v : ''; };
+    function renderGamesBlock() {
+        const host = $('ach-games-block');
+        if (!host) return;
+        const games = (data.games || []).filter(g => listOf(g).length);
+        if (!games.length) { host.innerHTML = ''; return; }
+        const rows = games.map(g => {
+            const s = stats(g), gs = groupsOf(g).map(grp => ({ grp, st: groupStats(g, grp) })).filter(x => x.st.total && !x.st.locked);
+            const plats = gs.filter(x => x.st.full).length;
+            return { g, s, gs, plats, full: s.total > 0 && s.done >= s.total };
+        });
+        const totalPlat = rows.reduce((n, r) => n + r.plats, 0), fullGames = rows.filter(r => r.full).length;
+        const cnt = f => rows.filter(r => f === 'all' || (f === 'full' ? r.full : !r.full)).length;
+        const shown = rows.filter(r => gbFilter === 'all' || (gbFilter === 'full' ? r.full : !r.full))
+            .sort((a, b) => (a.full - b.full) || (b.s.pct - a.s.pct) || String(a.g.title).localeCompare(String(b.g.title), 'ru'));
+        const chip = (id, l) => `<button type="button" class="ach-chip is-sm${gbFilter === id ? ' is-on' : ''}" data-gbf="${id}">${l} <em>${cnt(id)}</em></button>`;
+        const card = r => {
+            const cv = gbCover(r.g.img), multi = r.gs.length > 1;
+            const dl = multi ? `<div class="agb-groups">${r.gs.map(x => `<span class="agb-g${x.st.full ? ' is-full' : ''}" title="${esc(x.st.done + ' / ' + x.st.total)}">${x.st.full ? '🏆' : '▫️'} ${esc(x.grp.key === BASE ? 'Игра' : x.grp.title)}</span>`).join('')}</div>` : '';
+            return `<button type="button" class="agb-card${r.full ? ' is-full' : ''}" data-gbopen="${r.g.id}">
+                <span class="agb-cover">${cv ? `<img src="${esc(cv)}" alt="" loading="lazy">` : '<i>🎮</i>'}${r.plats ? `<b class="agb-plat">🏆${r.plats > 1 ? ' ×' + r.plats : ''}</b>` : ''}</span>
+                <span class="agb-info"><b class="agb-t">${esc(r.g.title)}</b><em class="agb-p">${esc(r.g.platform || '')}</em>
+                <span class="agb-bar"><i style="width:${r.s.pct}%"></i></span>
+                <span class="agb-n">${r.s.done} / ${r.s.total} · ${r.s.pct}%${r.s.locked ? ` · 🔒 ${r.s.locked}` : ''}</span>${dl}</span></button>`;
+        };
+        host.innerHTML = `<div class="agb-head"><div><h3 class="agb-h">🎮 Ачивки игр</h3><p class="agb-sub">Платин: <b>${totalPlat}</b> · игр со списком: <b>${rows.length}</b>${fullGames ? ` · закрыто полностью: <b>${fullGames}</b>` : ''}</p></div>
+            <div class="ach-chips">${chip('all', 'Все')}${chip('prog', 'В процессе')}${chip('full', 'С платиной')}</div></div>
+            <div class="agb-grid">${shown.length ? shown.map(card).join('') : '<div class="ach-empty">Здесь пока пусто — попробуйте другой фильтр 🔎</div>'}</div>`;
+    }
+    document.addEventListener('click', e => {
+        const f = e.target.closest && e.target.closest('[data-gbf]');
+        if (f) { gbFilter = f.dataset.gbf; renderGamesBlock(); return; }
+        const o = e.target.closest && e.target.closest('[data-gbopen]');
+        if (o) open(o.dataset.gbopen);
+    });
+    if (typeof window.renderAchievementsPage === 'function') {
+        const base = window.renderAchievementsPage;
+        window.renderAchievementsPage = function () { const r = base.apply(this, arguments); try { renderGamesBlock(); } catch (_) {} return r; };
+    }
+    window.mhRenderGamesBlock = renderGamesBlock;
     window.openGameAchievements = open;
 
     /* ================= Достижения хаба ================= */

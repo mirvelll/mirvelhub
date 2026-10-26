@@ -34,7 +34,7 @@
         '17-convenience.js', 'i18n-dict.js', 'i18n.js', '18-hub2.js', '19-features.js', '20-music-detail.js', '21-optimize.js', '22-wishlist.js', '23-sounds.js',
         '24-share-collection.js', '25-bulk.js', '27-design.js', '28-appearance.js', '29-games-page.js', '30-collection-ui.js', '31-analytics-charts.js', '32-game-bundles.js', '33-hidden-games.js', '34-platform-logos.js', '35-copy-games.js', '36-tierlist.js', '37-game-dlc.js', '38-game-sync.js', '39-game-editor.js', '40-games-extras.js', '41-fav-carousel.js', '42-platform-settings.js', '43-ui-custom.js', '44-steam-page.js', '45-wishlist-games.js', '46-game-achievements.js', '47-prompts.js', '48-dialogs.js'
     ];
-    const BUILD = '20.9';
+    const BUILD = '20.11';
 
     /* Ускорение загрузки: все скрипты начинают скачиваться СРАЗУ и параллельно (preload),
        а выполняются по-прежнему строго по порядку. Раньше каждый следующий файл начинал качаться
@@ -312,7 +312,13 @@
     }
 
     function loadScripts(i) {
-        if (i >= SCRIPTS.length) { store.booting = false; armFlush(); document.dispatchEvent(new Event('mirvel-ready')); return; }
+        if (i >= SCRIPTS.length) {
+            window.MH_BUILD = BUILD;
+            try { const v = document.createElement('div'); v.id = 'mh-build-badge'; v.textContent = 'v' + BUILD; v.title = 'Версия сайта — если цифра новая, обновление применилось';
+                v.style.cssText = 'position:fixed;left:8px;bottom:6px;z-index:40;font:600 10px/1 system-ui,sans-serif;letter-spacing:.04em;color:#fff;opacity:.35;background:rgba(0,0,0,.35);padding:3px 6px;border-radius:6px;pointer-events:none';
+                document.body.appendChild(v); } catch (_) {}
+            store.booting = false; armFlush(); document.dispatchEvent(new Event('mirvel-ready')); return;
+        }
         const s = document.createElement('script');
         s.src = 'js/' + SCRIPTS[i] + '?v=' + BUILD;
         s.onload = () => { if (SCRIPTS[i] === '03-achievements.js') guardAchievements(); loadScripts(i + 1); };
