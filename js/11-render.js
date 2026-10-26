@@ -368,6 +368,7 @@ function renderAll() {
                 const priceEl = document.createElement('p');
                 priceEl.className = "text-cyan-400 font-mono text-sm mt-1 font-bold";
                 priceEl.innerText = `${fmtPrice(i)}`;
+                if (typeof isNoPrice === 'function' && isNoPrice(i)) { priceEl.dataset.customPrice = key + ':' + i.id; priceEl.classList.add('custom-price-hint'); priceEl.title = 'Нажми, чтобы указать цену'; }
                 infoContainer.appendChild(priceEl);
 
                 if (i.whereBought) {

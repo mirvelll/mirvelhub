@@ -108,7 +108,7 @@
                 <h3 class="text-2xl sm:text-3xl font-black leading-tight break-words" style="font-family:var(--font-display)">${esc(i.title)}</h3>
                 ${i.artist ? `<p class="text-base text-purple-300 font-bold">${esc(i.artist)}</p>` : ''}
                 ${meta ? `<p class="text-sm text-gray-400">${meta}</p>` : ''}
-                <p class="text-sm text-cyan-400 font-bold font-mono">${esc(fmtPrice(i))}${i.whereBought ? ` <span class="text-gray-500 font-sans font-medium">· ${esc(i.whereBought)}</span>` : ''}</p>
+                <p class="text-sm text-cyan-400 font-bold font-mono"><span${isNoPrice(i) ? ` data-custom-price="${key}:${i.id}" class="custom-price-hint" title="Нажми, чтобы указать цену"` : ''}>${esc(fmtPrice(i))}</span>${i.whereBought ? ` <span class="text-gray-500 font-sans font-medium">· ${esc(i.whereBought)}</span>` : ''}</p>
                 <div class="flex items-center gap-1" role="group" aria-label="Оценка">
                     ${[1, 2, 3, 4, 5].map(n => `<button type="button" class="gd-star${(i.rating || 0) >= n ? ' is-on' : ''}" data-act="rate" data-v="${n}" aria-label="Оценка ${n}">★</button>`).join('')}
                 </div>

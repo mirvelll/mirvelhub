@@ -1186,6 +1186,7 @@
         });
     }
     function rollGame() {
+        if (window.mhPicker) { window.mhPicker.open('games'); return; }   // J: новое окно (js/49-picker.js); ниже старый вариант как запасной
         const pool = rollPool();
         if (!pool) { showToast('Добавьте игры в коллекцию — тогда будет из чего выбирать 🎮'); return; }
         const [list, poolLabel] = pool;
@@ -1240,6 +1241,7 @@
     });
     onHidden(roll, () => { clearTimeout(rollTimer); $('roll-card').classList.remove('is-rolling'); });
     window.rollGame = rollGame;
+    window.mhSetGameStatus = (id, value) => { const it = gameById(id); if (!it) return false; setStatus(it, value); commit(); return true; };
 
     /* =====================================================
        Интеграции: палитра Ctrl+K, достижения

@@ -145,6 +145,12 @@ function todayStamp() {
     return new Date().toISOString().slice(0, 10);
 }
 
+/** I: самодельный диск без цены: не «0 ₴», в суммы и «халяву» не идёт, цену можно указать по клику */
+function isNoPrice(item) {
+    return !!(item && item.isCustom && !(Number(item.price) > 0) && !item.isGift && !item.priceUnknown && !item.priceBundle
+        && !item.priceFree && !item.priceGift && !item.priceCode && !item.priceFamily && !item.psPlus);
+}
+
 /** Цена для показа: «PS Plus» (игра из подписки), «650 ₴», «~650 ₴» (примерная),
  *  «Бесплатно», «Подарок», «Семья», «Активировано кодом», «В наборе» или «Не помню» (цену не помню) */
 function fmtPrice(item) {
@@ -169,6 +175,7 @@ function fmtPrice(item) {
     if (item.priceUnknown) return 'Не помню';
     const n = Number(item.price) || 0;
     if (item.isGift && !n) return 'Подарок';
+    if (isNoPrice(item)) return 'самодельный';
     return `${item.priceApprox ? '~' : ''}${n} ₴`;
 }
 

@@ -1167,8 +1167,9 @@
     .ga-gtag{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .ga-glink{font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;cursor:pointer;color:#c4b5fd;background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.3)}
     .ga-glink:hover{background:rgba(139,92,246,.22)}
-    .gl-ov{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.62);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
-    .gl-box{width:100%;max-width:420px;max-height:88vh;overflow:auto;border-radius:20px;padding:20px;color:#e5e7eb;background:rgba(24,24,32,.96);border:1px solid rgba(255,255,255,.1);box-shadow:0 20px 60px rgba(0,0,0,.55)}
+    body:has(.gl-ov) #main{overflow:hidden}
+    .gl-ov{overscroll-behavior:contain;touch-action:none;position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.62);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+    .gl-box{overscroll-behavior:contain;touch-action:pan-y;width:100%;max-width:420px;max-height:88vh;overflow:auto;border-radius:20px;padding:20px;color:#e5e7eb;background:rgba(24,24,32,.96);border:1px solid rgba(255,255,255,.1);box-shadow:0 20px 60px rgba(0,0,0,.55)}
     .gl-title{font-size:15px;font-weight:800;color:#fff;margin:0}
     .gl-sub{font-size:12px;color:#9ca3af;margin:4px 0 12px;word-break:break-word}
     .gl-list{display:flex;flex-direction:column;gap:6px}

@@ -31,6 +31,7 @@
         FORMS[key] = { priceId, kinds };
         const box = document.createElement('div');
         box.className = 'price-flags';
+        box.id = `${key}-flags`;
         box.innerHTML = `<label><input type="checkbox" id="${key}-approx" class="accent-purple-500"> ≈ Цена примерная</label>` +
             kinds.map(k => {
                 const cb = `<input type="checkbox" id="${key}-${k}" class="accent-purple-500"> ${KIND[k][1]}`;
@@ -139,12 +140,50 @@
     injectControls('item-price', 'pf-item', ['unknown', 'bundle']);
     injectControls('game-price', 'pf-game', ['unknown', 'bundle', 'free', 'gift', 'family', 'code', 'psplus']);
 
+    /* I: у самодельного CD цена по умолчанию не показывается (кнопка «Указать цену») */
+    let priceOpen = false;
+    const priceBtn = document.createElement('button');
+    priceBtn.type = 'button'; priceBtn.id = 'item-price-show'; priceBtn.className = 'hidden w-full text-left p-3.5 rounded-xl border border-dashed border-white/15 text-gray-400 text-sm hover:text-white hover:border-white/30';
+    priceBtn.textContent = '＋ Указать цену (необязательно)';
+    $('item-price').insertAdjacentElement('afterend', priceBtn);
+    function syncCustomPrice() {
+        const cb = $('item-custom-cd'), inp = $('item-price'), flags = $('pf-item-flags'), wrap = $('custom-cd-container');
+        if (!cb || !inp) return;
+        const custom = cb.checked && wrap && !wrap.classList.contains('hidden');
+        const flagOn = ['unknown', 'bundle'].some(k => kindBox('pf-item', k)?.checked);
+        const hide = custom && !priceOpen && !(Number(inp.value) > 0) && !flagOn;
+        inp.classList.toggle('hidden', hide);
+        if (flags) flags.classList.toggle('hidden', hide);
+        priceBtn.classList.toggle('hidden', !hide);
+    }
+    priceBtn.addEventListener('click', () => { priceOpen = true; syncCustomPrice(); $('item-price').focus(); });
+    $('item-custom-cd')?.addEventListener('change', () => { priceOpen = false; syncCustomPrice(); });
+
     const openBase = window.openModal;
     window.openModal = (type, id = null) => {
         openBase(type, id);
         const item = id ? (data[type] || []).find(x => x.id === parseInt(id)) : null;
         setFlags('pf-item', item);
+        priceOpen = false;
+        syncCustomPrice();
     };
+
+    /* I: клик по «самодельный» → вводим цену прямо на месте, дальше она считается как обычная */
+    document.addEventListener('click', async e => {
+        const el = e.target.closest && e.target.closest('[data-custom-price]');
+        if (!el) return;
+        e.preventDefault(); e.stopPropagation();
+        const [list, rawId] = String(el.dataset.customPrice || '').split(':');
+        const item = (data[list] || []).find(x => x.id === Number(rawId));
+        if (!item) return;
+        const v = await mhPrompt('Сколько стоил этот диск? Цена будет учитываться как обычная.', { title: 'Цена самодельного диска', placeholder: 'например 150', okText: 'Сохранить', maxLength: 9 });
+        if (v === null || String(v).trim() === '') return;
+        const n = parseFloat(String(v).replace(',', '.'));
+        if (!(n > 0)) { try { showToast('Нужно число больше нуля', 'error'); } catch (_) {} return; }
+        item.price = n;
+        persistData(); updateUI();
+        if (el.isConnected) { el.textContent = fmtPrice(item); el.removeAttribute('data-custom-price'); el.classList.remove('custom-price-hint'); el.removeAttribute('title'); }
+    }, true);
 
     const openGameBase = window.openGameModal;
     window.openGameModal = (id = null) => {
