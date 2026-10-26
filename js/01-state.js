@@ -26,6 +26,7 @@ const defaults = {
     selectedTheme: '',
     musicSites: [],
     unlockedAchievements: [],
+    achievementDates: {},
     quotes: defaultQuotes,
     quoteLanguage: 'ru',
     currentQuoteId: 1,
