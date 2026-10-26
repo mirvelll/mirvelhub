@@ -21,7 +21,7 @@
         return p;
     };
     const commit = () => { try { persistData(); } catch (_) {} try { updateUI(); } catch (_) {} };
-    const TABS = [['profile', '👤', 'Профиль'], ['look', '🎨', 'Внешний вид'], ['games', '🎮', 'Игры'], ['sound', '🔊', 'Атмосфера'], ['data', '💾', 'Данные']];
+    const TABS = [['profile', '👤', 'Профиль'], ['look', '🎨', 'Внешний вид'], ['games', '🎮', 'Игры'], ['sound', '🔊', 'Атмосфера'], ['prompts', '📝', 'Промпты'], ['data', '💾', 'Данные']];
     let tab = 'profile';
     try { const t = sessionStorage.getItem('mh-set-tab'); if (TABS.some(x => x[0] === t)) tab = t; } catch (_) {}
 
@@ -150,6 +150,7 @@
     /* ---------- вкладки ---------- */
     function tabOf(b) {
         if (b.id === 'plat-settings-card') return 'games';
+        if (b.id === 'prompts-card') return 'prompts';
         if (b.id === 'appearance-card' || b.id === 'ui-custom-card') return 'look';
         const t = ((b.querySelector('h3, h2')?.textContent) || '') + ' ' + b.id;
         if (/Артист месяца|Альбом месяца/i.test(t)) return 'none';   // блоки больше не нужны — скрыты (поля остаются в DOM)
