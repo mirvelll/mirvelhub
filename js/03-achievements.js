@@ -456,15 +456,21 @@ window.auditAndSyncXP = () => {
     const oldXP = Number(data.xp) || 0;
     const oldAch = (data.unlockedAchievements || []).length;
 
-    // 1. чистим устаревшие ID и открываем всё, что уже выполнено (в том числе достижения из раздела «Игры»)
+    // 1–2. чистим устаревшие ID, затем повторяем «пересчёт XP → проверка достижений», пока что-то открывается:
+    //      часть достижений зависит от самого опыта/уровня, поэтому одного прохода мало (иначе они открывались бы со 2-го нажатия).
+    //      XP всегда считается заново из текущего состояния, а не «добавлением» — дублей начислений не бывает.
     sanitizeUnlockedAchievements();
-    checkAchievements();
-    sanitizeUnlockedAchievements();
-    const newAch = data.unlockedAchievements.length - oldAch;
-
-    // 2. пересчитываем опыт по уже актуальному списку достижений
-    const r = computeAuditedXP();
+    let r = computeAuditedXP();
+    for (let pass = 0; pass < 6; pass++) {
+        data.xp = r.total;
+        const before = (data.unlockedAchievements || []).length;
+        checkAchievements();
+        sanitizeUnlockedAchievements();
+        r = computeAuditedXP();
+        if ((data.unlockedAchievements || []).length === before) break;
+    }
     data.xp = r.total;
+    const newAch = data.unlockedAchievements.length - oldAch;
 
     // 3. сохраняем напрямую (save() снова запускал бы проверку достижений поверх уже посчитанного)
     persistData();

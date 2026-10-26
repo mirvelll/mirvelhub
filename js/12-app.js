@@ -44,8 +44,8 @@ renderAll = function () {
     updateStorageMeter();
 };
 
-window.resetAllData = () => {
-    const ok = confirm('Удалить ВСЮ коллекцию, заметки и настройки?\n\nЭто действие нельзя отменить. Сначала сделайте экспорт (.json), если данные нужны.');
+window.resetAllData = async () => {
+    const ok = await mhConfirm('Удалить ВСЮ коллекцию, заметки и настройки?\n\nЭто действие нельзя отменить. Сначала сделайте экспорт (.json), если данные нужны.', { title: 'Удалить все данные?', okText: 'Удалить всё', danger: true });
     if (!ok) return;
     try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
     data = { ...structuredClone(defaults) };

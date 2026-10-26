@@ -64,10 +64,10 @@
         return c;
     }
 
-    function deleteCollection(id) {
+    async function deleteCollection(id) {
         const c = colById(id);
         if (!c) return;
-        if (!confirm(`Удалить коллекцию «${c.name}»?\nИгры останутся в библиотеке — пропадёт только эта группировка.`)) return;
+        if (!(await mhConfirm(`Удалить коллекцию «${c.name}»?\nИгры останутся в библиотеке — пропадёт только эта группировка.`, { title: 'Удалить коллекцию?', okText: 'Удалить', danger: true }))) return;
         data.gameCollections = colList().filter(x => x.id !== id);
         (data.games || []).forEach(g => { if (Array.isArray(g.collections)) g.collections = g.collections.filter(x => x !== id); });
         if (colSel === id) colSel = '';

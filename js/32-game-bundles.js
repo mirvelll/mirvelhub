@@ -197,9 +197,9 @@
         refreshDetail();
     }
 
-    function dissolve(id) {
+    async function dissolve(id) {
         const b = bundleById(id);
-        if (!b || !confirm(`Распустить набор «${b.name}»?\n\nИгры останутся в коллекции и сохранят цены, которые им досталась от набора.`)) return;
+        if (!b || !(await mhConfirm(`Распустить набор «${b.name}»?\n\nИгры останутся в коллекции и сохранят цены, которые им досталась от набора.`, { title: 'Распустить набор?', okText: 'Распустить', danger: true }))) return;
         membersOf(id).forEach(g => { delete g.bundleId; });
         save();
         refreshDetail();

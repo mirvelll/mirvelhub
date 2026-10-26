@@ -5,7 +5,10 @@
    • ачивки можно добавить пачкой (вставка текста, .txt / .csv / .json) или по одной;
    • галочка = получено (запоминается дата); фильтры «Осталось / Получено», поиск;
    • когда отмечено всё — игра сама получает 100% («платина»), это учитывает «Охотник за трофеями».
-   Данные: game.achList = [{ id, n (название), d (описание), done (bool), ts (дата) }].
+   Данные: game.achList = [{ id, n (название), d (описание), done (bool), ts (дата), g (ключ группы, у «Основной игры» не пишется) }].
+   Группы: game.achGroups = [{ key, title, dlcId|null }]; группа 'base' = «Основная игра» (хранить не нужно).
+   Группа, привязанная к дополнению (dlcId), которое не куплено (dlc.owned !== true), «🔒 заблокирована»:
+   ачивки видно, отметить нельзя, в общий зачёт 100% она не входит. Старые списки без групп работают как раньше.
    Старые поля trophy / trophyDone / trophyTotal обновляются автоматически, ничего не ломается.
    ========================================================= */
 (() => {
@@ -34,10 +37,42 @@
     const toast = (m, t) => { try { showToast(m, t); } catch (_) {} };
 
     const listOf = g => (g && Array.isArray(g.achList)) ? g.achList : [];
-    const stats = g => {
-        const l = listOf(g);
+    const nk = x => norm(x).replace(/[^a-z0-9а-яёіїєґ]+/gi, '');            // сравнение названий без знаков и регистра
+    const dlcList = g => (g && Array.isArray(g.dlcs)) ? g.dlcs : [];
+    const BASE = 'base', BASE_TITLE = 'Основная игра';
+    const keyOf = a => (a && a.g) || BASE;
+
+    /* ---------- группы ---------- */
+    const storedGroups = g => (g && Array.isArray(g.achGroups)) ? g.achGroups : [];
+    /** Все группы игры: «Основная игра» первой, дальше сохранённые (и «осиротевшие» ключи из самих ачивок) */
+    function groupsOf(g) {
+        const out = [{ key: BASE, title: BASE_TITLE, dlcId: null }];
+        const seen = new Set([BASE]);
+        storedGroups(g).forEach(x => { if (x && x.key && !seen.has(x.key)) { seen.add(x.key); out.push({ key: x.key, title: x.title || 'Группа', dlcId: x.dlcId || null }); } });
+        listOf(g).forEach(a => { const k = keyOf(a); if (!seen.has(k)) { seen.add(k); out.push({ key: k, title: 'Группа', dlcId: null }); } });
+        return out;
+    }
+    /** Привязанное дополнение группы (если оно есть в game.dlcs) */
+    const dlcOfGroup = (g, grp) => (grp && grp.dlcId) ? (dlcList(g).find(d => d.id === grp.dlcId) || null) : null;
+    /** 🔒 Группа привязана к дополнению, которое не куплено. Если дополнение удалено — группа считается обычной. */
+    const isLocked = (g, grp) => { const d = dlcOfGroup(g, grp); return !!d && d.owned !== true; };
+    const lockedKey = (g, key) => { const grp = groupsOf(g).find(x => x.key === key); return !!grp && isLocked(g, grp); };
+
+    function groupStats(g, grp) {
+        const l = listOf(g).filter(a => keyOf(a) === grp.key);
         const done = l.filter(a => a.done).length;
-        return { total: l.length, done, left: l.length - done, pct: l.length ? Math.round(done / l.length * 100) : 0 };
+        return { total: l.length, done, left: l.length - done, pct: l.length ? Math.round(done / l.length * 100) : 0,
+                 full: l.length > 0 && done >= l.length, locked: isLocked(g, grp) };
+    }
+    /** Общий прогресс: только учитываемые группы (основная игра + купленные DLC + группы без привязки) */
+    const stats = g => {
+        let total = 0, done = 0, lockedN = 0;
+        groupsOf(g).forEach(grp => {
+            const s = groupStats(g, grp);
+            if (s.locked) { lockedN += s.total; return; }
+            total += s.total; done += s.done;
+        });
+        return { total, done, left: total - done, pct: total ? Math.round(done / total * 100) : 0, locked: lockedN };
     };
 
     /* Приводит прежние поля (trophy / done / total) в соответствие со списком */
@@ -48,6 +83,47 @@
         g.trophyDone = s.done;
         g.trophy = s.done >= s.total ? 'full' : 'some';
         return s;
+    }
+    /** Пересчёт счётчиков для всех игр со списками: вызывается, когда меняется «куплено» у DLC (37-game-dlc.js, 38-game-sync.js). */
+    function syncAll() {
+        let ch = false;
+        (data.games || []).forEach(g => {
+            if (!listOf(g).length) return;
+            const before = g.trophyDone + '/' + g.trophyTotal + g.trophy;
+            sync(g);
+            if (before !== g.trophyDone + '/' + g.trophyTotal + g.trophy) ch = true;
+        });
+        return ch;
+    }
+    window.mhAchSync = g => (g ? sync(g) : syncAll());
+    window.mhAchSyncAll = syncAll;
+
+    /* Находит (или создаёт) группу по названию и возвращает её ключ; для DLC-группы ещё привязывает/создаёт дополнение */
+    function ensureGroup(g, grp, stat) {
+        if (!grp || grp.base) return BASE;
+        if (!Array.isArray(g.achGroups)) g.achGroups = [];
+        const k = nk(grp.title);
+        let ex = g.achGroups.find(x => nk(x.title) === k);
+        if (!ex) {
+            let key = 'x-' + (norm(grp.title).replace(/[^a-z0-9а-яёіїєґ]+/gi, '-').replace(/^-|-$/g, '').slice(0, 40) || 'g');
+            while (g.achGroups.some(x => x.key === key) || key === BASE) key += '_';
+            ex = { key, title: grp.title.slice(0, 80), dlcId: null };
+            g.achGroups.push(ex);
+            stat.groups++;
+        }
+        if (grp.dlc && !(ex.dlcId && dlcList(g).some(d => d.id === ex.dlcId))) {
+            let d = dlcList(g).find(x => nk(x.title) === k);
+            if (!d) {
+                // дополнения ещё нет — создаём «в планах» (не куплено), поля как у формы в 37-game-dlc.js
+                d = { id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), title: grp.title.slice(0, 120), type: 'dlc', price: 0, approx: false,
+                      date: '', owned: false, img: '', from: [], free: '', giftFrom: '', rating: 0, url: '', note: '', status: '', done: false };
+                if (!Array.isArray(g.dlcs)) g.dlcs = [];
+                g.dlcs.push(d);
+                stat.dlcs++;
+            }
+            ex.dlcId = d.id;
+        }
+        return ex.key;
     }
 
     function commit(g, wasFull) {
@@ -75,24 +151,49 @@
         return isFinite(ts) && ts <= Date.now() + 864e5 ? ts : 0;
     }
 
+    /* Строка-заголовок группы: «# …», «## …», «=== … ===», «[DLC: …]».
+       «Основная игра» / «Base game» → base; «DLC: Название» → группа дополнения; любой другой заголовок → обычная группа без привязки. */
+    function parseHeader(line) {
+        let m, t = null;
+        if ((m = line.match(/^#{1,6}\s+(\S.*)$/))) t = m[1];
+        else if ((m = line.match(/^={2,}\s*(\S.*?)\s*=*$/))) t = m[1];
+        else if ((m = line.match(/^\[\s*(DLC\s*[:：].+?)\s*\]$/i))) t = m[1];
+        if (t == null) return null;
+        t = t.replace(/\s*#+\s*$/, '').trim();
+        if (!t) return null;
+        if (/^(основн[а-яёa-z]*(\s+игра)?|base(\s+game)?|main(\s+game)?|игра)$/i.test(t)) return { base: true };
+        const d = t.match(/^(?:dlc|дополнени[ея]|доп\.?)\s*[:：\-–—]\s*(.+)$/i);
+        if (d && d[1].trim()) return { title: d[1].trim().slice(0, 80), dlc: true };
+        return { title: t.slice(0, 80), dlc: false };
+    }
+
     function parseText(text, pairs) {
         let lines = String(text || '').replace(/\r/g, '').split('\n').map(s => s.trim()).filter(Boolean)
             .filter(s => !/^\d+([.,]\d+)?\s*%$/.test(s))            // «12.3%» — процент получивших (Steam)
             .filter(s => !/^(unlocked|получено|locked|не получено)\b/i.test(s));
+        // делим на блоки по заголовкам групп; до первого заголовка — «Основная игра»
+        const segs = [{ grp: { base: true }, lines: [] }];
+        lines.forEach(line => {
+            const h = parseHeader(line);
+            if (h) segs.push({ grp: h, lines: [] }); else segs[segs.length - 1].lines.push(line);
+        });
         const out = [];
-        if (pairs) {
-            for (let i = 0; i < lines.length; i += 2) out.push({ n: lines[i], d: lines[i + 1] || '' });
-        } else {
-            lines.forEach(line => {
-                line = line.replace(/^\s*(?:\d{1,3}[.)]|[-•*▪●○☐☑✔✓])\s+/, '');   // «1.» «- » «☐ »
-                const parts = line.split(SEP);
-                const n = (parts.shift() || '').trim();
-                let ts = 0;
-                if (parts.length && (ts = parseDate(parts[parts.length - 1]))) parts.pop();
-                if (n) out.push({ n, d: parts.join(' — ').trim(), ts });
-            });
-        }
-        return out.filter(a => a.n);
+        segs.forEach(seg => {
+            const push = it => { if (it.n) out.push({ ...it, grp: seg.grp }); };
+            if (pairs) {
+                for (let i = 0; i < seg.lines.length; i += 2) push({ n: seg.lines[i], d: seg.lines[i + 1] || '' });
+            } else {
+                seg.lines.forEach(line => {
+                    line = line.replace(/^\s*(?:\d{1,3}[.)]|[-•*▪●○☐☑✔✓])\s+/, '');   // «1.» «- » «☐ »
+                    const parts = line.split(SEP);
+                    const n = (parts.shift() || '').trim();
+                    let ts = 0;
+                    if (parts.length && (ts = parseDate(parts[parts.length - 1]))) parts.pop();
+                    push({ n, d: parts.join(' — ').trim(), ts });
+                });
+            }
+        });
+        return out;
     }
 
     function parseJson(json) {
@@ -109,22 +210,26 @@
     function addMany(g, items, replace) {
         const had = listOf(g);
         let list = replace ? [] : had.slice();
-        const keep = new Map(had.map(a => [norm(a.n), a]));
-        const seen = new Set(list.map(a => norm(a.n)));
-        let added = 0, dup = 0, dated = 0;
+        if (replace) g.achGroups = [];
+        const gk = a => keyOf(a) + '|' + norm(a.n);                  // одинаковые названия в разных группах — не повторы
+        const keep = new Map(had.map(a => [gk(a), a]));
+        const seen = new Set(list.map(gk));
+        const st = { added: 0, dup: 0, dated: 0, groups: 0, dlcs: 0 };
         items.forEach(it => {
-            const k = norm(it.n);
-            if (seen.has(k)) { dup++; return; }
+            const key = ensureGroup(g, it.grp, st);
+            const k = key + '|' + norm(it.n);
+            if (seen.has(k)) { st.dup++; return; }
             if (list.length >= MAX_LIST) return;
             seen.add(k);
             const old = replace ? keep.get(k) : null;     // при замене сохраняем уже отмеченные
             const ts = old?.ts || it.ts || 0;
-            list.push({ id: old?.id || uid(), n: it.n.slice(0, 120), d: (it.d || '').slice(0, 300), done: !!(old?.done || ts), ts, ...(old?.img ? { img: old.img } : {}) });
-            added++;
-            if (ts) dated++;
+            list.push({ id: old?.id || uid(), n: it.n.slice(0, 120), d: (it.d || '').slice(0, 300), done: !!(old?.done || ts), ts,
+                        ...(key !== BASE ? { g: key } : {}), ...(old?.img ? { img: old.img } : {}) });
+            st.added++;
+            if (ts) st.dated++;
         });
         g.achList = list;
-        return { added, dup, dated };
+        return st;
     }
 
     /* ================= Окно со списком ================= */
@@ -147,6 +252,7 @@
         const g = gameById(id);
         if (!g) return;
         gid = g.id; filter = 'all'; query = ''; editId = null;
+        try { if (listOf(g).length && syncAll()) persistData(); } catch (_) {}   // «куплено» у DLC могли поменять после прошлого открытия
         view = v || (listOf(g).length ? 'list' : 'import');
         paint();
         modal.classList.remove('hidden');
@@ -197,8 +303,8 @@
                 </div>
                 <div class="ga-actions"><button type="button" class="gd-tool" data-ga="save-edit">Сохранить</button><button type="button" class="gd-tool" data-ga="cancel-edit">Отмена</button></div>
             </li>` : `
-            <li class="ga-row${a.done ? ' is-done' : ''}" data-aid="${esc(a.id)}">
-                <button type="button" class="ga-tick" data-ga="toggle" role="checkbox" aria-checked="${!!a.done}" aria-label="Получено: ${esc(a.n)}">${a.done ? '✓' : ''}</button>
+            <li class="ga-row${a.done ? ' is-done' : ''}${lockedKey(g, keyOf(a)) ? ' is-locked' : ''}" data-aid="${esc(a.id)}">
+                <button type="button" class="ga-tick" data-ga="toggle" role="checkbox" aria-checked="${!!a.done}" aria-label="Получено: ${esc(a.n)}"${lockedKey(g, keyOf(a)) ? ' aria-disabled="true" title="Сначала отметь DLC купленным"' : ''}>${a.done ? '✓' : (lockedKey(g, keyOf(a)) ? '🔒' : '')}</button>
                 ${a.img ? `<img class="ga-thumb" src="${esc(a.img)}" alt="" loading="lazy">` : ''}
                 <div class="flex-1 min-w-0">
                     <p class="ga-name">${esc(a.n)}</p>
@@ -207,14 +313,28 @@
                 </div>
                 <div class="ga-actions"><button type="button" class="ga-ico" data-ga="edit" title="Изменить" aria-label="Изменить">✏️</button><button type="button" class="ga-ico" data-ga="del" title="Удалить" aria-label="Удалить">🗑</button></div>
             </li>`;
+        const grps = groupsOf(g);
+        const multi = grps.length > 1;
+        const groupBlock = grp => {
+            const inGroup = rows.filter(a => keyOf(a) === grp.key);
+            if (!inGroup.length) return '';
+            if (!multi) return inGroup.map(row).join('');
+            const gs = groupStats(g, grp), dlc = dlcOfGroup(g, grp);
+            const badge = gs.locked ? '<span class="ga-gtag is-lock">🔒 не куплено</span>'
+                : dlc ? '<span class="ga-gtag is-own">🧩 куплено</span>' : '';
+            const note = gs.locked ? `<p class="ga-gnote">В общий зачёт не входит. Чтобы отмечать ачивки, отметь дополнение «${esc(dlc.title)}» купленным в блоке «Дополнения» на странице игры.</p>` : '';
+            return `<li class="ga-group${gs.locked ? ' is-locked' : ''}${gs.full ? ' is-full' : ''}"><div class="ga-ghead"><span class="ga-gtitle">${esc(grp.title)}</span>${badge}<span class="ga-gcount">${gs.full ? '🏆 ' : ''}${gs.done} / ${gs.total}</span></div>${note}</li>`
+                + inGroup.map(row).join('');
+        };
+        const lockedLine = s.locked ? ` · 🔒 ещё ${s.locked} в некупленных DLC (не в зачёте)` : '';
         return `
         <div class="gs-bar" role="img" aria-label="Ачивки: ${s.pct}%"><span class="gs-seg" style="width:${s.pct}%;--sc:${s.done >= s.total && s.total ? '#facc15' : '#fbbf24'}"></span></div>
-        <p class="text-xs text-gray-400 mt-1.5">${s.total && s.done >= s.total ? '🏆 Платина! Все ачивки получены' : `Получено <b class="text-white">${s.done}</b> из ${s.total} · осталось ${s.left}`}</p>
+        <p class="text-xs text-gray-400 mt-1.5">${s.total && s.done >= s.total ? '🏆 Платина! Все ачивки получены' : `Получено <b class="text-white">${s.done}</b> из ${s.total} · осталось ${s.left}`}${lockedLine}</p>
         <div class="flex flex-wrap items-center gap-2 mt-3">
             ${chip('all', 'Все', s.total)}${chip('left', 'Осталось', s.left)}${chip('done', 'Получено', s.done)}
             <input id="ga-search" class="gd-input ga-search" type="search" placeholder="Поиск…" value="${esc(query)}" aria-label="Поиск по ачивкам">
         </div>
-        <ul class="ga-list mt-3">${rows.length ? rows.map(row).join('') : `<li class="text-sm text-gray-500 py-6 text-center">${s.total ? 'Ничего не найдено' : 'Список пуст'}</li>`}</ul>
+        <ul class="ga-list mt-3">${rows.length ? grps.map(groupBlock).join('') : `<li class="text-sm text-gray-500 py-6 text-center">${l.length ? 'Ничего не найдено' : 'Список пуст'}</li>`}</ul>
         <div class="flex flex-wrap gap-2 mt-4 pt-3 border-t border-white/5">
             <button type="button" class="gd-tool" data-ga="to-import">📥 Добавить списком</button>
             <button type="button" class="gd-tool" data-ga="add-one">➕ Добавить одну</button>
@@ -244,11 +364,11 @@
         const wasFull = g.trophy === 'full';
         const r = addMany(g, items, replace);
         commit(g, wasFull);
-        toast(`Добавлено ачивок: <b>${r.added}</b>${r.dated ? `, из них отмечено получено: ${r.dated}` : ''}${r.dup ? `, повторов пропущено: ${r.dup}` : ''}`, 'success');
+        toast(`Добавлено ачивок: <b>${r.added}</b>${r.dated ? `, из них отмечено получено: ${r.dated}` : ''}${r.dup ? `, повторов пропущено: ${r.dup}` : ''}${r.groups ? `<br>Групп: ${r.groups}` : ''}${r.dlcs ? `<br>🧩 Создано дополнений «в планах»: ${r.dlcs} — отметь купленными в блоке «Дополнения», и группа войдёт в зачёт` : ''}`, 'success');
         view = 'list'; paint();
     }
 
-    modal.addEventListener('click', e => {
+    modal.addEventListener('click', async e => {
         if (e.target === modal) { close(); return; }
         const b = e.target.closest('[data-ga]');
         if (!b) return;
@@ -267,6 +387,7 @@
             case 'filter': filter = b.dataset.v; paint(); break;
             case 'toggle':
                 if (!item) break;
+                if (lockedKey(g, keyOf(item))) { toast('🔒 Сначала отметь DLC купленным (блок «Дополнения» на странице игры)', 'info'); break; }
                 item.done = !item.done; item.ts = item.done ? Date.now() : 0;
                 commit(g, wasFull); paint(); break;
             case 'edit': editId = aid; paint(); $('ga-en')?.focus(); break;
@@ -288,23 +409,23 @@
                 if (g.achList.length) commit(g, wasFull); else { persistData(); }
                 paint(); break;
             case 'add-one': {
-                const n = (prompt('Название ачивки') || '').trim();
+                const n = ((await mhPrompt('Название ачивки', { title: 'Новая ачивка', placeholder: 'Например: Первая кровь', required: true, maxLength: 120 })) || '').trim();
                 if (!n) break;
-                const d = (prompt('Описание (можно оставить пустым)') || '').trim();
+                const d = ((await mhPrompt('Описание (можно оставить пустым)', { title: 'Описание ачивки', multiline: true, maxLength: 300, okText: 'Добавить' })) || '').trim();
                 if (!Array.isArray(g.achList)) g.achList = [];
                 g.achList.push({ id: uid(), n: n.slice(0, 120), d: d.slice(0, 300), done: false, ts: 0 });
                 commit(g, wasFull); paint(); break;
             }
             case 'mark-all':
-                listOf(g).forEach(a => { if (!a.done) { a.done = true; a.ts = Date.now(); } });
+                listOf(g).forEach(a => { if (!a.done && !lockedKey(g, keyOf(a))) { a.done = true; a.ts = Date.now(); } });
                 commit(g, wasFull); paint(); break;
             case 'reset':
-                if (!confirm('Снять отметки со всех ачивок этой игры?')) break;
+                if (!(await mhConfirm('Снять отметки со всех ачивок этой игры?', { title: 'Сбросить отметки?', okText: 'Сбросить', danger: true }))) break;
                 listOf(g).forEach(a => { a.done = false; a.ts = 0; });
                 commit(g, wasFull); paint(); break;
             case 'clear':
-                if (!confirm('Удалить весь список ачивок этой игры? Счётчик «получено / всего» останется как есть.')) break;
-                g.achList = []; persistData(); try { updateUI(); } catch (_) {}
+                if (!(await mhConfirm('Удалить весь список ачивок этой игры? Счётчик «получено / всего» останется как есть.', { title: 'Удалить список?', okText: 'Удалить', danger: true }))) break;
+                g.achList = []; g.achGroups = []; persistData(); try { updateUI(); } catch (_) {}
                 view = 'import'; paint(); break;
         }
     });
@@ -375,26 +496,36 @@
         return el ? Number(el.dataset.id) : null;
     };
 
-    function injectSection() {
-        if (!detailBody || detailBody.querySelector('#ga-sec') || !detailBody.children.length) return;
-        const id = currentId();
-        const g = gameById(id);
-        if (!g) return;
+    function secEl(g) {
         const s = stats(g);
-        const missing = listOf(g).filter(a => !a.done).slice(0, 3);
+        const missing = listOf(g).filter(a => !a.done && !lockedKey(g, keyOf(a))).slice(0, 3);
         const sec = document.createElement('div');
         sec.className = 'gd-sec mt-5';
         sec.id = 'ga-sec';
-        sec.innerHTML = s.total ? `
+        sec.innerHTML = (s.total || s.locked) ? `
             <p class="gd-sec-title">Список ачивок <span class="normal-case tracking-normal font-semibold text-gray-600">· ${s.done} из ${s.total}</span></p>
             <div class="gs-bar" role="img" aria-label="Ачивки: ${s.pct}%"><span class="gs-seg" style="width:${s.pct}%;--sc:${s.left ? '#fbbf24' : '#facc15'}"></span></div>
-            ${s.left ? `<p class="text-xs text-gray-500 mt-1.5">Осталось ${s.left}${missing.length ? ': ' + missing.map(a => esc(a.n)).join(', ') + (s.left > missing.length ? '…' : '') : ''}</p>` : '<p class="text-xs text-gray-500 mt-1.5">🏆 Платина! Все ачивки получены ✓</p>'}
+            ${s.left ? `<p class="text-xs text-gray-500 mt-1.5">Осталось ${s.left}${missing.length ? ': ' + missing.map(a => esc(a.n)).join(', ') + (s.left > missing.length ? '…' : '') : ''}</p>` : (s.total ? '<p class="text-xs text-gray-500 mt-1.5">🏆 Платина! Все ачивки получены ✓</p>' : '')}${s.locked ? `<p class="text-xs text-gray-600 mt-1">🔒 ${s.locked} ачивок в некупленных DLC — не в зачёте</p>` : ''}
             <button type="button" class="gd-tool mt-3 ga-open" data-gaopen="${g.id}">🏆 Открыть список</button>` : `
             <p class="gd-sec-title">Список ачивок <span class="normal-case tracking-normal font-semibold text-gray-600">· необязательно</span></p>
             <p class="text-xs text-gray-500">Добавь ачивки игры списком и отмечай их по мере прохождения — потом сразу видно, чего не хватает до платины.</p>
             <button type="button" class="gd-tool mt-3 ga-open" data-gaopen="${g.id}">📥 Добавить список ачивок</button>`;
-        detailBody.appendChild(sec);
+        return sec;
     }
+
+    function injectSection() {
+        if (!detailBody || detailBody.querySelector('#ga-sec') || !detailBody.children.length) return;
+        const g = gameById(currentId());
+        if (g) detailBody.appendChild(secEl(g));
+    }
+
+    /* после смены «куплено» у DLC карточка пересчитывается на месте */
+    function refreshSection() {
+        const old = detailBody && detailBody.querySelector('#ga-sec');
+        const g = old && gameById(currentId());
+        if (g) old.replaceWith(secEl(g));
+    }
+    document.addEventListener('click', e => { if (e.target.closest && e.target.closest('[data-act^="dlc-"]')) setTimeout(refreshSection, 0); });
 
     if (detailBody) {
         detailBody.addEventListener('click', e => {
@@ -408,7 +539,7 @@
     /* ================= Достижения хаба ================= */
     if (typeof ACHIEVEMENTS_LIST !== 'undefined' && !ACHIEVEMENTS_LIST.some(a => a.id === 'ach_list_maker')) {
         const games = d => d.games || [];
-        const ticks = d => games(d).reduce((n, g) => n + (Array.isArray(g.achList) ? g.achList.filter(a => a.done).length : 0), 0);
+        const ticks = d => games(d).reduce((n, g) => n + (Array.isArray(g.achList) ? g.achList.filter(a => a.done && !lockedKey(g, keyOf(a))).length : 0), 0);
         ACHIEVEMENTS_LIST.push(
             { id: 'ach_list_maker', title: 'Составитель списка', desc: 'Добавить игре список из 10+ ачивок', icon: '📋', xp: 50,
               cond: d => games(d).some(g => Array.isArray(g.achList) && g.achList.length >= 10) },
@@ -422,10 +553,23 @@
         if (typeof ACH_CAT !== 'undefined' && ACH_CAT.games) ACH_CAT.games.push('ach_list_maker', 'ach_ticker');
     }
 
-    /* Пересчёт при старте: если список правили вручную, держим счётчики в порядке */
-    document.addEventListener('mirvel-ready', () => {
-        let ch = false;
-        (data.games || []).forEach(g => { if (listOf(g).length) { const before = g.trophyDone + '/' + g.trophyTotal + g.trophy; sync(g); if (before !== g.trophyDone + '/' + g.trophyTotal + g.trophy) ch = true; } });
-        if (ch) persistData();
-    }, { once: true });
+    /* Пересчёт при старте: если список правили вручную или меняли «куплено» у DLC, держим счётчики в порядке */
+    document.addEventListener('mirvel-ready', () => { if (syncAll()) persistData(); }, { once: true });
+
+    /* ---------- стили групп (встроены, чтобы не трогать css-файлы) ---------- */
+    const gcss = document.createElement('style');
+    gcss.textContent = `
+    .ga-group{list-style:none;margin-top:6px}
+    .ga-ghead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 4px 2px}
+    .ga-gtitle{font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#e5e7eb}
+    .ga-gcount{margin-left:auto;font-size:12px;font-weight:800;color:#fbbf24}
+    .ga-group.is-full .ga-gcount{color:#facc15}
+    .ga-gtag{font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px;border:1px solid rgba(255,255,255,.12);color:#9ca3af;background:rgba(255,255,255,.05)}
+    .ga-gtag.is-lock{color:#fca5a5;border-color:rgba(248,113,113,.35);background:rgba(248,113,113,.1)}
+    .ga-gtag.is-own{color:#6ee7b7;border-color:rgba(52,211,153,.35);background:rgba(52,211,153,.1)}
+    .ga-gnote{font-size:11px;color:#9ca3af;padding:0 4px 4px;line-height:1.4}
+    .ga-row.is-locked{opacity:.55}
+    .ga-row.is-locked .ga-tick{cursor:not-allowed;font-size:13px;background:rgba(255,255,255,.04)}
+    .ga-row.is-locked .ga-tick:hover{transform:none;border-color:rgba(255,255,255,.25)}`;
+    document.head.appendChild(gcss);
 })();

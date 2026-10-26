@@ -71,14 +71,14 @@
             const src = (prim && opts(prim).trophies && prim.trophy ? prim : null) || [g, ...siblings(g).map(x => x.g)].filter(x => opts(x).trophies && x.trophy)
                 .sort((a, b) => num(b.trophyDone) - num(a.trophyDone))[0];
             if (src) [g, ...siblings(g).map(x => x.g)].forEach(x => {
-                if (!opts(x).trophies || x === src) return;
+                if (!opts(x).trophies || x === src || (Array.isArray(x.achList) && x.achList.length)) return;   // у игры со списком ачивок счётчики считаются по списку
                 x.trophy = src.trophy; x.trophyDone = src.trophyDone; x.trophyTotal = src.trophyTotal; n++;
             });
         }
         return n;
     }
 
-    function persist() { try { checkAchievements(); } catch (_) {} const ok = persistData(); try { updateUI(); } catch (_) {} return ok; }
+    function persist() { try { window.mhAchSyncAll && window.mhAchSyncAll(); } catch (_) {} try { checkAchievements(); } catch (_) {} const ok = persistData(); try { updateUI(); } catch (_) {} return ok; }
 
     /* ---------- стили ---------- */
     const css = document.createElement('style');

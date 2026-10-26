@@ -44,7 +44,7 @@
         const list = collect();
         if (!list.length) { showToast('Тяжёлых фото нет — сжимать нечего 👌'); return; }
         const before = list.reduce((n, r) => n + r.holder[r.key].length, 0);
-        if (!confirm(`Найдено фото: ${list.length} (≈ ${fmtBytes(before * 0.75)}).\n\nСначала скачается бэкап (.json), потом фото уменьшатся: обложки до 480 px, фото в галерее до 1100 px, баннер до 1280 px. Продолжить?`)) return;
+        if (!(await mhConfirm(`Найдено фото: ${list.length} (≈ ${fmtBytes(before * 0.75)}).\n\nСначала скачается бэкап (.json), потом фото уменьшатся: обложки до 480 px, фото в галерее до 1100 px, баннер до 1280 px. Продолжить?`, { title: 'Сжать фото?', okText: 'Сжать' }))) return;
         try { exportData(); } catch (_) {}
         const o = overlay();
         let saved = 0, done = 0, failed = 0;

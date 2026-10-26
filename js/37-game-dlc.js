@@ -355,6 +355,7 @@
     }
 
     function persist() {
+        try { window.mhAchSyncAll && window.mhAchSyncAll(); } catch (_) {}   // «куплено» у DLC влияет на зачёт групп ачивок (46-game-achievements.js)
         try { checkAchievements(); } catch (_) {}
         const ok = persistData();
         try { updateUI(); } catch (_) {}

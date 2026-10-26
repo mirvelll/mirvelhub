@@ -78,7 +78,7 @@
                     editId = null; try { persistData(); } catch (_) {} paint(); break;
                 }
                 case 'del':
-                    if (!p || !confirm(`Удалить промпт «${p.title}»?`)) break;
+                    if (!p || !(await mhConfirm(`Удалить промпт «${p.title}»?`, { title: 'Удалить промпт?', okText: 'Удалить', danger: true }))) break;
                     data.prompts = list().filter(x => x !== p); try { persistData(); } catch (_) {} paint(); break;
             }
         });

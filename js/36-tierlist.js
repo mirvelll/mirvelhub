@@ -212,7 +212,22 @@
     .tl-pool{border-radius:1.4rem;border:1.5px dashed rgba(255,255,255,.16);background:rgba(255,255,255,.02)}
     .tl-pool .tl-ph{background:rgba(255,255,255,.03)}
     .tl-add{border-radius:1.4rem}
-    @media (max-width:640px){.tl-lab{width:4.4rem}.tl-lab-in{font-size:1.15rem}.tl-sum{padding:.7rem .8rem}}`;
+    @media (max-width:640px){.tl-lab{width:4.4rem}.tl-lab-in{font-size:1.15rem}.tl-sum{padding:.7rem .8rem}}
+    /* название тира: перенос по строкам, шрифт уменьшается с длиной */
+    .tl-lab{padding-top:1.5rem}
+    textarea.tl-lab-in{resize:none;overflow:hidden;white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal;line-height:1.15;display:block;min-height:1.2em;padding:0}
+    .tl-lab-in[data-len="2"]{font-size:1.25rem}.tl-lab-in[data-len="3"]{font-size:.95rem}.tl-lab-in[data-len="4"]{font-size:.8rem}
+    @media (max-width:640px){.tl-lab-in[data-len="2"]{font-size:.95rem}.tl-lab-in[data-len="3"]{font-size:.8rem}.tl-lab-in[data-len="4"]{font-size:.7rem}}
+    /* сворачивание тира */
+    .tl-fold{position:absolute;top:3px;left:50%;transform:translateX(-50%);z-index:3;width:1.6rem;height:1.2rem;display:grid;place-items:center;border:0;border-radius:99px;background:rgba(0,0,0,.35);color:#fff;font-size:.7rem;cursor:pointer;opacity:.8;transition:opacity .15s,background .15s}
+    .tl-fold:hover,.tl-fold:focus-visible{opacity:1;background:rgba(0,0,0,.6)}
+    .tl-foldinfo{display:none;flex:1;align-items:center;min-width:0;padding:.5rem .9rem;border:0;background:transparent;color:#9ca3af;font-size:.78rem;font-weight:700;text-align:left;cursor:pointer}
+    .tl-foldinfo:hover{color:#fff}
+    .tl-row.is-folded{min-height:0}
+    .tl-row.is-folded .tl-zone{display:none}
+    .tl-row.is-folded .tl-foldinfo{display:flex}
+    .tl-row.is-folded .tl-lab{padding-top:1.5rem;padding-bottom:.4rem}
+    .tl-row.is-folded .tl-ctl{display:none}`;
     document.head.appendChild(css3);
 
     const main = $('main') || document.querySelector('main');
@@ -290,6 +305,11 @@
             : `<button class="tl-b${renaming ? ' on' : ''}" data-a="rename" title="Переименовать">✎</button><button class="tl-b" data-a="delete" title="Удалить тир-лист">🗑</button>`;
     }
 
+    /* Название тира переносится по строкам (textarea), а размер шрифта подбирается по длине: «Привет / Я шакал» */
+    const labLen = lab => { const n = String(lab || '').length; return n <= 3 ? 1 : n <= 6 ? 2 : n <= 12 ? 3 : 4; };
+    function fitLabel(el) { if (!el) return; el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
+    function fitLabels() { sec.querySelectorAll('textarea.tl-lab-in').forEach(fitLabel); }
+
     function render() {
         renderBar();
         const l = L();
@@ -324,12 +344,14 @@
             <div class="tl-prog" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>
             <div class="tl-chips">${l.tiers.map(t => `<span class="tl-chip"><u style="background:${t.color};color:${fg(t.color)}">${E(t.label.slice(0, 3))}</u>${l.items.filter(x => x.tier === t.id).length}</span>`).join('')}</div></div>` : ''}
         <div class="tl-board">${l.tiers.map(t => `
-            <div class="tl-row" data-tid="${t.id}" style="--tc:${t.color}">
+            <div class="tl-row${t.fold ? ' is-folded' : ''}" data-tid="${t.id}" style="--tc:${t.color}">
                 <div class="tl-lab" style="color:${fg(t.color)}">
-                    <input class="tl-lab-in" value="${E(t.label)}" maxlength="24" data-tl="${t.id}" aria-label="Название тира">
+                    <button type="button" class="tl-fold" data-a="fold" aria-expanded="${!t.fold}" title="${t.fold ? 'Развернуть' : 'Свернуть'}">${t.fold ? '▸' : '▾'}</button>
+                    <textarea class="tl-lab-in" rows="1" maxlength="60" data-len="${labLen(t.label)}" data-tl="${t.id}" aria-label="Название тира" spellcheck="false">${E(t.label)}</textarea>
                     <div class="tl-ctl"><label title="Цвет">🎨<input type="color" value="${t.color}" data-col="${t.id}"></label><button data-a="up" title="Выше">↑</button><button data-a="dn" title="Ниже">↓</button><button data-a="deltier" title="Удалить тир">✕</button></div>
                 </div>
                 <div class="tl-zone" data-tier="${t.id}">${l.items.filter(x => x.tier === t.id).map(x => tileHTML(x, pop(x.id))).join('')}</div>
+                <button type="button" class="tl-foldinfo" data-a="fold">${l.items.filter(x => x.tier === t.id).length} карточек · свёрнуто, нажмите, чтобы развернуть</button>
             </div>`).join('')}
         </div>
         <div style="margin-top:.7rem"><button class="tl-b" data-a="addtier">＋ Добавить тир</button></div>
@@ -342,6 +364,7 @@
             <div class="tl-zone" data-tier="">${pool.map(x => tileHTML(x, pop(x.id))).join('') || `<div class="tl-empty">${poolAll ? 'Ничего не найдено' : 'Здесь появятся карточки — нажмите «Добавить игры / музыку»'}</div>`}</div>
         </div>`;
         popId = null; newIds.clear();
+        fitLabels();
     }
 
     /* ---------- Панель «Добавить» (выезжает сверху) ---------- */
@@ -539,6 +562,7 @@
             case 'plat': l.plat = PLAT_MODES[(PLAT_MODES.indexOf(platMode(l)) + 1) % PLAT_MODES.length]; break;
             case 'size': l.sz = +a.dataset.v; break;
             case 'export': return exportPng();
+            case 'fold': if (tier) tier.fold = !tier.fold; break;
             case 'addtier': l.tiers.push({ id: uid(), label: 'Новый', color: COLORS[l.tiers.length % COLORS.length] }); break;
             case 'deltier': { if (l.tiers.length <= 1) return toast('Нужен хотя бы один тир', 'error'); l.items.forEach(x => { if (x.tier === tier.id) x.tier = ''; }); l.tiers = l.tiers.filter(x => x !== tier); break; }
             case 'up': case 'dn': { const i = l.tiers.indexOf(tier), j = act === 'up' ? i - 1 : i + 1; if (j < 0 || j >= l.tiers.length) return; [l.tiers[i], l.tiers[j]] = [l.tiers[j], l.tiers[i]]; break; }
@@ -601,7 +625,7 @@
     async function onChange(e) {
         const t = e.target, l = L();
         if (t.id === 'tl-sel') { data.tierActive = t.value; save(); return render(); }
-        if (t.dataset.tl) { const x = l.tiers.find(z => z.id === t.dataset.tl); if (x) { x.label = t.value; save(); } return; }
+        if (t.dataset.tl) { const x = l.tiers.find(z => z.id === t.dataset.tl); if (x) { x.label = t.value.replace(/\s*\n+\s*/g, ' ').trim() || x.label; save(); render(); } return; }
         if (t.dataset.col) { const x = l.tiers.find(z => z.id === t.dataset.col); if (x) { x.color = t.value; save(); render(); } return; }
         if (t.dataset.ef) {
             const it = itemOf(t); if (!it) return;
@@ -625,9 +649,14 @@
     sec.addEventListener('click', onClick);
     sec.addEventListener('change', onChange);
     sec.addEventListener('input', e => {
+        if (e.target.classList && e.target.classList.contains('tl-lab-in')) { e.target.dataset.len = labLen(e.target.value); fitLabel(e.target); return; }
         if (e.target.id === 'tl-q') { q = e.target.value; render(); const i = $('tl-q'); i.focus(); i.setSelectionRange(q.length, q.length); }
         else if (e.target.id === 'tl-aq') { aq = e.target.value; tab === 'mine' ? renderMineList() : renderCands(); }
     });
+    sec.addEventListener('keydown', e => {      // Enter в названии тира не вставляет перенос — просто сохраняет
+        if (e.key === 'Enter' && e.target.classList && e.target.classList.contains('tl-lab-in')) { e.preventDefault(); e.target.blur(); }
+    });
+    window.addEventListener('resize', () => { try { fitLabels(); } catch (_) {} });
     sec.addEventListener('dblclick', e => {   // двойной клик по своей карточке — открыть её в редакторе
         const tile = e.target.closest('.tl-tile'); if (!tile) return;
         const it = L().items.find(x => x.id === tile.dataset.id); if (!it || it.src !== 'custom') return;
