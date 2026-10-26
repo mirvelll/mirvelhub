@@ -35,6 +35,16 @@
         if (kept) setTimeout(() => toast('📝 Промпт «Ачивки по скриншотам» ты правил — я его не трогал. Новый текст всё равно копируется кнопкой в окне импорта ачивок.', 'info'), 2500);
     }
 
+    /* Этап F2: ещё два встроенных шаблона (один раз, флаг data.promptsV3; удалённые не возвращаются, твои правки не затираются) */
+    function upgrade3() {
+        if (data.promptsV3 || !window.MH_ACH_UPDATE) return;
+        data.promptsV3 = true;
+        const add = (id, title, text) => { if (text && !list().some(p => p.id === id)) list().push({ id, title, text }); };
+        add('ach-screens-tt', 'Ачивки по скриншотам (с типами трофеев)', window.MH_ACH_PROMPT);
+        add('ach-update', 'Обновить мой промпт под формат сайта', window.MH_ACH_UPDATE);
+        try { persistData(); } catch (_) {}
+    }
+
     async function copy(t) {
         try { await navigator.clipboard.writeText(t); return true; } catch (_) {}
         try { const ta = document.createElement('textarea'); ta.value = t; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok; } catch (_) { return false; }
@@ -66,7 +76,7 @@
         if ($('prompts-card')) return true;
         const host = document.querySelector('#profile .grid > div.space-y-6:not(.glass)');
         if (!host) return false;
-        seed(); upgrade();
+        seed(); upgrade(); upgrade3();
         const card = document.createElement('div');
         card.id = 'prompts-card';
         card.className = 'glass p-8 rounded-3xl space-y-4';

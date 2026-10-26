@@ -38,10 +38,17 @@
 1. Определи игру по скриншотам и найди в интернете полный список её ачивок с разбивкой на основную игру и DLC (Steam: страница ачивок игры, PSNProfiles, TrueAchievements, Exophase, Steam Community Guides, wiki игры).
 2. Узнай, какие у игры есть DLC и сколько в них ачивок.
 3. Сверь КАЖДУЮ ачивку со скриншотов с этим списком по названию и описанию и определи, к какой группе она принадлежит. Не полагайся на то, что на скриншоте нет пометки «DLC».
-4. Если интернета нет или данные не нашлись — действуй по правилам ниже и в конце ответа (ВНЕ блока кода) одной строкой напиши, что группы не удалось проверить.
+4. Если игра на PlayStation, заодно уточни тип каждого трофея (бронза / серебро / золото / платина) по PSNProfiles или похожему сайту.
+5. Если интернета нет или данные не нашлись — действуй по правилам ниже и в конце ответа (ВНЕ блока кода) одной строкой напиши, что группы или типы трофеев не удалось проверить.
 
 ФОРМАТ ОДНОЙ АЧИВКИ (одна строка):
-Название — Описание — ДД.ММ.ГГГГ
+Название — Описание — ДД.ММ.ГГГГ [тип]
+
+ТИП ТРОФЕЯ (только для PlayStation, необязательно):
+- Тип пиши в КОНЦЕ строки, после даты, в квадратных скобках: [bronze], [silver], [gold] или [platinum] (на английском, строчными буквами).
+- Если тип виден на скриншоте (значок кубка) или найден в интернете — добавь тег. Если не знаешь точно — тег НЕ пиши, ничего не угадывай.
+- Для игр не на PlayStation (Steam, Xbox, Nintendo и т. д.) теги не пиши вообще.
+- У полученной: «Название — Описание — 12.03.2024 [gold]». У неполученной (даты нет): «Название — Описание [gold]». Если нет описания и даты: «Название [gold]».
 
 ГРУППЫ (ОСНОВНАЯ ИГРА И DLC) — ОБЯЗАТЕЛЬНО:
 Перед каждой группой ачивок пиши строку-заголовок, начинающуюся с символа # и пробела:
@@ -61,8 +68,28 @@
 4. Описание скрыто или отсутствует — оставь «Название» (в интернете можно уточнить описание, но не выдумывай).
 5. Тексты оставляй как на скриншоте, на языке оригинала. Не пропускай ачивки со скриншотов. Проценты редкости («12.3% игроков») не пиши.
 6. Если ачивка попала на два скриншота, оставь её один раз.
-7. Не добавляй пояснений, приветствий и итогов (кроме строки из шага 0, если группы не удалось проверить).
+7. Не добавляй пояснений, приветствий и итогов (кроме строки из шага 0, если группы или типы не удалось проверить).
 8. Основной ответ дай ОДНИМ блоком кода (тройные обратные кавычки), чтобы символы # не превратились в заголовки.`;
+    /* Мета-промпт: «обнови мой промпт под формат сайта» (встроенный шаблон 'ach-update' в «Промптах») */
+    window.MH_ACH_UPDATE = `Я веду коллекцию игр на своём сайте, у него есть импорт списка ачивок текстом. Ниже — ФОРМАТ, который понимает сайт, а после него — МОЙ ПРОМПТ для нейросети. Перепиши мой промпт так, чтобы результат нейросети по нему подходил под формат сайта. Мои идеи, порядок действий и особенности (откуда брать данные, что искать, как проверять) СОХРАНИ, меняй только то, что относится к формату вывода.
+
+ФОРМАТ СТРОКИ (одна ачивка = одна строка):
+Название — Описание — ДД.ММ.ГГГГ [тип]
+- Описание, дата и тип необязательны. Дата = когда ачивка получена (ачивка сразу отметится полученной). Не получена — даты нет.
+- [тип] — только для PlayStation, в КОНЦЕ строки после даты: [bronze], [silver], [gold] или [platinum]. Если не уверен — не писать. Для остальных платформ не писать вообще.
+- Примеры: «Первая кровь — Победить первого врага — 12.03.2024 [gold]», «Коллекционер — Найти все сокровища [silver]», «Платина [platinum]».
+
+ГРУППЫ — перед каждой группой строка-заголовок с # и пробелом:
+# Основная игра
+# DLC: <название дополнения>
+- Ачивки DLC не смешивать с основной игрой, платину DLC относить к DLC. Группа неизвестна → «# Основная игра». Если DLC нет — всё равно начать со строки «# Основная игра».
+
+ОБЩИЕ ТРЕБОВАНИЯ К ОТВЕТУ: без нумерации, маркеров, приветствий и пояснений; тексты на языке оригинала; проценты редкости не писать; повторы не дублировать; весь ответ одним блоком кода (чтобы # не превратились в заголовки).
+
+В ответе дай ТОЛЬКО готовый переписанный промпт одним блоком кода и после него 2–3 коротких строки: что именно ты изменил.
+
+МОЙ ПРОМПТ:
+(вставь сюда свой текст промпта)`;
     /* Шаблон «Гайд по оставшимся ачивкам»: {игра} {платформа} {памятка} {список} подставляет кнопка «Скопировать оставшиеся для гайда» (этап F2) */
     window.MH_ACH_GUIDE = `Помоги мне добить платину в игре {игра} ({платформа}).
 
@@ -129,16 +156,32 @@
         g.trophyTotal = s.total;
         g.trophyDone = s.done;
         g.trophy = s.done >= s.total ? 'full' : 'some';
+        syncPlat(g, s);
         return s;
+    }
+    /** F3: дата платины игры (game.platAt) и закрытых DLC-групп (achGroups[].platAt): ставится, когда закрыто, и сбрасывается, если ачивку сняли.
+        Дата = последняя полученная ачивка (так задним числом правильно и для старых списков); если дат нет — сегодня. */
+    function syncPlat(g, s) {
+        const lastTs = items => items.reduce((m, a) => Math.max(m, a.done && a.ts ? a.ts : 0), 0) || Date.now();
+        if (s.total > 0 && s.done >= s.total) { if (!g.platAt) g.platAt = lastTs(listOf(g).filter(a => a.done && !lockedKey(g, keyOf(a)))); }
+        else if (g.platAt) delete g.platAt;
+        groupsOf(g).forEach(grp => {
+            if (grp.key === BASE) return;
+            const gs = groupStats(g, grp), full = gs.full && !gs.locked;
+            const stored = (g.achGroups || []).find(x => x.key === grp.key);
+            if (full) { storedGroup(g, grp.key).platAt = stored && stored.platAt ? stored.platAt : lastTs(listOf(g).filter(a => keyOf(a) === grp.key)); }
+            else if (stored && stored.platAt) delete stored.platAt;
+        });
     }
     /** Пересчёт счётчиков для всех игр со списками: вызывается, когда меняется «куплено» у DLC (37-game-dlc.js, 38-game-sync.js). */
     function syncAll() {
         let ch = false;
         (data.games || []).forEach(g => {
             if (!listOf(g).length) return;
-            const before = g.trophyDone + '/' + g.trophyTotal + g.trophy;
+            const sig = () => g.trophyDone + '/' + g.trophyTotal + g.trophy + (g.platAt || '') + (g.achGroups || []).map(x => x.platAt || '').join(',');
+            const before = sig();
             sync(g);
-            if (before !== g.trophyDone + '/' + g.trophyTotal + g.trophy) ch = true;
+            if (before !== sig()) ch = true;
         });
         return ch;
     }
@@ -352,7 +395,7 @@
     function close() {
         closeLink();
         modal.classList.add('hidden');
-        try { renderGamesBlock(); } catch (_) {}
+        try { renderGamesBlock(); renderHomeAch(); renderGoal(); } catch (_) {}
         const g = gameById(gid);
         gid = null;
         if (g) { try { const d = $('game-detail-modal'); if (d && !d.classList.contains('hidden')) window.openGameDetail?.(g.id); } catch (_) {} }
@@ -381,6 +424,37 @@
         </details>`;
     }
 
+    /* ---------- F2: «что взять следующим», закрепление, памятка, гайд ---------- */
+    const nextFold = { get() { try { return localStorage.getItem('mh_ga_nextfold') === '1'; } catch (_) { return false; } }, set(v) { try { localStorage.setItem('mh_ga_nextfold', v ? '1' : '0'); } catch (_) {} } };
+    /** 3–5 ближайших невыполненных: закреплённые ⭐ → у кого счётчик почти выполнен → по порядку списка */
+    function nextGoals(g, onlyKey) {
+        const cand = listOf(g).map((a, i) => ({ a, i })).filter(x => !x.a.done && !lockedKey(g, keyOf(x.a)) && (!onlyKey || keyOf(x.a) === onlyKey));
+        const rank = x => x.a.pin ? 0 : (x.a.pm > 0 && (x.a.p || 0) > 0 ? 1 : 2);
+        cand.sort((x, y) => rank(x) - rank(y) || (rank(x) === 1 ? ((y.a.p || 0) / y.a.pm) - ((x.a.p || 0) / x.a.pm) : 0) || x.i - y.i);
+        return cand.slice(0, 5).map(x => x.a);
+    }
+    const nextHTML = (g, onlyKey) => {
+        const items = nextGoals(g, onlyKey);
+        if (!items.length) return '';
+        const fold = nextFold.get();
+        return `<div class="ga-next"><button type="button" class="ga-next-h" data-ga="next-fold" aria-expanded="${!fold}"><span>${fold ? '▸' : '▾'}</span> 🎯 Что взять следующим <em>${items.length}</em></button>${fold ? '' : `<ul class="ga-next-l">${items.map(a => `<li class="ga-nx" data-aid="${esc(a.id)}"><button type="button" class="ga-tick" data-ga="toggle" role="checkbox" aria-checked="false" aria-label="Получено: ${esc(a.n)}"></button><div class="min-w-0 flex-1"><p class="ga-name">${a.pin ? '⭐ ' : ''}${ttOf(a) ? TT[a.tt].ico + ' ' : ''}${esc(a.n)}</p>${a.d ? `<p class="ga-desc">${esc(a.d)}</p>` : ''}${a.pm > 0 ? `<div class="ga-cnt"><span class="ga-cbar"><i style="width:${Math.min(100, Math.round((a.p || 0) / a.pm * 100))}%"></i></span><b>${a.p || 0} / ${a.pm}</b></div>` : ''}</div></li>`).join('')}</ul>`}</div>`;
+    };
+    /** Текст «оставшиеся ачивки для гайда» по шаблону 'ach-guide' (твоя правка шаблона в «Промптах» учитывается) */
+    function guideText(g) {
+        const tpl = ((data.prompts || []).find(p => p.id === 'ach-guide') || {}).text || window.MH_ACH_GUIDE || '';
+        const out = [];
+        groupsOf(g).forEach(grp => {
+            const left = listOf(g).filter(a => keyOf(a) === grp.key && !a.done);
+            if (!left.length) return;
+            const lk = isLocked(g, grp);
+            out.push((grp.key === BASE ? '# Основная игра' : (dlcOfGroup(g, grp) ? '# DLC: ' : '# ') + grp.title) + (lk ? ' (DLC не куплено)' : ''));
+            left.forEach(a => out.push('- ' + a.n + (a.d ? ' — ' + String(a.d).replace(/\s*\n+\s*/g, ' ') : '') + (a.pm > 0 ? ` (${a.p || 0}/${a.pm})` : '') + (ttOf(a) ? ` [${a.tt}]` : '')));
+        });
+        if (!out.length) return '';
+        return tpl.split('{игра}').join(g.title).split('{платформа}').join(g.platform || 'платформа не указана')
+            .split('{памятка или «нет»}').join((g.achNote || '').trim() || 'нет').split('{памятка}').join((g.achNote || '').trim() || 'нет').split('{список}').join(out.join('\n'));
+    }
+
     function listHTML(g) {
         const s = stats(g);
         const l = listOf(g);
@@ -404,12 +478,12 @@
                 <button type="button" class="ga-tick" data-ga="toggle" role="checkbox" aria-checked="${!!a.done}" aria-label="Получено: ${esc(a.n)}"${lockedKey(g, keyOf(a)) ? ' aria-disabled="true" title="Сначала отметь DLC купленным"' : ''}>${a.done ? '✓' : (lockedKey(g, keyOf(a)) ? '🔒' : '')}</button>
                 ${a.img ? `<img class="ga-thumb" src="${esc(a.img)}" alt="" loading="lazy">` : ''}
                 <div class="flex-1 min-w-0">
-                    <p class="ga-name">${ttOf(a) ? `<span class="ga-tt" title="${TT[a.tt].name} · ${TT[a.tt].pts} очков">${TT[a.tt].ico}</span> ` : ''}${esc(a.n)}</p>
+                    <p class="ga-name">${ttOf(a) ? `<span class="ga-tt" title="${TT[a.tt].name} · ${TT[a.tt].pts} очков">${TT[a.tt].ico}</span> ` : ''}${a.pin ? '<span class="ga-pin" title="Закреплено">⭐</span> ' : ''}${esc(a.n)}</p>
                     ${a.d ? `<p class="ga-desc">${esc(a.d)}</p>` : ''}
                     ${a.pm > 0 ? `<div class="ga-cnt"><span class="ga-cbar"><i style="width:${Math.min(100, Math.round((a.p || 0) / a.pm * 100))}%"></i></span><b>${a.p || 0} / ${a.pm}</b>${editMode && !a.done ? '<button type="button" class="ga-cb" data-ga="p-dec" aria-label="Минус">−</button><button type="button" class="ga-cb" data-ga="p-inc" aria-label="Плюс">+</button>' : ''}</div>` : ''}
                     ${a.done && a.ts ? `<p class="ga-date">Получено ${fmt(a.ts)}</p>` : ''}
                 </div>
-                ${editMode ? '<div class="ga-actions"><button type="button" class="ga-ico" data-ga="edit" title="Изменить" aria-label="Изменить">✏️</button><button type="button" class="ga-ico" data-ga="del" title="Удалить" aria-label="Удалить">🗑</button></div>' : ''}
+                ${editMode ? `<div class="ga-actions"><button type="button" class="ga-ico${a.pin ? ' is-pin' : ''}" data-ga="pin" title="${a.pin ? 'Открепить' : 'Закрепить'}" aria-label="Закрепить">${a.pin ? '⭐' : '☆'}</button><button type="button" class="ga-ico" data-ga="edit" title="Изменить" aria-label="Изменить">✏️</button><button type="button" class="ga-ico" data-ga="del" title="Удалить" aria-label="Удалить">🗑</button></div>` : ''}
             </li>`;
         const grps = groupsOf(g);
         const multi = grps.length > 1;
@@ -440,6 +514,8 @@
             <button type="button" role="menuitem" data-ga="add-one">➕ Добавить одну</button>
             <button type="button" role="menuitem" data-ga="copy-from">📑 Скопировать с другой версии</button>
             <button type="button" role="menuitem" data-ga="copy-text">📋 Скопировать список текстом</button>
+            <button type="button" role="menuitem" data-ga="guide">📋 Скопировать оставшиеся для гайда</button>
+            <button type="button" role="menuitem" data-ga="note">📝 ${g.achNote ? 'Изменить памятку' : 'Памятка для возвращения'}</button>
             <button type="button" role="menuitem" data-ga="mark-all">✓ Отметить все</button>
             <button type="button" role="menuitem" data-ga="reset">↺ Сбросить отметки</button>
             <button type="button" role="menuitem" class="is-danger" data-ga="clear">🗑 Удалить список</button></div>` : '';
@@ -457,17 +533,18 @@
             <div class="ga-big"><b>${s.done}</b><span> / ${s.total}</span></div>
             <div class="ga-hero-r">
                 <div class="gs-bar" role="img" aria-label="Ачивки: ${s.pct}%"><span class="gs-seg" style="width:${s.pct}%;--sc:${full ? '#facc15' : '#fbbf24'}"></span></div>
-                <p class="text-xs text-gray-400 mt-1.5">${full ? '🏆 Платина! Все ачивки получены' : `${s.pct}% · осталось ${s.left}`}${lockedLine}</p>
+                <p class="text-xs text-gray-400 mt-1.5">${full ? `🏆 Платина! Все ачивки получены${g.platAt ? ' · ' + fmt(g.platAt) : ''}` : `${s.pct}% · осталось ${s.left}`}${lockedLine}</p>
             </div>
             ${full ? '<span class="ga-plat">🏆 Платина</span>' : ''}
         </div>
+        ${g.achNote ? `<p class="ga-note" title="Памятка для возвращения">📝 ${esc(g.achNote)}</p>` : ''}
         ${tabs}
         <div class="ga-tools">
             ${chip('all', 'Все', sc.total)}${chip('left', 'Осталось', sc.left)}${chip('done', 'Получено', sc.done)}
             <input id="ga-search" class="gd-input ga-search" type="search" placeholder="Поиск…" value="${esc(query)}" aria-label="Поиск по ачивкам">
             <select id="ga-sort" class="gd-input ga-sort" aria-label="Сортировка"><option value="list"${sort === 'list' ? ' selected' : ''}>По списку</option><option value="date"${sort === 'date' ? ' selected' : ''}>По дате получения</option></select>
         </div>
-        <div class="ga-scroll"><ul class="ga-list">${rows.length && list ? list : `<li class="text-sm text-gray-500 py-6 text-center">${l.length ? 'Ничего не найдено' : 'Список пуст'}</li>`}</ul></div>`;
+        <div class="ga-scroll">${!q && filter !== 'done' ? nextHTML(g, solo ? solo.key : null) : ''}<ul class="ga-list">${rows.length && list ? list : `<li class="text-sm text-gray-500 py-6 text-center">${l.length ? 'Ничего не найдено' : 'Список пуст'}</li>`}</ul></div>`;
     }
 
     function paint() {
@@ -556,6 +633,20 @@
                 if (moved) commit(g, wasFull); else persistData();
                 paint();
                 await offerDone(g, item);
+                break;
+            }
+            case 'next-fold': nextFold.set(!nextFold.get()); paint(); break;
+            case 'pin': if (!item) break; if (item.pin) delete item.pin; else item.pin = true; persistData(); paint(); break;
+            case 'note': {
+                const t = await mhPrompt('Коротко: на чём остановился, что осталось, как проходил', { title: 'Памятка для возвращения', value: g.achNote || '', multiline: true, maxLength: 500, okText: 'Сохранить' });
+                if (t === null) break;
+                if (t.trim()) g.achNote = t.trim().slice(0, 500); else delete g.achNote;
+                persistData(); paint(); break;
+            }
+            case 'guide': {
+                const t = guideText(g);
+                if (!t) { toast('Все ачивки получены — для гайда ничего не осталось 🏆', 'info'); break; }
+                copyText(t).then(ok => toast(ok ? 'Скопировано 📋 — вставь в нейросеть' : 'Не удалось скопировать', ok ? 'success' : 'error'));
                 break;
             }
             case 'p-inc': case 'p-dec':
@@ -781,6 +872,7 @@
         sec.innerHTML = (s.total || s.locked) ? `
             <div class="ga-card-top"><p class="gd-sec-title !mb-0">🏆 Список ачивок</p><div class="ga-card-num"><b>${s.done}</b> / ${s.total}</div></div>
             <div class="gs-bar mt-2" role="img" aria-label="Ачивки: ${s.pct}%"><span class="gs-seg" style="width:${s.pct}%;--sc:${full ? '#facc15' : '#fbbf24'}"></span></div>
+            ${full && g.platAt ? `<p class="ga-platdate">🏆 Платина: <b>${fmt(g.platAt)}</b></p>` : ''}
             ${plats.length ? `<div class="ga-plats">${plats.map(t => `<span class="ga-plat-chip">${esc(t)}</span>`).join('')}</div>` : ''}
             ${(() => { const t = trophyPoints(g); return t.any ? `<p class="ga-tp">🏅 Трофейные очки: <b>${t.pts}</b> из ${t.max}</p>` : ''; })()}
             <p class="text-xs text-gray-400 mt-2">${s.left ? `Осталось ${s.left}` : '✓ Все ачивки получены'}${s.locked ? ` · 🔒 ${s.locked} в некупленных DLC — не в зачёте` : ''}</p>
@@ -856,9 +948,145 @@
     });
     if (typeof window.renderAchievementsPage === 'function') {
         const base = window.renderAchievementsPage;
-        window.renderAchievementsPage = function () { const r = base.apply(this, arguments); try { renderGamesBlock(); } catch (_) {} return r; };
+        window.renderAchievementsPage = function () { const r = base.apply(this, arguments); try { renderGamesBlock(); } catch (_) {} try { renderHomeAch(); } catch (_) {} try { renderGoal(); } catch (_) {} return r; };
     }
     window.mhRenderGamesBlock = renderGamesBlock;
+
+    /* ================= F3: карточки «Платины», «В процессе» и «Этот день в прошлом» на главной ================= */
+    const isoTs = v => { const m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? new Date(+m[1], +m[2] - 1, +m[3], 12).getTime() : 0; };
+    let platMigrated = false;
+    function renderHomeAch() {
+        const host = $('home-ach');
+        if (!host) return;
+        if (!platMigrated) { platMigrated = true; try { if (syncAll()) persistData(); } catch (_) {} platMigrated = false; }   // старым закрытым спискам (и после восстановления бэкапа) проставляем дату платины; флаг защищает от зацикливания   // старым закрытым спискам один раз проставляем дату платины
+        const games = (data.games || []).filter(g => listOf(g).length);
+        const plats = [];
+        games.forEach(g => {
+            const s = stats(g);
+            if (s.total > 0 && s.done >= s.total && g.platAt) plats.push({ g, ts: g.platAt, label: g.title });
+            (g.achGroups || []).forEach(x => { if (x.platAt && x.key !== BASE && groupStats(g, x).full && !isLocked(g, x)) plats.push({ g, ts: x.platAt, label: `${g.title} · ${x.title}` }); });
+        });
+        plats.sort((a, b) => b.ts - a.ts);
+        const prog = games.map(g => ({ g, s: stats(g), last: listOf(g).reduce((m, a) => Math.max(m, a.done ? (a.ts || 0) : 0), 0) }))
+            .filter(x => x.s.total > 0 && x.s.done > 0 && x.s.done < x.s.total).sort((a, b) => b.last - a.last).slice(0, 4);
+        /* этот день в прошлых годах: ачивки, начало/конец прохождения, платины */
+        const now = new Date(), md = now.getMonth() * 100 + now.getDate(), ev = [];
+        const hit = ts => { if (!ts) return null; const d = new Date(ts); return d.getFullYear() < now.getFullYear() && d.getMonth() * 100 + d.getDate() === md ? d.getFullYear() : null; };
+        (data.games || []).forEach(g => {
+            const ach = {};
+            listOf(g).forEach(a => { const y = a.done ? hit(a.ts) : null; if (y) ach[y] = (ach[y] || 0) + 1; });
+            Object.keys(ach).forEach(y => ev.push({ y: +y, t: `🏆 ${ach[y]} ${ach[y] === 1 ? 'ачивка' : 'ачивок'} · ${g.title}` }));
+            const st = hit(isoTs(g.startedAt)), fi = hit(isoTs(g.finishedAt)), pl = hit(g.platAt);
+            if (st) ev.push({ y: st, t: `▶️ Начал играть · ${g.title}` });
+            if (fi) ev.push({ y: fi, t: `🏁 Прошёл · ${g.title}` });
+            if (pl) ev.push({ y: pl, t: `💎 Платина · ${g.title}` });
+        });
+        ev.sort((a, b) => b.y - a.y);
+        if (!plats.length && !prog.length && !ev.length) { host.innerHTML = ''; return; }
+        const card = (cls, h, body) => `<div class="hach-card ${cls}"><p class="hach-h">${h}</p>${body}</div>`;
+        const open = id => `data-gbopen="${id}"`;
+        const parts = [];
+        if (plats.length) parts.push(card('is-plat', `🏆 Платины <b>${plats.length}</b>`, plats.slice(0, 3).map(x => `<button type="button" class="hach-row" ${open(x.g.id)}><span class="hach-t">${esc(x.label)}</span><em>${fmt(x.ts)}</em></button>`).join('')));
+        if (prog.length) parts.push(card('', '🎯 В процессе', prog.map(x => `<button type="button" class="hach-row" ${open(x.g.id)}><span class="hach-t">${esc(x.g.title)}</span><span class="hach-bar"><i style="width:${x.s.pct}%"></i></span><em>${x.s.pct}%</em></button>`).join('')));
+        if (ev.length) parts.push(card('', '📅 Этот день в прошлом', ev.slice(0, 5).map(x => `<p class="hach-ev"><b>${x.y}</b> ${esc(x.t)}</p>`).join('')));
+        host.innerHTML = `<div class="hach-grid">${parts.join('')}</div>`;
+    }
+    window.mhRenderHomeAch = renderHomeAch;
+
+    /* ================= G: карточка «🎯 Цель» на главной (день / месяц) =================
+       data.goals = { hidden, dayN (по умолчанию 1), dayNotified:'YYYY-MM-DD', month:{ gid, since:'YYYY-MM', doneAt }, history:[{ ts, text }] }
+       Без штрафов и напоминаний: только тост, когда цель выполнена. */
+    const goalsOf = () => (data.goals && typeof data.goals === 'object') ? data.goals : (data.goals = {});
+    const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const MONTHS = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+    function todayCount() {
+        const t0 = new Date(); t0.setHours(0, 0, 0, 0);
+        const from = t0.getTime(), to = from + 864e5;
+        return (data.games || []).reduce((n, g) => n + listOf(g).filter(a => a.done && a.ts >= from && a.ts < to).length, 0);
+    }
+    function checkGoals() {
+        const G = data.goals;
+        if (!G || typeof G !== 'object') return;
+        let ch = false;
+        const n = Math.max(1, G.dayN || 1);
+        if (G.dayNotified !== dayKey() && todayCount() >= n) {
+            G.dayNotified = dayKey(); ch = true;
+            toast(`🎯 Цель дня выполнена: ${todayCount()} ${todayCount() === 1 ? 'ачивка' : 'ачивок'} сегодня. Отличная работа!`, 'success');
+        }
+        const m = G.month, g = m && gameById(m.gid);
+        if (m && g && !m.doneAt) {
+            const s = stats(g);
+            if (s.total > 0 && s.done >= s.total) {
+                m.doneAt = Date.now(); ch = true;
+                (G.history = Array.isArray(G.history) ? G.history : []).unshift({ ts: m.doneAt, text: `Платина в «${g.title}»` });
+                G.history = G.history.slice(0, 50);
+                toast(`🏆 Цель месяца достигнута: платина в «${esc(g.title)}»!`, 'success');
+            }
+        }
+        if (ch) { try { persistData(); } catch (_) {} }
+    }
+    function renderGoal() {
+        const host = $('home-goal');
+        if (!host) return;
+        if (!(data.games || []).some(g => !g.hidden)) { host.innerHTML = ''; return; }
+        checkGoals();
+        const G = goalsOf();
+        if (G.hidden) { host.innerHTML = '<button type="button" class="goal-show" data-goal="show">🎯 Показать цели</button>'; return; }
+        const n = Math.max(1, G.dayN || 1), c = todayCount(), dpct = Math.min(100, Math.round(c / n * 100));
+        const m = G.month, mg = m && gameById(m.gid);
+        let mon;
+        if (!mg) mon = `<p class="goal-sub">Цель месяца не выбрана — например, закрыть платину в одной игре.</p><div class="goal-btns"><button type="button" class="goal-btn is-main" data-goal="pick">Выбрать игру</button></div>`;
+        else if (!listOf(mg).length) mon = `<p class="goal-t">${esc(mg.title)}</p><p class="goal-sub">У этой игры ещё нет списка ачивок, прогресс считать не по чему.</p><div class="goal-btns"><button type="button" class="goal-btn is-main" data-goal="addlist">Добавить список</button><button type="button" class="goal-btn" data-goal="pick">Выбрать другую игру</button></div>`;
+        else {
+            const s = stats(mg), done = !!m.doneAt;
+            mon = `<p class="goal-t">${done ? '🏆 ' : ''}Платина: ${esc(mg.title)}</p><div class="goal-bar${done ? ' is-done' : ''}"><i style="width:${s.pct}%"></i></div><p class="goal-sub">${s.done} / ${s.total} · ${s.pct}%${done ? ' · цель достигнута' : ` · осталось ${s.left}`}</p><div class="goal-btns"><button type="button" class="goal-btn" data-goal="open">Открыть список</button><button type="button" class="goal-btn" data-goal="pick">Сменить</button></div>`;
+        }
+        const hist = (G.history || []).slice(0, 10);
+        host.innerHTML = `<div class="goal-card"><div class="goal-top"><p class="goal-h">🎯 Цель</p><div class="goal-tr"><button type="button" class="goal-ico" data-goal="hide" title="Скрыть карточку" aria-label="Скрыть">✕</button></div></div>
+            <div class="goal-cols"><div class="goal-col"><p class="goal-k">Сегодня</p><p class="goal-t">${c} / ${n} ${n === 1 ? 'ачивка' : 'ачивок'}${c >= n ? ' ✓' : ''}</p><div class="goal-bar${c >= n ? ' is-done' : ''}"><i style="width:${dpct}%"></i></div><div class="goal-btns"><button type="button" class="goal-btn" data-goal="dayn">Цель: ${n}</button></div></div>
+            <div class="goal-col"><p class="goal-k">${esc(MONTHS[new Date().getMonth()])}</p>${mon}</div></div>
+            ${hist.length ? `<details class="goal-hist"><summary>История целей · ${hist.length}</summary>${hist.map(h => `<p><b>${fmt(h.ts)}</b> ${esc(h.text)}</p>`).join('')}</details>` : ''}</div>`;
+    }
+    /** Окно выбора игры с поиском */
+    function pickGame() {
+        return new Promise(resolve => {
+            closeLink();
+            const all = (data.games || []).filter(g => !g.hidden).slice().sort((a, b) => (listOf(b).length > 0) - (listOf(a).length > 0) || String(a.title).localeCompare(String(b.title), 'ru'));
+            const ov = document.createElement('div');
+            ov.className = 'gl-ov';
+            const rowsHtml = q => all.filter(g => !q || nk(g.title).includes(nk(q))).slice(0, 40).map(g => `<button type="button" class="gl-item" data-gl="pick" data-id="${esc(g.id)}"><span>${esc(g.title)}</span><em>${esc(g.platform || '')}${listOf(g).length ? ` · ${stats(g).pct}%` : ' · нет списка'}</em></button>`).join('') || '<p class="gl-empty">Ничего не найдено</p>';
+            ov.innerHTML = `<div class="gl-box" role="dialog" aria-modal="true" aria-label="Выбор игры"><p class="gl-title">🎯 Цель месяца: платина в игре</p><p class="gl-sub">Выбери игру. Лучше ту, у которой уже есть список ачивок.</p>
+                <input class="gd-input" id="goal-q" type="search" placeholder="Поиск по названию…" style="margin-bottom:8px"><div class="gl-list" id="goal-list">${rowsHtml('')}</div><div class="gl-row"><button type="button" class="gl-btn" data-gl="cancel">Отмена</button></div></div>`;
+            const done = id => { ov.remove(); linkOv = null; resolve(id); };
+            ov.addEventListener('click', e => { if (e.target === ov) return done(null); const b = e.target.closest('[data-gl]'); if (!b) return; done(b.dataset.gl === 'pick' ? b.dataset.id : null); });
+            ov.addEventListener('input', e => { if (e.target.id === 'goal-q') ov.querySelector('#goal-list').innerHTML = rowsHtml(e.target.value); });
+            document.body.appendChild(ov); linkOv = ov; ov.querySelector('#goal-q').focus();
+        });
+    }
+    document.addEventListener('click', async e => {
+        const b = e.target.closest && e.target.closest('[data-goal]');
+        if (!b) return;
+        const G = goalsOf(), act = b.dataset.goal;
+        G.touched = true;
+        if (act === 'hide') { G.hidden = true; persistData(); renderGoal(); }
+        else if (act === 'show') { G.hidden = false; persistData(); renderGoal(); }
+        else if (act === 'dayn') {
+            const v = await mhPrompt('Сколько ачивок хочешь получать за день? (от 1 до 50)', { title: 'Цель дня', value: String(Math.max(1, G.dayN || 1)), okText: 'Сохранить', required: true, maxLength: 2 });
+            const n = parseInt(v, 10);
+            if (v === null) return;
+            if (!(n >= 1 && n <= 50)) { toast('Нужно число от 1 до 50', 'error'); return; }
+            G.dayN = n; if (G.dayNotified === dayKey() && todayCount() < n) delete G.dayNotified;
+            persistData(); renderGoal();
+        } else if (act === 'pick') {
+            const id = await pickGame();
+            if (id == null) return;
+            G.month = { gid: Number(id), since: dayKey().slice(0, 7) };
+            persistData(); renderGoal();
+        } else if (act === 'addlist') { if (G.month) open(G.month.gid, 'import'); }
+        else if (act === 'open') { if (G.month) open(G.month.gid); }
+    });
+    window.mhRenderGoal = renderGoal;
+
     window.openGameAchievements = open;
 
     /* ================= Достижения хаба ================= */
@@ -955,6 +1183,15 @@
     .ga-open-big{display:block;width:100%;margin-top:12px;padding:12px;border-radius:14px;font-size:14px;font-weight:800;cursor:pointer;color:#fff;background:var(--theme-btn,#8b5cf6);border:0;transition:filter .15s,transform .1s}
     .ga-open-big:hover{filter:brightness(1.12)}.ga-open-big:active{transform:scale(.99)}
     @media (max-width:640px){.ga-menu{right:auto;left:0}#game-ach-modal{padding:0}#game-ach-modal .ga-panel{max-width:none;width:100%;height:100dvh;max-height:100dvh;border-radius:0;padding:14px}.ga-hero{gap:10px}}
+    .ga-pin{font-size:11px;opacity:.85}
+    .ga-platdate{font-size:12px;color:#fbbf24;margin-top:8px}.ga-platdate b{color:#fde68a}
+    .ga-ico.is-pin{filter:none}
+    .ga-note{margin:8px 0 0;padding:8px 12px;border-radius:12px;font-size:12px;line-height:1.45;color:#d1d5db;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+    .ga-next{margin:2px 0 12px;border-radius:16px;background:rgba(var(--theme-rgb,139,92,246),.1);border:1px solid rgba(var(--theme-rgb,139,92,246),.3);overflow:hidden}
+    .ga-next-h{width:100%;display:flex;gap:8px;align-items:center;padding:10px 14px;font-size:12px;font-weight:800;letter-spacing:.04em;color:#fff;text-align:left}
+    .ga-next-h em{margin-left:auto;font-style:normal;opacity:.55}
+    .ga-next-l{list-style:none;margin:0;padding:0 10px 10px;display:flex;flex-direction:column;gap:6px}
+    .ga-nx{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:12px;background:rgba(0,0,0,.25)}
     .ga-tt{font-size:13px}
     .ga-row.tt-bronze{box-shadow:inset 0 0 0 1px rgba(205,127,50,.5)}
     .ga-row.tt-silver{box-shadow:inset 0 0 0 1px rgba(203,213,225,.5)}
