@@ -30,7 +30,7 @@ const AchHelpers = {
     },
     tagged: d => [...(d.cds || []), ...(d.vinyls || []), ...(d.stuff || []), ...(d.wishlists || [])]
         .filter(i => Array.isArray(i.tags) && i.tags.length > 0).length,
-    stuffCats: d => new Set((d.stuff || []).map(i => i.category).filter(c => ['clothing', 'gear', 'other'].includes(c))).size,
+    stuffCats: d => new Set((d.stuff || []).map(i => i.category).filter(c => ['clothing', 'music', 'gear', 'other'].includes(c))).size,
     ownQuotes: d => (d.quotes || []).filter(q => !(typeof defaultQuotes !== 'undefined' && defaultQuotes.some(x => x.id === q.id))).length,
     decades(d) {
         const s = new Set();
@@ -107,7 +107,7 @@ const ACHIEVEMENTS_LIST = [
         title: 'Властелин Мерча',
         icon: '👕',
         isTiered: true,
-        getVal: d => (d.stuff || []).filter(i => i.category === 'clothing').length,
+        getVal: d => (d.stuff || []).filter(i => i.category === 'clothing' || i.category === 'music').length,
         tiers: [
             { req: 1, label: 'Lvl 1', xp: 40, desc: 'Добавить 1 предмет одежды или музыкального мерча' },
             { req: 3, label: 'Lvl 2', xp: 80, desc: 'Собрать 3 предмета одежды или музыкального мерча' },
