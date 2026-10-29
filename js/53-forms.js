@@ -15,7 +15,10 @@
 
     // подписи пунктов в списке: для вещей и общие (для желаемого)
     const STUFF = { clothing: '👕 Одежда', music: '🎵 Мерч (музыкальный)', gear: '🎧 Техника / Аудио', other: '📦 Другое' };
-    const BRAND_PH = { clothing: 'Бренд (опционально)', gear: 'Бренд и модель устройства', other: 'Бренд / производитель (опционально)' };
+    const WISHL = { music: '💿 Музыка (CD / Винил)', merch: '🎤 Мерч (постеры, значки, сумки…)', clothing: '👕 Одежда', gear: '🔌 Техника / Аудио', collectible: '🗿 Коллекционки (стилбуки, фигурки, артбуки)', event: '🎟 Концерты и билеты', other: '🎁 Другое' };
+    const NEWC = ['merch', 'collectible', 'event'];   // эти категории только для «Желаемого»
+    const ARTIST_CATS = ['music', 'merch', 'event'];
+    const BRAND_PH = { collectible: 'Издатель / бренд (опционально)', clothing: 'Бренд (опционально)', gear: 'Бренд и модель устройства', other: 'Бренд / производитель (опционально)' };
     let mode = '';           // cds | vinyls | stuff | wishlists
 
     function arrange() {
@@ -25,7 +28,9 @@
         if (label) { if (!label.dataset.orig) label.dataset.orig = label.textContent; label.textContent = mode === 'stuff' ? 'Тип вещи' : label.dataset.orig; }
         [...sel.options].forEach(o => {
             if (!o.dataset.orig) o.dataset.orig = o.textContent;
-            if (mode === 'stuff') o.textContent = STUFF[o.value] || o.dataset.orig; else o.textContent = o.dataset.orig;
+            const lab = mode === 'stuff' ? STUFF : mode === 'wishlists' ? WISHL : null;
+            o.textContent = (lab && lab[o.value]) || o.dataset.orig;
+            if (NEWC.includes(o.value)) { o.hidden = mode !== 'wishlists'; o.disabled = o.hidden; }
         });
         const h = document.querySelector('#modal h2');
         if (h) { if (!h.dataset.orig) h.dataset.orig = h.textContent; h.textContent = mode === 'stuff' ? 'Редактор вещи' : h.dataset.orig; }
@@ -35,7 +40,7 @@
         const cat = $('item-category') && $('item-category').value;
         if (!cat || cat === 'games') return;                         // «Игры» в желаемом настраивает 45-wishlist-games.js
         const artist = $('item-artist'), brand = $('item-brand'), gearBox = $('gear-fields-container');
-        const music = cat === 'music';
+        const music = ARTIST_CATS.includes(cat);
         const keepArtist = artist && artist.value.trim() && !music;  // старые данные не прячем
         artist && artist.classList.toggle('hidden', !music && !keepArtist);
         // бренд: у одежды, техники и «другого» (поле лежит в блоке техники)
@@ -45,7 +50,8 @@
         }
         const aa = $('aa-row'); if (aa) aa.style.display = (music || keepArtist) ? '' : 'none';   // «Фото артиста» — только для музыки
         const t = $('item-title');
-        if (t) t.placeholder = music ? (mode === 'stuff' || mode === 'wishlists' ? 'Название мерча / релиза' : 'Название альбома') : 'Название вещи';
+        const TITLE_PH = { merch: 'Название мерча', event: 'Название концерта / события', collectible: 'Название (стилбук, фигурка, артбук…)' };
+        if (t) t.placeholder = TITLE_PH[cat] || (cat === 'music' ? (mode === 'stuff' || mode === 'wishlists' ? 'Название мерча / релиза' : 'Название альбома') : 'Название вещи');
         if (artist) artist.placeholder = 'Исполнитель / Артист (опционально)';
     }
 

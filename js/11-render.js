@@ -136,7 +136,7 @@ function renderAll() {
     const banner = document.getElementById('banner-bg');
     if(data.bannerImg) { banner.style.backgroundImage = `url(${data.bannerImg})`; }
 
-    ['all', 'music', 'clothing', 'gear', 'other'].forEach(cat => {
+    ['all', ...WISH_CAT_IDS].forEach(cat => {
         const btn = document.getElementById(`filter-cat-${cat}`);
         if (btn) {
             if (currentFilter === cat || (cat === 'all' && currentFilter === null)) {
@@ -174,7 +174,7 @@ function renderAll() {
 
         // Фильтрация
         if(key === 'wishlists' && currentFilter) {
-            if (['music', 'clothing', 'gear', 'other'].includes(currentFilter)) {
+            if (WISH_CAT_IDS.includes(currentFilter)) {
                 items = items.filter(i => (i.category || 'music') === currentFilter);
             } else {
                 items = items.filter(i => (i.tags || []).find(t => t.text === currentFilter));
@@ -317,6 +317,11 @@ function renderAll() {
                 } else if (itemCat === 'gear') {
                     disc.className += " bg-amber-900 border-2 border-amber-500/30 flex items-center justify-center";
                     disc.innerHTML = `<span class="text-3xl">🔌</span>`;
+                } else if (['merch', 'collectible', 'event'].includes(itemCat)) {
+                    const wc = WISH_CATS.find(c => c.id === itemCat);
+                    disc.className += " border-2 flex items-center justify-center";
+                    disc.style.background = wc.hex + '33'; disc.style.borderColor = wc.hex + '4d';
+                    disc.innerHTML = `<span class="text-3xl">${wc.ico}</span>`;
                 } else {
                     disc.className += " bg-zinc-900 border-2 border-white/10";
                     disc.innerHTML = `<span class="text-xs text-gray-500">Wish</span>`;
@@ -467,6 +472,10 @@ if (key === 'wishlists' && i.priority) {
                     } else if (itemCat === 'gear') {
                         catBadge.className += " bg-amber-500/20 text-amber-300 border border-amber-500/20";
                         catBadge.innerText = "🔌 Техника";
+                    } else if (['merch', 'collectible', 'event'].includes(itemCat)) {
+                        const wc = WISH_CATS.find(c => c.id === itemCat);
+                        catBadge.style.cssText = `background:${wc.hex}33;color:${wc.hex};border:1px solid ${wc.hex}33`;
+                        catBadge.innerText = `${wc.ico} ${wc.name}`;
                     } else {
                         catBadge.className += " bg-gray-500/20 text-gray-300 border border-gray-500/20";
                         catBadge.innerText = "🎁 Другое";

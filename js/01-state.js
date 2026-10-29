@@ -1,3 +1,14 @@
+// Категории «Желаемого» (общий список: фильтр, бюджет, карточки). 'music' — диски, остальное — вещи.
+const WISH_CATS = [
+    { id: 'music', ico: '💿', name: 'Музыка', hex: '#a855f7' },
+    { id: 'merch', ico: '🎤', name: 'Мерч', hex: '#ec4899' },
+    { id: 'clothing', ico: '👕', name: 'Одежда', hex: '#14b8a6' },
+    { id: 'gear', ico: '🔌', name: 'Техника', hex: '#f59e0b' },
+    { id: 'collectible', ico: '🗿', name: 'Коллекционки', hex: '#38bdf8' },
+    { id: 'event', ico: '🎟', name: 'Концерты', hex: '#84cc16' },
+    { id: 'other', ico: '🎁', name: 'Другое', hex: '#94a3b8' }
+];
+const WISH_CAT_IDS = WISH_CATS.map(c => c.id);
 const defaultQuotes = [
     { id: 1, author: "Kurt Cobain", textOriginal: "Wanting to be someone else is a waste of the person you are.", textTranslation: "Желание быть кем-то другим — это растрата того, кто ты есть.", song: "" },
     { id: 2, author: "Lana Del Rey", textOriginal: "Live fast. Die young. Be wild. And have fun.", textTranslation: "Живи быстро. Умри молодым. Будь диким. И веселись.", song: "Ride" },

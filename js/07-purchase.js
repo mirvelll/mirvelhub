@@ -7,7 +7,7 @@ window.openPurchaseMoveModal = (id) => {
     document.getElementById('buy-confirm-where').value = item.whereBought || '';
 
     const selectEl = document.getElementById('buy-confirm-format');
-    if (item.category === 'clothing' || item.category === 'gear' || item.category === 'other') {
+    if (['clothing', 'gear', 'other', 'merch', 'collectible', 'event'].includes(item.category)) {
         selectEl.value = 'stuff';
     } else if (item.formatDetails?.toLowerCase().includes('винил')) {
         selectEl.value = 'vinyls';
@@ -33,7 +33,8 @@ window.confirmPurchaseMove = () => {
 
     const newItem = {
         id: Date.now(),
-        category: wishItem.category || 'music',
+        // в «Вещах» музыкальный мерч хранится как 'music', коллекционки и билеты — в «Другом»
+        category: ({ merch: 'music', collectible: 'other', event: 'other' })[wishItem.category] || wishItem.category || 'music',
         title: wishItem.title,
         artist: wishItem.artist || '',
         price: price,

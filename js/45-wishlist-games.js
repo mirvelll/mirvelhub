@@ -236,6 +236,7 @@
             const share = total ? Math.round(sum / total * 100) : 0;
             const div = document.createElement('div');
             div.className = 'glass p-3 rounded-2xl border border-white/5 flex flex-col justify-between hover:border-white/10 transition-colors';
+            div.dataset.cat = 'games';
             div.innerHTML = `
                 <div><div class="flex justify-between items-center text-[10px] font-black uppercase tracking-wider mb-1"><span style="color:#a78bfa">🎮 Игры</span><span class="text-gray-500">${gs.length} шт.</span></div>
                 <p class="font-mono text-xs font-bold text-white">${Math.round(sum)} ₴</p></div>

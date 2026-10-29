@@ -99,12 +99,7 @@ function updateHobbyBudgetPlanner() {
     itemsEl.innerText = `~${itemsPerMonth} шт.`;
 
     // Расчет стоимости хотелок покатегорийно
-    const categories = [
-        { id: 'music', label: '💿 Музыка', color: 'text-purple-400', barBg: 'bg-purple-500' },
-        { id: 'clothing', label: '👕 Одежда', color: 'text-teal-400', barBg: 'bg-teal-500' },
-        { id: 'gear', label: '🔌 Техника', color: 'text-amber-400', barBg: 'bg-amber-500' },
-        { id: 'other', label: '🎁 Другое', color: 'text-pink-400', barBg: 'bg-pink-500' }
-    ];
+    const categories = WISH_CATS.map(c => ({ id: c.id, label: `${c.ico} ${c.name}`, hex: c.hex }));
 
     const breakdownHTML = categories.map(cat => {
         // Отбираем элементы конкретной категории из Wishlist
@@ -124,10 +119,10 @@ function updateHobbyBudgetPlanner() {
         const sharePercent = wishVal > 0 ? Math.round((catSum / wishVal) * 100) : 0;
 
         return `
-            <div class="glass p-3 rounded-2xl border border-white/5 flex flex-col justify-between hover:border-white/10 transition-colors">
+            <div data-cat="${cat.id}" class="glass p-3 rounded-2xl border border-white/5 flex flex-col justify-between hover:border-white/10 transition-colors">
                 <div>
                     <div class="flex justify-between items-center text-[10px] font-black uppercase tracking-wider mb-1">
-                        <span class="${cat.color}">${cat.label}</span>
+                        <span style="color:${cat.hex}">${cat.label}</span>
                         <span class="text-gray-500">${catCount} шт.</span>
                     </div>
                     <p class="font-mono text-xs font-bold text-white">${catSum} ₴</p>
@@ -138,7 +133,7 @@ function updateHobbyBudgetPlanner() {
                         <span class="font-bold text-gray-300">${sharePercent}%</span>
                     </div>
                     <div class="w-full bg-white/5 h-1.5 rounded-full overflow-hidden mb-1">
-                        <div class="${cat.barBg} h-full" style="width: ${sharePercent}%"></div>
+                        <div class="h-full" style="width: ${sharePercent}%;background:${cat.hex}"></div>
                     </div>
                     <div class="text-[9px] text-gray-400 leading-tight">
                         ⏱️ Копить соло: <span class="text-white font-mono font-bold">${soloMonths} мес.</span>

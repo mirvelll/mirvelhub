@@ -113,7 +113,10 @@
 
     const REGIONS = ['PAL', 'NTSC-U', 'NTSC-J', 'NTSC', 'Region Free'];
 
-    const PHOTO_LABELS = ['Диск', 'Коробка (перед)', 'Коробка (зад)', 'Корешок', 'Мануал', 'Вкладыш', 'Чек / скрин', 'Другое'];
+    const PHOTO_LABELS = ['Фото', 'Диск', 'Коробка (перед)', 'Коробка (зад)', 'Корешок', 'Мануал', 'Вкладыш', 'Чек', 'Скриншот', 'Платина / ачивки', 'Другое'];
+    const PHOTO_ICO = { 'Фото': '📷', 'Диск': '💿', 'Коробка (перед)': '📦', 'Коробка (зад)': '📦', 'Корешок': '📚', 'Мануал': '📖', 'Вкладыш': '📄', 'Чек': '🧾', 'Чек / скрин': '🧾', 'Скриншот': '🖼️', 'Платина / ачивки': '🏆', 'Другое': '🔹' };
+    const phIco = l => PHOTO_ICO[l] || '🏷️';
+    let photoFlt = 'all';   // фильтр по метке в блоке фото
     const MAX_PHOTOS = 10;
 
     const SORTS = [
@@ -903,27 +906,34 @@
             </div>
         </div>
 
-        <div class="gd-sec mt-5">
+        <div class="gd-sec mt-5" id="gd-photos-sec">
             <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
                 <p class="gd-sec-title mb-0">Фото (${photos.length}/${MAX_PHOTOS})${kb ? ` · ~${kb} КБ` : ''}
                     ${lastPhoto && lastPhoto.gameId === i.id ? '<button type="button" class="gd-tool ml-2 normal-case tracking-normal" data-act="undophoto">↩ Вернуть фото</button>' : ''}</p>
-                <label class="text-xs text-gray-400 flex items-center gap-2">Что на фото:
-                    <select id="gd-photo-label" class="bg-[#0d0d14] text-white text-xs p-2 rounded-lg border border-white/10">${PHOTO_LABELS.map(l => `<option>${esc(l)}</option>`).join('')}</select>
+                <label class="text-xs text-gray-400 flex items-center gap-2">Метка для новых:
+                    <select id="gd-photo-label" class="bg-[#0d0d14] text-white text-xs p-2 rounded-lg border border-white/10">${PHOTO_LABELS.map(l => `<option value="${esc(l)}">${phIco(l)} ${esc(l === 'Фото' ? 'Без метки' : l)}</option>`).join('')}</select>
                 </label>
             </div>
+            ${(() => {
+                const cnt = {}; photos.forEach(p => { const l = p.label || 'Фото'; cnt[l] = (cnt[l] || 0) + 1; });
+                const keys = Object.keys(cnt);
+                if (photoFlt !== 'all' && !cnt[photoFlt]) photoFlt = 'all';
+                return keys.length > 1 ? `<div class="gd-pflt">${[['all', 'Все', photos.length], ...keys.map(k => [k, `${phIco(k)} ${k}`, cnt[k]])].map(([k, t, n]) => `<button type="button" class="gd-pchip${photoFlt === k ? ' is-on' : ''}" data-act="pflt" data-v="${esc(k)}">${esc(t)} <i>${n}</i></button>`).join('')}</div>` : '';
+            })()}
             <div class="gd-photos">
-                ${photos.map((p, idx) => `
-                    <figure class="gd-photo" data-act="zoom" data-idx="${idx}">
+                ${photos.map((p, idx) => photoFlt !== 'all' && (p.label || 'Фото') !== photoFlt ? '' : `
+                    <figure class="gd-photo" data-act="zoom" data-idx="${idx}"${p.note ? ` title="${esc(p.note)}"` : ''}>
                         <img src="${esc(imgSrc(p.src))}" alt="${esc(p.label || 'Фото')}" loading="lazy">
-                        <figcaption class="gd-photo-cap">${esc(p.label || 'Фото')}</figcaption>
+                        <button type="button" class="gd-photo-chip" data-act="plabel" data-idx="${idx}" title="Изменить метку и подпись">${phIco(p.label || 'Фото')} ${esc(p.label || 'Фото')}${p.note ? ' 📝' : ''} ✎</button>
                         <div class="gd-photo-act">
+                            <button type="button" data-act="plabel" data-idx="${idx}" title="Изменить метку и подпись" aria-label="Изменить">✏️</button>
                             <button type="button" data-act="cover" data-idx="${idx}" title="Сделать обложкой" aria-label="Сделать обложкой">🖼️</button>
                             <button type="button" data-act="delphoto" data-idx="${idx}" title="Удалить фото" aria-label="Удалить фото">🗑</button>
                         </div>
                     </figure>`).join('')}
                 ${photos.length < MAX_PHOTOS ? `<button type="button" class="gd-photo-add" data-act="addphoto"><span aria-hidden="true">📷</span><span>Добавить фото</span></button>` : ''}
             </div>
-            <p class="text-[11px] text-gray-500 mt-2">Фото сжимаются и хранятся в памяти браузера вместе с коллекцией — попадут и в бэкап (.json).</p>
+            <p class="text-[11px] text-gray-500 mt-2">Нажмите на фото — откроется просмотр, там можно поменять метку (диск, чек, скриншот…), добавить подпись, сделать обложкой или удалить. Фото сжимаются и попадают в бэкап (.json).</p>
         </div>`;
     }
 
@@ -935,6 +945,7 @@
     }
 
     function openGameDetail(id) {
+        if (dId !== Number(id)) photoFlt = 'all';
         dId = Number(id);
         if (!gameById(dId)) return;
         renderDetail();
@@ -998,7 +1009,7 @@
             }
         }
         if (list.length > room) showToast(`Добавлено ${added}, остальные не влезли в лимит ${MAX_PHOTOS} фото`);
-        else if (added) showToast(`Фото добавлено: ${added} 📷`, 'success');
+        else if (added) showToast(`Фото добавлено: ${added} 📷 Метку можно сменить — нажмите на фото`, 'success');
         renderDetail();
     }
     fileInput.addEventListener('change', () => { addPhotos(fileInput.files); fileInput.value = ''; });
@@ -1051,6 +1062,8 @@
                 break;
             }
             case 'addphoto': fileInput.click(); break;
+            case 'pflt': photoFlt = v || 'all'; renderDetail(); break;
+            case 'plabel': e.stopPropagation(); openLightbox(item.id, idx); break;
             case 'zoom':
                 if (!e.target.closest('.gd-photo-act')) openLightbox(item.id, idx);
                 break;
@@ -1103,6 +1116,7 @@
     lightbox.innerHTML = `
         <img id="gl-img" class="gl-img" alt="">
         <p id="gl-cap" class="text-sm text-gray-300 font-bold text-center"></p>
+        <div id="gl-edit" class="gl-edit"></div>
         <button type="button" id="gl-prev" class="gl-nav" style="left:16px" aria-label="Предыдущее">‹</button>
         <button type="button" id="gl-next" class="gl-nav" style="right:16px" aria-label="Следующее">›</button>
         <button type="button" id="gl-close" class="absolute top-4 right-4 gd-tool" aria-label="Закрыть">✕</button>`;
@@ -1116,10 +1130,16 @@
         const p = photos[lb.idx];
         $('gl-img').src = imgSrc(p.src);
         $('gl-img').alt = p.label || 'Фото';
-        $('gl-cap').textContent = `${p.label || 'Фото'} · ${lb.idx + 1} / ${photos.length}`;
+        $('gl-cap').textContent = `${phIco(p.label || 'Фото')} ${p.label || 'Фото'}${p.note ? ' — ' + p.note : ''} · ${lb.idx + 1} / ${photos.length}`;
         const multi = photos.length > 1;
         $('gl-prev').classList.toggle('hidden', !multi);
         $('gl-next').classList.toggle('hidden', !multi);
+        const cur = p.label || 'Фото', known = PHOTO_LABELS.includes(cur);
+        if (!(document.activeElement && $('gl-edit').contains(document.activeElement) && document.activeElement.tagName === 'INPUT')) {
+            $('gl-edit').innerHTML = `<div class="gl-chips">${PHOTO_LABELS.concat(known ? [] : [cur]).map(l => `<button type="button" class="gd-pchip${l === cur ? ' is-on' : ''}" data-gl="label" data-v="${esc(l)}">${phIco(l)} ${esc(l === 'Фото' ? 'Без метки' : l)}</button>`).join('')}</div>
+                <div class="gl-row"><input id="gl-custom" class="gl-in" maxlength="30" placeholder="Своя метка…" autocomplete="off"><input id="gl-note" class="gl-in" maxlength="120" placeholder="Подпись (необязательно)" autocomplete="off" value="${esc(p.note || '')}"></div>
+                <div class="gl-row"><button type="button" class="gd-tool" data-gl="cover">🖼️ Сделать обложкой</button><button type="button" class="gd-tool is-danger" data-gl="del">🗑 Удалить</button></div>`;
+        }
     }
     function openLightbox(id, idx) {
         lb.id = id; lb.idx = idx || 0;
@@ -1129,9 +1149,35 @@
     $('gl-prev').onclick = () => { lb.idx--; renderLightbox(); };
     $('gl-next').onclick = () => { lb.idx++; renderLightbox(); };
     $('gl-close').onclick = () => lightbox.classList.add('hidden');
+    function curPhoto() { const g = gameById(lb.id); return { g, p: photosOf(g)[lb.idx] }; }
+    function afterPhotoEdit() { commit(); renderDetail(); $('gl-edit').innerHTML = ''; renderLightbox(); }
+    $('gl-edit').addEventListener('click', async e => {
+        const b = e.target.closest('[data-gl]'); if (!b) return;
+        const { g, p } = curPhoto(); if (!g || !p) return;
+        if (b.dataset.gl === 'label') { p.label = b.dataset.v || 'Фото'; afterPhotoEdit(); }
+        else if (b.dataset.gl === 'cover') {
+            try { g.img = await reencode(p.src, IMG_PRESETS.cover.max, IMG_PRESETS.cover.quality); if (commit()) showToast('Фото стало обложкой 🖼️', 'success'); renderDetail(); }
+            catch (_) { showToast('Не удалось поставить обложку', 'error'); }
+        } else if (b.dataset.gl === 'del') {
+            lastPhoto = { gameId: g.id, photo: p, idx: lb.idx };
+            g.photos = photosOf(g).filter((_, k) => k !== lb.idx);
+            lb.idx = Math.max(0, lb.idx - 1);
+            commit(); renderDetail(); $('gl-edit').innerHTML = ''; renderLightbox();
+            showToast('Фото удалено. Вернуть можно в блоке «Фото»');
+        }
+    });
+    const applyCustom = () => { const v = ($('gl-custom')?.value || '').trim(); const { p } = curPhoto(); if (p && v) { p.label = v; afterPhotoEdit(); } };
+    const applyNote = () => { const { p } = curPhoto(); const el = $('gl-note'); if (p && el && (p.note || '') !== el.value.trim()) { p.note = el.value.trim(); commit(); renderDetail(); $('gl-cap').textContent = `${phIco(p.label || 'Фото')} ${p.label || 'Фото'}${p.note ? ' — ' + p.note : ''} · ${lb.idx + 1} / ${photosOf(curPhoto().g).length}`; } };
+    $('gl-edit').addEventListener('change', e => { if (e.target.id === 'gl-note') applyNote(); });
+    $('gl-edit').addEventListener('keydown', e => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault(); e.stopPropagation();
+        if (e.target.id === 'gl-custom') applyCustom(); else if (e.target.id === 'gl-note') { applyNote(); e.target.blur(); }
+    });
     onHidden(lightbox, () => { $('gl-img').removeAttribute('src'); });
     document.addEventListener('keydown', e => {
         if (lightbox.classList.contains('hidden')) return;
+        if (e.target && e.target.tagName === 'INPUT') return;
         if (e.key === 'ArrowLeft') { lb.idx--; renderLightbox(); }
         else if (e.key === 'ArrowRight') { lb.idx++; renderLightbox(); }
     });
