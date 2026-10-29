@@ -1,12 +1,12 @@
 /* =========================================================
    MIRVEL HUB — 18-hub2.js (подключать ПОСЛЕ 17-convenience.js)
-   1. Заметки: плавающая панель (двигается, меняет размер, поиск, закрепление, цвета)
+   1. Заметки: плавающая панель (двигается, меняет размер, поиск, закрепление, цвета, группы/подгруппы, иконки, картинки, ссылки)
    2. Главная: приветствие, чипы коллекции, «Избранное» (трек, клип, игра, любая ссылка), «Игра дня»
    3. Рейтинг артистов и обновлённое окно артиста
    4. Расширенная статистика (игры, оценки, месяцы, магазины, желаемое)
    5. Язык: русский / English / Українська
    6. Настройки интерфейса («Слушать» по умолчанию скрыто)
-   Новые поля data: spotlights[], lang, showScrobble, since; у заметок: pinned, color, ts
+   Новые поля data: spotlights[], lang, showScrobble, since, noteGroups[{id,name,parent,closed}]; у заметок: pinned, color, ts, icon, gid, images[{id,src}], links[{id,url,title,img}]
    ========================================================= */
 (() => {
     const $ = id => document.getElementById(id);
@@ -43,14 +43,112 @@
        1. ЗАМЕТКИ
        ===================================================== */
     const NCOL = ['', '#fbbf24', '#34d399', '#60a5fa', '#f472b6', '#a78bfa'];
-    let nSel = null, nQ = '', lastDel = null, undoTimer = null;
+    const NEMO = ['📝', '⭐', '💡', '🎵', '💿', '🎮', '🛒', '🎁', '📌', '❤️', '🔥', '📚', '🎫', '👕', '💰', '✅', '📷', '🔗'];
+    const MAX_IMG = 12, MAX_LINKS = 30, MAX_DEPTH = 2;
+    let nSel = null, nQ = '', nGrp = 'all', lastDel = null, undoTimer = null, linkEdit = null, linkImg = '';
+    const nuid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+    /* ---- группы и подгруппы: data.noteGroups = [{ id, name, parent, closed }]; у заметки note.gid ---- */
+    const groups = () => Array.isArray(data.noteGroups) ? data.noteGroups : (data.noteGroups = []);
+    const gById = id => groups().find(g => g.id === id);
+    const gKids = pid => groups().filter(g => (g.parent || '') === (pid || ''));
+    const gDepth = id => { let d = 0, g = gById(id); while (g && g.parent && d < 10) { d++; g = gById(g.parent); } return d; };
+    const gPath = id => { const out = []; let g = gById(id), i = 0; while (g && i++ < 10) { out.unshift(g.name); g = g.parent ? gById(g.parent) : null; } return out.join(' › '); };
+    const gTree = id => { const ids = [id]; gKids(id).forEach(k => ids.push(...gTree(k.id))); return ids; };
+    const hasG = n => !!(n.gid && gById(n.gid));
+    const curGrp = () => { if (nGrp !== 'all' && nGrp !== 'none' && !gById(nGrp)) nGrp = 'all'; return nGrp; };
+    const inGroup = n => { const g = curGrp(); return g === 'all' || (g === 'none' ? !hasG(n) : (hasG(n) && gTree(g).includes(n.gid))); };
+
+    /* ---- ссылки ---- */
+    const lkNorm = u => {
+        u = String(u || '').trim(); if (!u) return '';
+        if (!/^[a-z][a-z0-9+.-]*:/i.test(u)) u = 'https://' + u;
+        try { const x = new URL(u); return /^https?:$/.test(x.protocol) && x.hostname.includes('.') ? x.href : ''; } catch (_) { return ''; }
+    };
+    const lkHost = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (_) { return ''; } };
+
     const nTitle = n => (String(n.title || '').trim() || String(n.text || '').split('\n').find(l => l.trim()) || 'Пустая заметка').trim().slice(0, 48);
+    const nHay = n => lc([n.title, n.text, hasG(n) ? gPath(n.gid) : '', ...(n.links || []).map(l => (l.title || '') + ' ' + (l.url || ''))].join(' '));
+    // при поиске ищем по ВСЕМ группам; без поиска — только в выбранной
     const nSorted = () => [...data.quickNotes]
-        .filter(n => !nQ || lc(`${n.title || ''} ${n.text || ''}`).includes(nQ))
+        .filter(n => (nQ ? nHay(n).includes(nQ) : inGroup(n)))
         .sort((a, b) => (!!b.pinned - !!a.pinned) || num(b.ts || b.id) - num(a.ts || a.id));
     const nCur = () => data.quickNotes.find(n => n.id === nSel);
 
+    function notesCss() {
+        if ($('np-pro-css')) return;
+        const s = document.createElement('style'); s.id = 'np-pro-css';
+        s.textContent = `
+        .np{width:760px;height:540px;min-width:420px;min-height:380px}
+        .np-side{width:40%;min-width:190px;min-height:0}
+        .np-edit{position:relative}
+        .np-pill,.np-gadd,.np-gtools button{padding:5px 9px;border-radius:9px;font-size:11px;font-weight:700;color:#d1d5db;cursor:pointer;
+            background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);transition:background-color .15s,color .15s}
+        .np-pill:hover,.np-gadd:hover,.np-gtools button:hover{color:#fff;background:rgba(var(--theme-rgb),.3);border-color:rgba(var(--theme-rgb),.55)}
+        .np-gtools button.is-danger:hover,.np .is-danger:hover{color:#fecaca;background:rgba(239,68,68,.2);border-color:rgba(239,68,68,.5)}
+        .np-gbox{display:flex;flex-direction:column;gap:5px;padding:6px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);max-height:44%;flex:0 0 auto;min-height:0}
+        .np-gh{display:flex;align-items:center;justify-content:space-between;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#9ca3af;padding:0 2px}
+        .np-groups{display:flex;flex-direction:column;gap:1px;overflow-y:auto;min-height:0}
+        .np-g{display:flex;align-items:center;gap:2px;padding:5px 6px 5px calc(4px + var(--d,0) * 12px);border-radius:8px;font-size:12px;font-weight:700;color:#cbd5e1;cursor:pointer}
+        .np-g:hover{background:rgba(255,255,255,.07)}
+        .np-g.is-sel{background:rgba(var(--theme-rgb),.22);color:#fff}
+        .np-g.is-drop{outline:2px dashed rgba(var(--theme-rgb),.9);outline-offset:-2px}
+        .np-g small{font-size:10px;color:#6b7280;font-weight:600;margin-left:4px}
+        .np-gt{width:16px;flex:none;text-align:center;font-size:10px;color:#9ca3af;background:none;border:0;cursor:pointer;padding:0}
+        .np-gn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .np-gtools{display:flex;flex-wrap:wrap;gap:4px}
+        .np-ghint{font-size:10px;color:#6b7280;line-height:1.35;padding:0 2px}
+        .np-item{display:block}
+        .np-titlebar{display:flex;align-items:center;border-bottom:1px solid rgba(255,255,255,.07)}
+        .np-titlebar .np-title{flex:1;min-width:0;border-bottom:0}
+        .np-emo{flex:none;width:34px;height:34px;margin-left:10px;font-size:17px;line-height:1;border-radius:10px;cursor:pointer;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1)}
+        .np-emo:hover{background:rgba(var(--theme-rgb),.25)}
+        .np-emopop{position:absolute;z-index:6;left:10px;top:48px;width:226px;padding:8px;border-radius:14px;background:#151521;border:1px solid rgba(255,255,255,.15);box-shadow:0 14px 40px rgba(0,0,0,.6);display:flex;flex-wrap:wrap;gap:4px}
+        .np-emopop button{width:32px;height:32px;font-size:17px;border-radius:9px;cursor:pointer;background:rgba(255,255,255,.05)}
+        .np-emopop button:hover{background:rgba(var(--theme-rgb),.3)}
+        .np-emopop .np-pill{width:100%;height:auto;font-size:11px;margin-top:2px}
+        .np-text{min-height:84px}
+        .np-emopop.hidden,.np-att.hidden,.np-linkform.hidden{display:none}
+        .np-att{display:flex;flex-direction:column;gap:8px;flex:0 1 auto;max-height:42%;overflow-y:auto;padding:8px 12px;border-top:1px solid rgba(255,255,255,.07)}
+        .np-imgs{display:flex;flex-wrap:wrap;gap:8px}
+        .np-im{margin:0;width:96px;display:flex;flex-direction:column;gap:4px}
+        .np-im img{width:96px;height:72px;object-fit:cover;border-radius:9px;cursor:zoom-in;border:1px solid rgba(255,255,255,.12)}
+        .np-im button{padding:3px 6px;border-radius:7px;font-size:10px;font-weight:700;color:#9ca3af;cursor:pointer;background:rgba(255,255,255,.06)}
+        .np-im button:hover{color:#fecaca;background:rgba(239,68,68,.2)}
+        .np-lks{display:flex;flex-direction:column;gap:5px}
+        .np-lk{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:11px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+        .np-lki{width:34px;height:34px;flex:none;border-radius:8px;object-fit:cover;background:rgba(255,255,255,.08)}
+        .np-lkem{display:flex;align-items:center;justify-content:center;font-size:16px}
+        .np-lkt{flex:1;min-width:0;display:flex;flex-direction:column;color:#fff;text-decoration:none}
+        .np-lkt b{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .np-lkt small{font-size:10px;color:#9ca3af;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .np-lkt:hover b{text-decoration:underline}
+        .np-lk>button{flex:none;padding:4px 8px;border-radius:8px;font-size:10px;font-weight:700;color:#d1d5db;cursor:pointer;background:rgba(255,255,255,.07)}
+        .np-lk>button:hover{color:#fff;background:rgba(var(--theme-rgb),.3)}
+        .np-lk>button.is-danger:hover{color:#fecaca;background:rgba(239,68,68,.2)}
+        .np-linkform{display:flex;flex-direction:column;gap:6px;padding:8px 12px;border-top:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.03)}
+        .np-linkform .row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+        .np-tools{gap:5px;padding:6px 10px}
+        .np .np-tools button{font-weight:700;font-size:12px;color:#d1d5db;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)}
+        .np .np-tools button:hover{color:#fff;background:rgba(var(--theme-rgb),.28);border-color:rgba(var(--theme-rgb),.5)}
+        .np .np-tools button.is-on{color:#facc15;background:rgba(250,204,21,.12);border-color:rgba(250,204,21,.4)}
+        .np .np-tools button.is-danger:hover{color:#fecaca;background:rgba(239,68,68,.2);border-color:rgba(239,68,68,.5)}
+        .np-lbl{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#6b7280;margin-right:2px}
+        .np-sel{max-width:160px;padding:5px 8px;border-radius:9px;font-size:12px;color:#e5e7eb;background:#151521;border:1px solid rgba(255,255,255,.12)}
+        .np-edit.is-empty .np-tools,.np-edit.is-empty .np-titlebar .np-emo{opacity:.4;pointer-events:none}
+        .np-zoom{position:fixed;inset:0;z-index:100001;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(0,0,0,.86);cursor:zoom-out}
+        .np-zoom img{max-width:92vw;max-height:82vh;border-radius:12px;box-shadow:0 20px 70px rgba(0,0,0,.7)}
+        .np-zoom button{padding:8px 16px;border-radius:12px;font-size:13px;font-weight:800;color:#fff;background:rgba(255,255,255,.14)}
+        @media (max-width:640px){
+            .np{height:78vh!important;min-width:0}
+            .np-side{width:100%;max-height:40%;overflow-y:auto;min-width:0}
+            .np-gbox{max-height:none}.np-groups{max-height:96px}
+        }`;
+        document.head.appendChild(s);
+    }
+
     function buildNotes() {
+        notesCss();
         const p = document.createElement('aside');
         p.id = 'notes-panel';
         p.className = 'np glass no-hover hidden';
@@ -65,38 +163,88 @@
         </div>
         <div class="np-body">
             <div class="np-side">
-                <input id="np-search" type="search" class="np-in" placeholder="Поиск…" aria-label="Поиск по заметкам">
+                <input id="np-search" type="search" class="np-in" placeholder="Поиск по всем заметкам…" aria-label="Поиск по заметкам">
                 <button type="button" class="np-new" data-np="new">＋ Новая заметка</button>
+                <div class="np-gbox">
+                    <div class="np-gh"><span>Группы</span><button type="button" class="np-gadd" data-np="gnew" title="Создать новую группу">＋ Группа</button></div>
+                    <div id="np-groups" class="np-groups"></div>
+                    <div id="np-gtools" class="np-gtools"></div>
+                </div>
                 <div id="np-list" class="np-list"></div>
             </div>
-            <div class="np-edit">
-                <input id="np-title" class="np-title" type="text" maxlength="80" placeholder="Заголовок / тема заметки" aria-label="Заголовок заметки" autocomplete="off">
-                <textarea id="np-text" class="np-text" placeholder="Пишите здесь…"></textarea>
+            <div class="np-edit is-empty" id="np-edit">
+                <div class="np-titlebar">
+                    <button type="button" id="np-emo" class="np-emo" data-np="emoji" title="Иконка заметки" aria-label="Иконка заметки">🙂</button>
+                    <input id="np-title" class="np-title" type="text" maxlength="80" placeholder="Заголовок / тема заметки" aria-label="Заголовок заметки" autocomplete="off">
+                </div>
+                <div id="np-emopop" class="np-emopop hidden"></div>
+                <textarea id="np-text" class="np-text" placeholder="Пишите здесь… (картинку можно вставить Ctrl+V или перетащить сюда)"></textarea>
+                <div id="np-att" class="np-att hidden"></div>
+                <div id="np-linkform" class="np-linkform hidden">
+                    <input id="np-lk-url" class="np-in" type="text" placeholder="Ссылка: https://…" aria-label="Адрес ссылки" autocomplete="off">
+                    <input id="np-lk-title" class="np-in" type="text" maxlength="80" placeholder="Название (необязательно)" aria-label="Название ссылки" autocomplete="off">
+                    <div class="row">
+                        <span id="np-lk-prev" class="flex items-center gap-2"></span>
+                        <button type="button" class="np-pill" data-ap="lkpick">🖼 Своя картинка</button>
+                        <button type="button" class="np-pill" data-ap="lkclr">Сбросить картинку</button>
+                        <span class="flex-1"></span>
+                        <button type="button" class="np-pill" data-ap="lkcancel">Отмена</button>
+                        <button type="button" class="np-pill" data-ap="lksave" style="background:var(--theme-btn);color:#fff">✔ Сохранить ссылку</button>
+                    </div>
+                </div>
                 <div class="np-tools">
+                    <span class="np-lbl">Вставить</span>
+                    <button type="button" data-np="todo" title="Новая строка-галочка в тексте">☑ Пункт списка</button>
+                    <button type="button" data-np="check" title="Поставить / снять галочку на строке, где курсор">✔ Отметить</button>
+                    <button type="button" data-np="date" title="Вставить дату и время">🕒 Дата</button>
+                    <button type="button" data-np="link" title="Добавить ссылку (с миниатюрой)">🔗 Ссылка</button>
+                    <button type="button" data-np="img" title="Добавить картинки к заметке">🖼 Картинка</button>
+                </div>
+                <div class="np-tools">
+                    <select id="np-gsel" class="np-sel" aria-label="Группа заметки" title="В какой группе лежит заметка"></select>
                     <span id="np-colors"></span>
-                    <button type="button" data-np="pin" title="Закрепить">📌</button>
-                    <button type="button" data-np="date" title="Вставить дату и время">🕒</button>
-                    <button type="button" data-np="todo" title="Пункт списка">☑</button>
-                    <button type="button" data-np="copy" title="Копировать текст">📋</button>
-                    <button type="button" data-np="del" title="Удалить заметку">🗑</button>
+                    <button type="button" data-np="pin" title="Закреплённые заметки всегда сверху">📌 Закрепить</button>
+                    <button type="button" data-np="copy" title="Копировать текст заметки">📋 Копировать</button>
+                    <button type="button" data-np="del" class="is-danger" title="Удалить заметку (можно вернуть)">🗑 Удалить</button>
                     <span class="flex-1"></span><small id="np-meta"></small>
                 </div>
+                <input type="file" id="np-file" accept="image/*" multiple hidden>
+                <input type="file" id="np-linkfile" accept="image/*" hidden>
             </div>
         </div>
         <div id="np-undo" class="np-undo hidden"><span>Заметка удалена</span><button type="button" data-np="undo">↩ Вернуть</button></div>`;
         document.body.appendChild(p);
+        $('np-emopop').innerHTML = NEMO.map(e => `<button type="button" data-emo="${e}">${e}</button>`).join('') + '<button type="button" class="np-pill" data-emo="">Убрать иконку</button>';
 
         const st = ui.get('np', {});
         if (st.w) p.style.width = st.w + 'px';
         if (st.h) p.style.height = st.h + 'px';
 
         p.addEventListener('click', e => {
-            const dot = e.target.closest('[data-c]');
+            const t = e.target;
+            if (!t.closest('#np-emopop') && !t.closest('#np-emo')) $('np-emopop').classList.add('hidden');
+            const dot = t.closest('[data-c]');
             if (dot) { const n = nCur(); if (n) { n.color = dot.dataset.c; n.ts = Date.now(); persistSoon(); renderNotes(); } return; }
-            const item = e.target.closest('[data-id]');
+            const gt = t.closest('[data-gt]');
+            if (gt) { const g = gById(gt.dataset.gt); if (g) { g.closed = !g.closed; persistSoon(); renderGroups(); } return; }
+            const gr = t.closest('[data-g]');
+            if (gr) { setGroup(gr.dataset.g); return; }
+            const emo = t.closest('[data-emo]');
+            if (emo) { const n = nCur(); if (n) { n.icon = emo.dataset.emo; n.ts = Date.now(); persistSoon(); } $('np-emopop').classList.add('hidden'); updateEmo(); renderNotes(true); return; }
+            const ap = t.closest('[data-ap]');
+            if (ap) { attAction(ap.dataset.ap, ap.dataset.aid); return; }
+            const item = t.closest('[data-id]');
             if (item) { selectNote(Number(item.dataset.id)); return; }
-            const b = e.target.closest('[data-np]');
+            const b = t.closest('[data-np]');
             if (b) noteAction(b.dataset.np);
+        });
+        p.addEventListener('error', e => {
+            if (e.target.classList && e.target.classList.contains('np-fav')) {
+                const em = document.createElement('span'); em.className = 'np-lki np-lkem'; em.textContent = '🔗'; e.target.replaceWith(em);
+            }
+        }, true);
+        p.addEventListener('keydown', e => {
+            if ((e.key === 'Enter' || e.key === ' ') && e.target.classList && e.target.classList.contains('np-item')) { e.preventDefault(); selectNote(Number(e.target.dataset.id)); }
         });
         $('np-search').addEventListener('input', e => { nQ = lc(e.target.value); renderNotes(); });
         $('np-text').addEventListener('input', e => {
@@ -108,10 +256,74 @@
             n.title = e.target.value; n.ts = Date.now(); persistSoon(); renderNotes(true);
         });
         $('np-title').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('np-text').focus(); } });
-        $('np-text').addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); noteAction('new'); } });
-        p.addEventListener('keydown', e => { if (e.key === 'Escape') closeNotes(); });
+        $('np-text').addEventListener('keydown', e => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); noteAction('new'); return; }
+            // Enter на строке-галочке продолжает список; Enter на пустой галочке — выходит из списка
+            if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+                const ta = e.target, s = ta.selectionStart;
+                if (s !== ta.selectionEnd) return;
+                const ls = ta.value.lastIndexOf('\n', s - 1) + 1, le0 = ta.value.indexOf('\n', s), le = le0 < 0 ? ta.value.length : le0;
+                const m = ta.value.slice(ls, s).match(/^(\s*)- \[[ xX]\] (.*)$/);
+                if (!m) return;
+                e.preventDefault();
+                if (!m[2].trim() && !ta.value.slice(s, le).trim()) {
+                    ta.value = ta.value.slice(0, ls) + ta.value.slice(le); ta.selectionStart = ta.selectionEnd = ls;
+                } else {
+                    const ins = '\n' + m[1] + '- [ ] ';
+                    ta.value = ta.value.slice(0, s) + ins + ta.value.slice(s); ta.selectionStart = ta.selectionEnd = s + ins.length;
+                }
+                ta.dispatchEvent(new Event('input'));
+            }
+        });
+        $('np-text').addEventListener('paste', e => {
+            const files = [...(e.clipboardData?.files || [])].filter(f => /^image\//i.test(f.type));
+            if (files.length) { e.preventDefault(); addImages(files); }
+        });
+        $('np-gsel').addEventListener('change', e => {
+            const n = nCur(); if (!n) return;
+            n.gid = e.target.value; n.ts = Date.now(); persistSoon();
+            const g = n.gid && gById(n.gid);
+            showToast(g ? `Заметка перенесена в «${g.name}»` : 'Заметка вне групп', 'info');
+            if (!nQ && !inGroup(n)) nGrp = hasG(n) ? n.gid : 'none';   // идём за заметкой в новую группу
+            renderGroups(); renderNotes();
+        });
+        $('np-file').addEventListener('change', e => { addImages(e.target.files); e.target.value = ''; });
+        $('np-linkfile').addEventListener('change', async e => {
+            const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+            try { linkImg = await compressImage(f, { max: 160, quality: 0.8 }); updateLinkPrev(); } catch (_) { showToast('Не удалось обработать картинку', 'error'); }
+        });
+        ['np-lk-url', 'np-lk-title'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); attAction('lksave'); } }));
+        p.addEventListener('keydown', e => {
+            if (e.key !== 'Escape') return;
+            if (!$('np-emopop').classList.contains('hidden')) { $('np-emopop').classList.add('hidden'); return; }
+            if (!$('np-linkform').classList.contains('hidden')) { closeLinkForm(); return; }
+            closeNotes();
+        });
 
-        // перетаскивание за заголовок
+        // перетаскивание: заметку — в группу, файлы-картинки — в редактор
+        const hasFiles = e => [...(e.dataTransfer?.types || [])].includes('Files');
+        p.addEventListener('dragstart', e => {
+            const it = e.target.closest && e.target.closest('.np-item'); if (!it) return;
+            e.dataTransfer.setData('text/plain', 'mhnote:' + it.dataset.id); e.dataTransfer.effectAllowed = 'move';
+        });
+        p.addEventListener('dragover', e => {
+            const g = e.target.closest && e.target.closest('[data-g]');
+            if (g && g.dataset.g !== 'all' && !hasFiles(e)) {
+                e.preventDefault();
+                p.querySelectorAll('.np-g.is-drop').forEach(x => { if (x !== g) x.classList.remove('is-drop'); });
+                g.classList.add('is-drop'); return;
+            }
+            if (hasFiles(e) && e.target.closest && e.target.closest('.np-edit')) e.preventDefault();
+        });
+        p.addEventListener('dragleave', e => { const g = e.target.closest && e.target.closest('[data-g]'); if (g) g.classList.remove('is-drop'); });
+        p.addEventListener('drop', e => {
+            p.querySelectorAll('.np-g.is-drop').forEach(x => x.classList.remove('is-drop'));
+            if (hasFiles(e) && e.target.closest('.np-edit')) { e.preventDefault(); addImages(e.dataTransfer.files); return; }
+            const g = e.target.closest('[data-g]'), raw = e.dataTransfer.getData('text/plain') || '';
+            if (g && g.dataset.g !== 'all' && raw.startsWith('mhnote:')) { e.preventDefault(); moveNote(Number(raw.slice(7)), g.dataset.g === 'none' ? '' : g.dataset.g); }
+        });
+
+        // перетаскивание панели за заголовок
         const head = $('np-drag');
         let off = null;
         head.addEventListener('pointerdown', e => {
@@ -182,8 +394,59 @@
         $('np-title').disabled = !n;
         $('np-text').value = n ? n.text || '' : '';
         $('np-text').disabled = !n;
+        $('np-edit').classList.toggle('is-empty', !n);
+        $('np-emopop').classList.add('hidden');
+        closeLinkForm();
+        updateEmo();
+        renderAtt();
         renderNotes();
         if (n && !noFocus && innerWidth > 640) (n.title || n.text ? $('np-text') : $('np-title')).focus();
+    }
+
+    const updateEmo = () => { const n = nCur(); $('np-emo').textContent = (n && n.icon) || '🙂'; };
+
+    function setGroup(key) {
+        nGrp = key;
+        const list = nSorted();
+        if (!list.some(n => n.id === nSel)) nSel = (list[0] || {}).id ?? null;
+        selectNote(nSel, true);
+    }
+
+    function moveNote(id, gid) {
+        const n = data.quickNotes.find(x => x.id === id); if (!n) return;
+        n.gid = gid; n.ts = Date.now(); persistSoon();
+        const g = gid && gById(gid);
+        showToast(g ? `Перенесено в «${g.name}»` : 'Перенесено в «Без группы»', 'success');
+        if (!nQ && !inGroup(n) && nSel === id) { const nx = nSorted()[0]; selectNote(nx ? nx.id : null, true); }
+        else { renderGroups(); renderNotes(); }
+    }
+
+    function renderGroups() {
+        const box = $('np-groups'); if (!box) return;
+        const cur = curGrp(), all = groups(), n0 = nCur();
+        const cnt = id => { const ids = gTree(id); return data.quickNotes.filter(n => hasG(n) && ids.includes(n.gid)).length; };
+        const row = (key, name, c, d, kidsOpen) => `<div class="np-g${cur === key ? ' is-sel' : ''}" data-g="${esc(key)}" style="--d:${d}">${kidsOpen}<span class="np-gn">${name}</span><small>${c}</small></div>`;
+        let html = row('all', '🗂 Все заметки', data.quickNotes.length, 0, '<i class="np-gt"></i>')
+                 + row('none', '📄 Без группы', data.quickNotes.filter(n => !hasG(n)).length, 0, '<i class="np-gt"></i>');
+        const walk = (pid, d) => gKids(pid).forEach(g => {
+            const kids = gKids(g.id).length;
+            const tgl = kids ? `<button type="button" class="np-gt" data-gt="${esc(g.id)}" title="${g.closed ? 'Развернуть подгруппы' : 'Свернуть подгруппы'}" aria-label="Свернуть или развернуть">${g.closed ? '▸' : '▾'}</button>` : '<i class="np-gt"></i>';
+            html += row(g.id, '📁 ' + esc(g.name), cnt(g.id), d, tgl);
+            if (kids && !g.closed) walk(g.id, d + 1);
+        });
+        walk('', 0);
+        box.innerHTML = html;
+
+        const tools = $('np-gtools'), g = cur !== 'all' && cur !== 'none' ? gById(cur) : null;
+        tools.innerHTML = g
+            ? `${gDepth(g.id) < MAX_DEPTH ? '<button type="button" data-np="gsub" title="Создать подгруппу внутри выбранной">＋ Подгруппа</button>' : ''}<button type="button" data-np="gren" title="Переименовать группу">✏️ Переименовать</button><button type="button" data-np="gdel" class="is-danger" title="Удалить группу (заметки останутся)">🗑 Удалить группу</button>`
+            : `<p class="np-ghint">${all.length ? 'Выбери группу — появятся «＋ Подгруппа», «Переименовать» и «Удалить». Заметки можно перетащить в группу мышкой.' : 'Групп пока нет. Нажми «＋ Группа», например «Хотелки», «Идеи», «Ссылки».'}</p>`;
+
+        const sel = $('np-gsel'), flat = [];
+        const walk2 = (pid, d) => gKids(pid).forEach(x => { flat.push([x, d]); walk2(x.id, d + 1); });
+        walk2('', 0);
+        sel.innerHTML = '<option value="">📄 Без группы</option>' + flat.map(([x, d]) => `<option value="${esc(x.id)}">${'\u00A0\u00A0'.repeat(d)}${d ? '↳ ' : ''}${esc(x.name)}</option>`).join('');
+        sel.value = n0 && hasG(n0) ? n0.gid : '';
     }
 
     function renderNotes(listOnly) {
@@ -192,40 +455,175 @@
         $('np-list').innerHTML = list.map(n => {
             const lines = String(n.text || '').split('\n').filter(l => l.trim());
             const body = (String(n.title || '').trim() ? lines : lines.slice(1)).join(' ');
-            return `<button type="button" class="np-item${n.id === nSel ? ' is-sel' : ''}" data-id="${n.id}" style="--c:${esc(n.color || '')}">
-                <span>${n.pinned ? '📌 ' : ''}${esc(nTitle(n))}</span><small>${esc(body || new Date(n.ts || n.id).toLocaleDateString(loc()))}</small></button>`;
-        }).join('') || `<p class="text-[11px] text-gray-500 italic p-2">${nQ ? 'Ничего не найдено' : 'Заметок пока нет'}</p>`;
+            const im = (n.images || []).length, lk = (n.links || []).length;
+            const badges = (im ? `🖼${im} ` : '') + (lk ? `🔗${lk} ` : '') + ((nQ || curGrp() === 'all') && hasG(n) ? `📁${gPath(n.gid)} · ` : '');
+            return `<div role="button" tabindex="0" draggable="true" class="np-item${n.id === nSel ? ' is-sel' : ''}" data-id="${n.id}" style="--c:${esc(n.color || '')}">
+                <span>${n.pinned ? '📌 ' : ''}${n.icon ? esc(n.icon) + ' ' : ''}${esc(nTitle(n))}</span><small>${esc(badges + (body || new Date(n.ts || n.id).toLocaleDateString(loc())))}</small></div>`;
+        }).join('') || `<p class="text-[11px] text-gray-500 italic p-2">${nQ ? 'Ничего не найдено' : (curGrp() === 'all' ? 'Заметок пока нет' : 'В этой группе пусто')}</p>`;
         $('np-colors').innerHTML = NCOL.map(c => `<i class="np-dot${cur && (cur.color || '') === c ? ' is-on' : ''}" data-c="${c}" style="--c:${c}" role="button" aria-label="Цвет"></i>`).join('');
         const pin = $('notes-panel').querySelector('[data-np="pin"]');
         pin.classList.toggle('is-on', !!(cur && cur.pinned));
+        pin.textContent = cur && cur.pinned ? '📌 Закреплено' : '📌 Закрепить';
         const t = cur ? String(cur.text || '') : '';
         $('np-meta').textContent = cur ? `${t.trim() ? t.trim().split(/\s+/).length : 0} сл. · ${t.length} зн.` : '';
+        if (!listOnly) renderGroups();
     }
 
-    function noteAction(a) {
+    /* ---- вложения: картинки и ссылки ---- */
+    function renderAtt() {
+        const n = nCur(), box = $('np-att');
+        const imgs = n ? n.images || [] : [], lks = n ? n.links || [] : [];
+        if (!imgs.length && !lks.length) { box.innerHTML = ''; box.classList.add('hidden'); return; }
+        box.classList.remove('hidden');
+        const hImgs = imgs.map(im => `<figure class="np-im"><img src="${esc(imgSrc(im.src))}" data-ap="zoom" data-aid="${esc(im.id)}" alt="Картинка в заметке" title="Нажми, чтобы увеличить"><button type="button" data-ap="imgdel" data-aid="${esc(im.id)}" title="Убрать эту картинку из заметки">🗑 Убрать</button></figure>`).join('');
+        const hLks = lks.map(l => {
+            const host = lkHost(l.url), href = lkNorm(l.url);
+            const ico = l.img ? `<img class="np-lki" src="${esc(imgSrc(l.img))}" alt="">` : `<img class="np-lki np-fav" src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64" alt="">`;
+            return `<div class="np-lk">${ico}<a class="np-lkt" href="${esc(href)}" target="_blank" rel="noopener noreferrer" title="Открыть в новой вкладке"><b>${esc(l.title || host)}</b><small>${esc(host)} ↗</small></a><button type="button" data-ap="lkedit" data-aid="${esc(l.id)}" title="Изменить ссылку">✏️ Изменить</button><button type="button" class="is-danger" data-ap="lkdel" data-aid="${esc(l.id)}" title="Убрать ссылку">✕ Убрать</button></div>`;
+        }).join('');
+        box.innerHTML = (hImgs ? `<div class="np-imgs">${hImgs}</div>` : '') + (hLks ? `<div class="np-lks">${hLks}</div>` : '');
+    }
+
+    async function addImages(files) {
+        const n = nCur(); if (!n) return showToast('Сначала создай заметку', 'info');
+        files = [...files].filter(f => /^image\//i.test(f.type));
+        if (!files.length) return;
+        n.images = Array.isArray(n.images) ? n.images : [];
+        let added = 0;
+        for (const f of files) {
+            if (n.images.length >= MAX_IMG) { showToast(`В одной заметке максимум ${MAX_IMG} картинок`, 'info'); break; }
+            try { n.images.push({ id: nuid(), src: await compressImage(f, 'photo') }); added++; } catch (_) { showToast('Не удалось обработать картинку', 'error'); }
+        }
+        if (added) { n.ts = Date.now(); persistSoon(); if (nCur() === n) renderAtt(); renderNotes(); }
+    }
+
+    function zoomImg(src) {
+        const o = document.createElement('div');
+        o.className = 'np-zoom';
+        o.innerHTML = `<img src="${esc(imgSrc(src))}" alt=""><button type="button">✕ Закрыть</button>`;
+        function key(e) { if (e.key === 'Escape') { e.stopPropagation(); close(); } }
+        function close() { o.remove(); document.removeEventListener('keydown', key, true); }
+        o.addEventListener('click', close);
+        document.addEventListener('keydown', key, true);
+        document.body.appendChild(o);
+    }
+
+    function updateLinkPrev() {
+        $('np-lk-prev').innerHTML = linkImg ? `<img src="${esc(imgSrc(linkImg))}" class="np-lki" alt="">` : '<span class="text-[11px] text-gray-500">Картинка не выбрана — возьмётся значок сайта</span>';
+    }
+    function openLinkForm(l) {
+        linkEdit = l ? l.id : 'new'; linkImg = l ? l.img || '' : '';
+        $('np-lk-url').value = l ? l.url || '' : ''; $('np-lk-title').value = l ? l.title || '' : '';
+        updateLinkPrev(); $('np-linkform').classList.remove('hidden'); $('np-lk-url').focus();
+    }
+    function closeLinkForm() { linkEdit = null; linkImg = ''; const f = $('np-linkform'); if (f) f.classList.add('hidden'); }
+
+    async function attAction(a, id) {
+        const n = nCur();
+        if (a === 'lkpick') return $('np-linkfile').click();
+        if (a === 'lkclr') { linkImg = ''; return updateLinkPrev(); }
+        if (a === 'lkcancel') return closeLinkForm();
+        if (!n) return;
+        if (a === 'zoom') { const im = (n.images || []).find(x => x.id === id); if (im) zoomImg(im.src); return; }
+        if (a === 'imgdel') {
+            if (!(await mhConfirm('Убрать эту картинку из заметки?', { title: 'Убрать картинку?', okText: 'Убрать', danger: true }))) return;
+            n.images = (n.images || []).filter(x => x.id !== id); n.ts = Date.now(); persistSoon(); renderAtt(); renderNotes(); return;
+        }
+        if (a === 'lkedit') { const l = (n.links || []).find(x => x.id === id); if (l) openLinkForm(l); return; }
+        if (a === 'lkdel') {
+            if (!(await mhConfirm('Убрать эту ссылку из заметки?', { title: 'Убрать ссылку?', okText: 'Убрать', danger: true }))) return;
+            n.links = (n.links || []).filter(x => x.id !== id); n.ts = Date.now(); persistSoon(); renderAtt(); renderNotes(); return;
+        }
+        if (a === 'lksave') {
+            const url = lkNorm($('np-lk-url').value);
+            if (!url) return showToast('Нужна ссылка вида https://сайт.com/…', 'error');
+            const title = $('np-lk-title').value.trim().slice(0, 80);
+            n.links = Array.isArray(n.links) ? n.links : [];
+            if (linkEdit && linkEdit !== 'new') {
+                const l = n.links.find(x => x.id === linkEdit);
+                if (l) { l.url = url; l.title = title; l.img = linkImg; }
+            } else {
+                if (n.links.length >= MAX_LINKS) return showToast(`В одной заметке максимум ${MAX_LINKS} ссылок`, 'info');
+                n.links.push({ id: nuid(), url, title, img: linkImg });
+            }
+            n.ts = Date.now(); persistSoon(); closeLinkForm(); renderAtt(); renderNotes();
+        }
+    }
+
+    async function noteAction(a) {
         const p = $('notes-panel'), n = nCur(), ta = $('np-text');
         if (a === 'close') return closeNotes();
         if (a === 'min') { p.classList.toggle('is-min'); return; }
         if (a === 'new') {
+            const g = curGrp();
             const note = { id: Date.now(), text: '', pinned: false, color: '', ts: Date.now() };
+            if (g !== 'all' && g !== 'none') note.gid = g;
             data.quickNotes.push(note); nQ = ''; $('np-search').value = '';
             persistSoon(); selectNote(note.id); return;
         }
         if (a === 'export') {
             if (!data.quickNotes.length) return showToast('Заметок пока нет');
-            downloadFile(`mirvel_notes_${todayStamp()}.txt`, data.quickNotes.map(x => (x.title ? x.title + '\n' : '') + (x.text || '')).join('\n\n----------\n\n'), 'text/plain;charset=utf-8');
+            const one = x => [
+                (hasG(x) ? `[${gPath(x.gid)}] ` : '') + (x.icon ? x.icon + ' ' : '') + (x.title || ''),
+                x.text || '',
+                ...(x.links || []).map(l => '🔗 ' + (l.title ? l.title + ' — ' : '') + l.url),
+                (x.images || []).length ? `(картинок: ${x.images.length})` : ''
+            ].filter(s => s && s.trim()).join('\n');
+            downloadFile(`mirvel_notes_${todayStamp()}.txt`, data.quickNotes.map(one).join('\n\n----------\n\n'), 'text/plain;charset=utf-8');
             return;
         }
         if (a === 'undo' && lastDel) {
             data.quickNotes.push(lastDel); const id = lastDel.id; lastDel = null;
             $('np-undo').classList.add('hidden'); persistSoon(); selectNote(id); return;
         }
+        /* --- группы --- */
+        if (a === 'gnew' || a === 'gsub') {
+            const parent = a === 'gsub' ? curGrp() : '';
+            if (a === 'gsub' && (!gById(parent) || gDepth(parent) >= MAX_DEPTH)) return showToast('Глубже вкладывать нельзя', 'info');
+            const name = await mhPrompt(a === 'gsub' ? `Подгруппа внутри «${gById(parent).name}»` : 'Название группы', { title: a === 'gsub' ? 'Новая подгруппа' : 'Новая группа', placeholder: 'Например: Хотелки, Идеи, Ссылки', okText: 'Создать', required: true });
+            if (name === null) return;
+            const nm = String(name).trim().slice(0, 40); if (!nm) return;
+            const g = { id: 'g' + nuid(), name: nm, parent };
+            groups().push(g);
+            if (parent) { const pg = gById(parent); if (pg) pg.closed = false; }
+            persistSoon(); setGroup(g.id); return;
+        }
+        if (a === 'gren' || a === 'gdel') {
+            const g = gById(curGrp()); if (!g) return;
+            if (a === 'gren') {
+                const name = await mhPrompt('Новое название группы', { title: 'Переименовать группу', value: g.name, okText: 'Сохранить', required: true });
+                if (name === null) return;
+                const nm = String(name).trim().slice(0, 40); if (!nm) return;
+                g.name = nm; persistSoon(); renderGroups(); renderNotes(); return;
+            }
+            const up = g.parent && gById(g.parent) ? g.parent : '';
+            if (!(await mhConfirm(`Удалить группу «${g.name}»?\nЗаметки не пропадут — они переедут в ${up ? '«' + gById(up).name + '»' : '«Без группы»'}.`, { title: 'Удалить группу?', okText: 'Удалить', danger: true }))) return;
+            gKids(g.id).forEach(k => { k.parent = up; });
+            data.quickNotes.forEach(x => { if (x.gid === g.id) x.gid = up; });
+            data.noteGroups = groups().filter(x => x !== g);
+            persistSoon(); setGroup(up || 'all'); return;
+        }
         if (!n) return;
+        if (a === 'emoji') { $('np-emopop').classList.toggle('hidden'); return; }
+        if (a === 'link') return openLinkForm(null);
+        if (a === 'img') return $('np-file').click();
         if (a === 'pin') { n.pinned = !n.pinned; persistSoon(); renderNotes(); }
-        else if (a === 'copy') { navigator.clipboard?.writeText((n.title ? n.title + '\n' : '') + (n.text || '')).then(() => showToast('Заметка скопирована 📋', 'success'), () => showToast('Не удалось скопировать', 'error')); }
+        else if (a === 'copy') {
+            const txt = (n.title ? n.title + '\n' : '') + (n.text || '') + ((n.links || []).length ? '\n\n' + n.links.map(l => (l.title ? l.title + ': ' : '') + l.url).join('\n') : '');
+            navigator.clipboard?.writeText(txt).then(() => showToast('Заметка скопирована 📋', 'success'), () => showToast('Не удалось скопировать', 'error'));
+        }
+        else if (a === 'check') {
+            const s = ta.selectionStart ?? 0, ls = ta.value.lastIndexOf('\n', s - 1) + 1, le0 = ta.value.indexOf('\n', s), le = le0 < 0 ? ta.value.length : le0;
+            const line = ta.value.slice(ls, le), m = line.match(/^(\s*- \[)([ xX])(\] .*)$/);
+            if (!m) return showToast('Поставь курсор на строку с галочкой (кнопка «☑ Пункт списка»)', 'info');
+            ta.value = ta.value.slice(0, ls) + m[1] + (m[2] === ' ' ? 'x' : ' ') + m[3] + ta.value.slice(le);
+            ta.selectionStart = ta.selectionEnd = s; ta.focus();
+            n.text = ta.value; n.ts = Date.now(); persistSoon(); renderNotes(true);
+        }
         else if (a === 'date' || a === 'todo') {
-            const add = a === 'date' ? new Date().toLocaleString(loc(), { dateStyle: 'medium', timeStyle: 'short' }) : '- [ ] ';
+            let add = a === 'date' ? new Date().toLocaleString(loc(), { dateStyle: 'medium', timeStyle: 'short' }) : '- [ ] ';
             const s = ta.selectionStart ?? ta.value.length;
+            if (a === 'todo' && s > 0 && ta.value[s - 1] !== '\n') add = '\n' + add;   // пункт всегда с новой строки
             ta.value = ta.value.slice(0, s) + add + ta.value.slice(ta.selectionEnd ?? s);
             ta.selectionStart = ta.selectionEnd = s + add.length; ta.focus();
             n.text = ta.value; n.ts = Date.now(); persistSoon(); renderNotes();

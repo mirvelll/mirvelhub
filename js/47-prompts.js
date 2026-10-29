@@ -1,5 +1,6 @@
 /* =========================================================
    MIRVEL HUB — 47-prompts.js (подключается после 46-game-achievements.js)
+   • «Правило версии сайта» — шаблон для ИИ: как повышать метку v20.xx при каждом обновлении;
    Вкладка «📝 Промпты» в настройках: твои заготовки текста для нейросетей.
    • в начале уже лежит промпт «Ачивки по скриншотам» (скрины → строки для импорта в игру);
    • «Скопировать» — в буфер обмена; ✏️ — править; 🗑 — удалить; «➕ Новый промпт» — добавить свой.
@@ -45,6 +46,26 @@
         try { persistData(); } catch (_) {}
     }
 
+
+    /* Этап G: правило версии сайта (один раз, флаг data.promptsV4; удалённый не возвращается, твои правки не затираются) */
+    const SITE_VERSION_PROMPT = `ПРАВИЛО ВЕРСИИ САЙТА — выполняй при КАЖДОМ обновлении сайта, даже если я об этом не напоминаю.
+
+В левом нижнем углу сайта висит маленькая метка версии, например v20.27. После каждого обновления её нужно повышать: было v20.27 — стало v20.28.
+
+Как это делается:
+1. Открой js/00-storage.js, найди строку const BUILD = '20.27'; и увеличь число на 0.01 (20.27 → 20.28, 20.99 → 21.00). Метка в углу берётся из этой константы, и по ней же браузер подгружает свежие js-файлы (?v=BUILD). Без повышения мои правки могут не дойти до браузера из-за кэша.
+2. В index.html в строке <script src="js/00-storage.js?v=…"> поставь то же самое число.
+3. Если правил CSS-файл — в index.html у его <link href="css/….css?v=…"> тоже поставь новое число (то же, что BUILD).
+4. Если создал НОВЫЙ js-файл — обязательно добавь его имя в массив SCRIPTS в js/00-storage.js (в нужное место порядка загрузки). Иначе файл не подключится.
+5. Версию повышай один раз за одно обновление (одна порция правок = +0.01), даже если правок много. Если в этом же обновлении ты её уже повысил — второй раз не повышай.
+6. В конце ответа напиши: «Версия сайта: v…» и коротко перечисли, что изменилось.`;
+    function upgrade4() {
+        if (data.promptsV4) return;
+        data.promptsV4 = true;
+        if (!list().some(p => p.id === 'site-version')) list().push({ id: 'site-version', title: 'Правило версии сайта (v20.xx) — для ИИ', text: SITE_VERSION_PROMPT });
+        try { persistData(); } catch (_) {}
+    }
+
     async function copy(t) {
         try { await navigator.clipboard.writeText(t); return true; } catch (_) {}
         try { const ta = document.createElement('textarea'); ta.value = t; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok; } catch (_) { return false; }
@@ -76,7 +97,7 @@
         if ($('prompts-card')) return true;
         const host = document.querySelector('#profile .grid > div.space-y-6:not(.glass)');
         if (!host) return false;
-        seed(); upgrade(); upgrade3();
+        seed(); upgrade(); upgrade3(); upgrade4();
         const card = document.createElement('div');
         card.id = 'prompts-card';
         card.className = 'glass p-8 rounded-3xl space-y-4';
