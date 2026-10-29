@@ -134,6 +134,20 @@
 .gd-photo:hover .gd-photo-act, .gd-photo:focus-within .gd-photo-act { opacity: 1; }
 @media (hover: none) { .gd-photo-act { opacity: 1; } }
 .gd-photo-act button { width: 26px; height: 26px; border-radius: 8px; font-size: 12px; background: rgba(0, 0, 0, 0.75); border: 1px solid rgba(255, 255, 255, 0.15); }
+.gd-photo-chip { position: absolute; left: 6px; top: 6px; max-width: calc(100% - 12px); padding: 3px 8px; border-radius: 999px; font-size: 10px; font-weight: 800; color: #fff; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: rgba(0, 0, 0, 0.72); border: 1px solid rgba(255, 255, 255, 0.2); backdrop-filter: blur(6px); }
+.gd-photo-chip:hover { background: rgba(var(--theme-rgb), 0.55); }
+.gd-photo-act { top: auto; bottom: 4px; }
+.gd-photo-cap { bottom: 0; padding-right: 74px; }
+.gd-pflt, .gl-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.gd-pchip { padding: 4px 11px; border-radius: 999px; font-size: 11px; font-weight: 700; color: #9ca3af; cursor: pointer; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1); transition: all 0.15s; }
+.gd-pchip i { font-style: normal; opacity: 0.6; margin-left: 2px; }
+.gd-pchip:hover { color: #fff; }
+.gd-pchip.is-on { color: #fff; border-color: rgba(var(--theme-rgb), 0.8); background: rgba(var(--theme-rgb), 0.25); }
+.gl-edit { width: min(560px, 94vw); display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.gl-edit .gl-chips { justify-content: center; margin: 0; }
+.gl-row { display: flex; gap: 8px; width: 100%; flex-wrap: wrap; justify-content: center; }
+.gl-in { flex: 1; min-width: 140px; padding: 8px 12px; border-radius: 12px; font-size: 12px; color: #fff; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); outline: none; }
+.gl-in:focus { border-color: rgba(var(--theme-rgb), 0.8); }
 .gd-photo-add {
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer;
     aspect-ratio: 1; border-radius: 14px; font-size: 11px; font-weight: 700; color: #9ca3af;
@@ -143,7 +157,7 @@
 .gd-photo-add span:first-child { font-size: 24px; }
 
 /* ---------- Лайтбокс ---------- */
-.gl-img { max-width: 92vw; max-height: 78vh; border-radius: 16px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7); object-fit: contain; }
+.gl-img { max-width: 92vw; max-height: 50vh; border-radius: 16px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7); object-fit: contain; }
 .gl-nav {
     position: absolute; top: 50%; transform: translateY(-50%); width: 46px; height: 46px; border-radius: 999px; font-size: 22px;
     background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(255, 255, 255, 0.2);
