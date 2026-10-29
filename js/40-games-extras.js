@@ -10,7 +10,7 @@
     const $ = id => document.getElementById(id);
     const listOn = () => !!(data.listMode && data.listMode.games);
     const mode = () => listOn() ? 'list' : (data.gameViewMode === 'covers' ? 'covers' : 'cards');
-    const LABEL = { cards: '🗂 Карточки', covers: '🖼 Обложки', list: '☰ Список' };
+    const LABEL = { cards: 'Вид: карточки', covers: 'Вид: обложки', list: 'Вид: список' };
 
     const css = document.createElement('style');
     css.textContent = `
@@ -38,7 +38,7 @@
         if (!b) return;
         const m = mode();
         if (b.textContent !== LABEL[m]) b.textContent = LABEL[m];
-        b.title = 'Вид списка игр: карточки → обложки → список';
+        b.title = 'Сменить вид: карточки → обложки → список';
     }
     function setList(on) {
         if (listOn() === on) return;

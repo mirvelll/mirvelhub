@@ -15,7 +15,11 @@
    • Текст — свой заголовок и подпись, панель с цифрами, имя, сумма трат
    Картинка пересобирается сразу при каждом изменении, настройки запоминаются.
 
-   Доступно: window.shareCollection('cds' | 'vinyls' | 'games')
+   Этап L: переключатель ТИП «🎮 Игры / 🏆 Достижения» (витрина платин: обложки, трофейный уровень,
+   число ачивок, последние платины с датами), подсказки у настроек, «Ещё настройки», липкое превью на телефоне,
+   обрезка длинных текстов на картинке.
+
+   Доступно: window.shareCollection('cds' | 'vinyls' | 'games' [, 'ach'])
    ========================================================= */
 (() => {
     'use strict';
@@ -46,6 +50,14 @@
         uk: { label: 'МОЯ КОЛЕКЦІЯ', more: n => `і ще ${n}`, done: 'пройдено', avg: 'середня оцінка', spent: 'витрачено',
               releases: ['реліз', 'релізи', 'релізів'], artists: ['виконавець', 'виконавці', 'виконавців'], games: ['гра', 'гри', 'ігор'],
               platforms: ['платформа', 'платформи', 'платформ'] }
+    };
+    const TA = {
+        ru: { label: 'МОИ ДОСТИЖЕНИЯ', title: 'ПЛАТИНЫ', plat: ['платина', 'платины', 'платин'], achs: ['ачивка', 'ачивки', 'ачивок'], level: 'трофейный уровень', recent: 'ПОСЛЕДНИЕ ПЛАТИНЫ',
+              empty: 'Платин пока нет', hint: 'Закрой все ачивки в списке игры — и она появится в витрине.' },
+        en: { label: 'MY ACHIEVEMENTS', title: 'PLATINUMS', plat: ['platinum', 'platinums', 'platinums'], achs: ['achievement', 'achievements', 'achievements'], level: 'trophy level', recent: 'LATEST PLATINUMS',
+              empty: 'No platinums yet', hint: 'Complete every achievement in a game’s list and it will show up here.' },
+        uk: { label: 'МОЇ ДОСЯГНЕННЯ', title: 'ПЛАТИНИ', plat: ['платина', 'платини', 'платин'], achs: ['ачівка', 'ачівки', 'ачівок'], level: 'трофейний рівень', recent: 'ОСТАННІ ПЛАТИНИ',
+              empty: 'Платин поки немає', hint: 'Закрий усі ачівки в списку гри — і вона з’явиться у вітрині.' }
     };
     function plural(n, forms) {
         n = Math.abs(Math.round(n));
@@ -230,6 +242,13 @@
         for (let s = size; s >= minSize; s -= 2) { c.font = `${weight} ${s}px ${family}`; if (c.measureText(text).width <= maxW) return s; }
         c.font = `${weight} ${minSize}px ${family}`; return minSize;
     }
+    /* обрезает строку многоточием, если она всё равно не влезла (шрифт уже выставлен) */
+    function clip(c, text, maxW) {
+        let t = String(text == null ? '' : text);
+        if (c.measureText(t).width <= maxW) return t;
+        while (t.length > 1 && c.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+        return t.replace(/[\s.,;:–-]+$/, '') + '…';
+    }
     const hue = s => [...String(s)].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) % 360, 7);
     const hexToRgb = h => { const m = /^#?([0-9a-f]{6})$/i.exec(h || ''); if (!m) return ''; const n = parseInt(m[1], 16); return `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`; };
     const rgbToHex = s => '#' + String(s).split(',').map(v => clamp(Number(v) || 0, 0, 255).toString(16).padStart(2, '0')).join('');
@@ -341,8 +360,8 @@
             const fs = Math.max(12, Math.round(s * 0.085)), pad = Math.round(s * 0.05);
             c.font = `800 ${fs}px ${FONT_U}`; c.textAlign = 'center'; c.textBaseline = 'alphabetic';
             const rows = wrap(c, item.title || '', s * 0.88, s >= 260 ? 2 : 1).map(t => ({ t, f: fs, w: 800, col: '#fff' }));
-            const subTxt = o.isGames ? (item.platform || '') : (item.artist || '');
-            if (subTxt && s >= 200) {
+            const subTxt = item.sub || (o.isGames ? (item.platform || '') : (item.artist || ''));
+            if (subTxt && s >= (item.sub ? 150 : 200)) {
                 const sf = Math.round(fs * 0.82);
                 c.font = `700 ${sf}px ${FONT_U}`;
                 rows.push({ t: wrap(c, subTxt, s * 0.88, 1)[0], f: sf, w: 700, col: 'rgba(255,255,255,0.72)' });
@@ -363,6 +382,13 @@
             const fs = Math.max(12, Math.round(s * 0.095)), txt = `★ ${Math.min(5, num(item.rating))}`;
             if (circle) chip(c, txt, x + s / 2, y + s * 0.07, fs, '#facc15', 'center');
             else chip(c, txt, x + s * 0.05, y + s * 0.05, fs, '#facc15', 'left');
+        }
+        if (item.badge && s >= 90) {                      // значок платины на плитке витрины достижений
+            const rr = Math.max(10, s * 0.07), bx = circle ? x + s * 0.85 : x + s - s * 0.05 - rr, by = circle ? y + s * 0.15 : y + s * 0.05 + rr;
+            c.beginPath(); c.arc(bx, by, rr, 0, Math.PI * 2); c.fillStyle = 'rgba(8,47,73,0.92)'; c.fill();
+            c.lineWidth = Math.max(1.5, rr * 0.12); c.strokeStyle = '#67e8f9'; c.stroke();
+            c.font = `${Math.round(rr * 1.15)}px ${FONT_U}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#fff';
+            c.fillText(item.badge, bx, by + 1);
         }
         if (o.isGames && o.completed && s >= 90 && item.status === 'completed') {
             const rr = Math.max(9, s * 0.062);
@@ -418,9 +444,9 @@
             const cx = 60 + cw * i + cw / 2;
             if (i) { c.beginPath(); c.moveTo(60 + cw * i, py + 36); c.lineTo(60 + cw * i, py + ph - 36); c.strokeStyle = 'rgba(255,255,255,0.12)'; c.lineWidth = 2; c.stroke(); }
             fit(c, s.v, 800, FONT_D, 74, 28, cw - 36);
-            c.fillStyle = s.color || '#fff'; c.fillText(s.v, cx, py + 92);
+            c.fillStyle = s.color || '#fff'; c.fillText(clip(c, s.v, cw - 36), cx, py + 92);
             fit(c, s.l, 600, FONT_U, 28, 18, cw - 28);
-            c.fillStyle = 'rgba(255,255,255,0.6)'; c.fillText(s.l, cx, py + 138);
+            c.fillStyle = 'rgba(255,255,255,0.6)'; c.fillText(clip(c, s.l, cw - 28), cx, py + 138);
         });
     }
     function statsCol(c, stats, x, y, w) {
@@ -431,10 +457,34 @@
             c.fillStyle = 'rgba(255,255,255,0.07)'; c.fill();
             c.lineWidth = 2; c.strokeStyle = 'rgba(255,255,255,0.14)'; c.stroke();
             fit(c, s.v, 800, FONT_D, 60, 26, w - 40);
-            c.fillStyle = s.color || '#fff'; c.fillText(s.v, cx, yy + 70);
+            c.fillStyle = s.color || '#fff'; c.fillText(clip(c, s.v, w - 40), cx, yy + 70);
             fit(c, s.l, 600, FONT_U, 26, 16, w - 40);
-            c.fillStyle = 'rgba(255,255,255,0.6)'; c.fillText(s.l, cx, yy + 106);
+            c.fillStyle = 'rgba(255,255,255,0.6)'; c.fillText(clip(c, s.l, w - 40), cx, yy + 106);
         });
+    }
+
+    /* панель «последние платины»: название слева, дата справа */
+    function recentPanel(c, rows, label, x, y, w, fs) {
+        const rh = Math.round(fs * 1.8), head = Math.round(fs * 2.1), pad = Math.round(fs * 0.8);
+        const h = head + rows.length * rh + Math.round(pad * 0.6);
+        rrect(c, x, y, w, h, 32); c.fillStyle = 'rgba(255,255,255,0.07)'; c.fill();
+        c.lineWidth = 2; c.strokeStyle = 'rgba(255,255,255,0.14)'; c.stroke();
+        c.textBaseline = 'alphabetic'; c.textAlign = 'left';
+        try { c.letterSpacing = '4px'; } catch (_) {}
+        c.font = `800 ${Math.round(fs * 0.68)}px ${FONT_U}`; c.fillStyle = 'rgba(255,255,255,0.5)';
+        c.fillText(label, x + pad * 1.5, y + head * 0.72);
+        try { c.letterSpacing = '0px'; } catch (_) {}
+        rows.forEach((r, i) => {
+            const yy = y + head + i * rh + rh * 0.66;
+            if (i) { c.beginPath(); c.moveTo(x + pad * 1.5, y + head + i * rh); c.lineTo(x + w - pad * 1.5, y + head + i * rh); c.strokeStyle = 'rgba(255,255,255,0.09)'; c.lineWidth = 1.5; c.stroke(); }
+            c.font = `800 ${Math.round(fs * 0.92)}px ${FONT_U}`; c.textAlign = 'right'; c.fillStyle = '#67e8f9';
+            const dw = r.date ? c.measureText(r.date).width : 0;
+            if (r.date) c.fillText(r.date, x + w - pad * 1.5, yy);
+            c.font = `700 ${fs}px ${FONT_U}`; c.textAlign = 'left'; c.fillStyle = '#fff';
+            c.fillText(clip(c, r.title, w - pad * 3 - dw - (dw ? 18 : 0)), x + pad * 1.5, yy);
+        });
+        c.textAlign = 'center';
+        return h;
     }
 
     async function build(o) {
@@ -465,15 +515,17 @@
             c.textAlign = 'center';
             try { c.letterSpacing = '8px'; } catch (_) {}
             c.font = `800 28px ${FONT_U}`; c.fillStyle = 'rgba(255,255,255,0.55)';
-            c.fillText(t.label, W / 2, 138);
+            c.fillText(o.label || t.label, W / 2, 138);
             try { c.letterSpacing = '0px'; } catch (_) {}
             fit(c, titleText, 800, FONT_D, 124, 50, 940);
-            c.fillStyle = '#fff'; c.fillText(titleText, W / 2, 285);
+            c.fillStyle = '#fff'; c.fillText(clip(c, titleText, 940), W / 2, 285);
             let y = 285;
-            if (o.sub) { y += 70; fit(c, o.sub, 700, FONT_U, 44, 24, 900); c.fillStyle = `rgb(${light})`; c.fillText(o.sub, W / 2, y); }
+            if (o.sub) { y += 70; fit(c, o.sub, 700, FONT_U, 44, 24, 900); c.fillStyle = `rgb(${light})`; c.fillText(clip(c, o.sub, 900), W / 2, y); }
             const py = y + 56, ph = 176;
             if (o.stats.length) statsRow(c, o.stats, W, py, ph);
-            const gridTop = (o.stats.length ? py + ph : y) + 56;
+            let blockBottom = o.stats.length ? py + ph : y;
+            if (o.recent && o.recent.length) { const pt = blockBottom + 28; blockBottom = pt + recentPanel(c, o.recent, o.recentLabel, 60, pt, W - 120, 30); }
+            const gridTop = blockBottom + 56;
             const bottom = o.hidden > 0 ? 200 : 145;
             grid = { x: 60, y: gridTop, w: W - 120, h: H - bottom - gridTop };
             moreAt = [W / 2, H - 135]; brandAt = [W / 2, H - 70];
@@ -482,13 +534,15 @@
             c.textAlign = 'center';
             try { c.letterSpacing = '8px'; } catch (_) {}
             c.font = `800 26px ${FONT_U}`; c.fillStyle = 'rgba(255,255,255,0.55)';
-            c.fillText(t.label, cx, 120);
+            c.fillText(clip(c, o.label || t.label, pw), cx, 120);
             try { c.letterSpacing = '0px'; } catch (_) {}
             fit(c, titleText, 800, FONT_D, 100, 38, pw);
-            c.fillStyle = '#fff'; c.fillText(titleText, cx, 238);
+            c.fillStyle = '#fff'; c.fillText(clip(c, titleText, pw), cx, 238);
             let y = 238;
-            if (o.sub) { y += 62; fit(c, o.sub, 700, FONT_U, 38, 20, pw); c.fillStyle = `rgb(${light})`; c.fillText(o.sub, cx, y); }
-            if (o.stats.length) statsCol(c, o.stats, px, y + 44, pw);
+            if (o.sub) { y += 62; fit(c, o.sub, 700, FONT_U, 38, 20, pw); c.fillStyle = `rgb(${light})`; c.fillText(clip(c, o.sub, pw), cx, y); }
+            let colBottom = y + 44;
+            if (o.stats.length) { statsCol(c, o.stats, px, y + 44, pw); colBottom = y + 44 + o.stats.length * 140 - 16; }
+            if (o.recent && o.recent.length) recentPanel(c, o.recent, o.recentLabel, px, colBottom + 24, pw, 24);
             grid = { x: 680, y: 70, w: W - 680 - 70, h: H - 140 };
             moreAt = [cx, H - 120]; brandAt = [cx, H - 58];
         }
@@ -496,8 +550,17 @@
         /* мозаика обложек */
         const n = o.items.length;
         if (!n) {      // фильтр ничего не нашёл
-            c.textAlign = 'center'; c.font = `700 40px ${FONT_U}`; c.fillStyle = 'rgba(255,255,255,0.5)';
-            c.fillText('—', grid.x + grid.w / 2, grid.y + grid.h / 2);
+            c.textAlign = 'center';
+            if (o.emptyMsg) {
+                const cx0 = grid.x + grid.w / 2, cy0 = grid.y + grid.h / 2;
+                c.font = `${wide ? 90 : 120}px ${FONT_U}`; c.fillStyle = 'rgba(255,255,255,0.9)'; c.fillText('🏆', cx0, cy0 - 40);
+                c.font = `800 ${wide ? 44 : 52}px ${FONT_D}`; c.fillStyle = '#fff'; c.fillText(clip(c, o.emptyMsg.t, grid.w - 40), cx0, cy0 + 50);
+                c.font = `600 ${wide ? 28 : 32}px ${FONT_U}`; c.fillStyle = 'rgba(255,255,255,0.6)';
+                wrap(c, o.emptyMsg.h, Math.min(grid.w - 60, 760), 3).forEach((ln, i) => c.fillText(ln, cx0, cy0 + 110 + i * 42));
+            } else {
+                c.font = `700 40px ${FONT_U}`; c.fillStyle = 'rgba(255,255,255,0.5)';
+                c.fillText('—', grid.x + grid.w / 2, grid.y + grid.h / 2);
+            }
         } else {
             const gapBase = n <= 4 ? 28 : n <= 16 ? 20 : n <= 36 ? 14 : n <= 64 ? 10 : n <= 120 ? 7 : 5;
             const gap = Math.max(2, Math.round(gapBase * ({ tight: 0.45, normal: 1, wide: 1.7 }[o.gap] || 1)));
@@ -529,18 +592,18 @@
     /* ---------- Настройки (запоминаются в браузере) ---------- */
     const LS_OPTS = 'mirvel_share_opts';
     const DEF = {
-        format: 'story', order: 'best', seed: 1, grid: 'auto', gap: 'normal', round: 'soft',
+        format: 'story', order: 'best', aorder: 'recent', seed: 1, grid: 'auto', gap: 'normal', round: 'soft',
         bg: 'cover', blur: { cover: 60, photo: 0 }, dim: 70, bgColor: '#0b0b14', accent: '',
         titles: false, rating: true, platformChip: true, completed: true, withCover: false, minRating: 0,
         stats: true, price: false, name: true, title: '', caption: ''
     };
     const ENUM = {
-        format: Object.keys(FORMATS), order: ['best', 'recent', 'alpha', 'price', 'random'],
+        format: Object.keys(FORMATS), order: ['best', 'recent', 'alpha', 'price', 'random'], aorder: ['recent', 'oldest', 'alpha', 'random'],
         grid: ['auto', '3', '4', '5', '6', '7', '8', '10', '12', 'all'],
         gap: ['tight', 'normal', 'wide'], round: ['sq', 'soft', 'round', 'circle'], bg: ['cover', 'photo', 'grad', 'solid']
     };
     const clone = v => JSON.parse(JSON.stringify(v));
-    const opt = Object.assign(clone(DEF), { key: 'vinyls', platform: '', status: '' });
+    const opt = Object.assign(clone(DEF), { key: 'vinyls', type: 'games', platform: '', status: '' });
     (function loadOpts() {
         try {
             const s = JSON.parse(localStorage.getItem(LS_OPTS) || 'null');
@@ -596,7 +659,51 @@
         return list.sort(sorters[opt.order] || sorters.best);
     }
 
+    /* ---------- Витрина достижений: платины игр ---------- */
+    const fmtDate = ts => { try { return ts ? new Date(ts).toLocaleDateString(locale(), { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''; } catch (_) { return ''; } };
+    function platinums() {
+        return (data.games || []).filter(g => !isGameHidden(g) && g.trophy === 'full' && num(g.trophyTotal) > 0)
+            .map(g => Object.assign({}, g, { _ts: num(g.platAt) }));
+    }
+    function describeAch() {
+        const ta = TA[lang()];
+        const all = platinums();
+        const byTitle = (a, b) => String(a.title || '').localeCompare(String(b.title || ''), locale());
+        let sorted = all.slice();
+        if (opt.aorder === 'random') {
+            const r = prng(opt.seed * 7919 + 13);
+            for (let i = sorted.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [sorted[i], sorted[j]] = [sorted[j], sorted[i]]; }
+        } else if (opt.aorder === 'alpha') sorted.sort(byTitle);
+        else if (opt.aorder === 'oldest') sorted.sort((a, b) => (a._ts || 9e15) - (b._ts || 9e15) || byTitle(a, b));
+        else sorted.sort((a, b) => b._ts - a._ts || byTitle(a, b));
+        const cap = opt.grid === 'auto' ? 49 : opt.grid === 'all' ? 300 : Number(opt.grid) ** 2;
+        const shown = sorted.slice(0, cap).map(g => ({ id: g.id, title: g.title, platform: g.platform, img: g.img, rating: g.rating, status: g.status, sub: fmtDate(g._ts), badge: '💎' }));
+        let dlcPlat = 0;
+        (data.games || []).forEach(g => (g.achGroups || []).forEach(x => { if (x.platAt && x.key !== 'base') dlcPlat++; }));
+        const platTotal = all.length + dlcPlat;
+        const doneAch = (data.games || []).reduce((n, g) => n + (g.achList || []).filter(a => a && a.done).length, 0);
+        const stats = [{ v: String(platTotal), l: plural(platTotal, ta.plat), color: '#67e8f9' }];
+        if (doneAch) stats.push({ v: String(doneAch), l: plural(doneAch, ta.achs), color: '#fbbf24' });
+        let tp = null; try { tp = window.mhTrophyPoints ? window.mhTrophyPoints() : null; } catch (_) {}
+        if (tp && tp.any) stats.push({ v: (lang() === 'en' ? 'Lv. ' : 'Ур. ') + tp.level, l: ta.level, color: '#c4b5fd' });
+        const wide = opt.format === 'wide';
+        const recent = sorted.slice().sort((a, b) => b._ts - a._ts).filter(g => g._ts).slice(0, wide ? 2 : 3).map(g => ({ title: g.title, date: fmtDate(g._ts) }));
+        const subParts = [];
+        if (opt.caption.trim()) subParts.push(opt.caption.trim());
+        if (opt.name) { const n = String(data.name || '').trim(); if (n) subParts.push(n); }
+        return {
+            kind: { icon: '🏆', title: { ru: ta.title, en: ta.title, uk: ta.title } }, icon: '🏆', isGames: true, isAch: true, format: opt.format,
+            items: shown, hidden: Math.max(0, sorted.length - shown.length),
+            stats: opt.stats ? (wide ? stats.slice(0, 3) : stats) : [], sub: subParts.join(' · '),
+            recent: opt.stats ? recent : [], recentLabel: ta.recent, label: ta.label,
+            emptyMsg: all.length ? null : { t: ta.empty, h: ta.hint },
+            order: opt.aorder, gap: opt.gap, round: opt.round, bg: opt.bg, blur: opt.blur, dim: opt.dim, bgColor: opt.bgColor, accent: opt.accent,
+            titles: true, rating: opt.rating, platformChip: opt.platformChip, completed: false, title: opt.title
+        };
+    }
+
     function describe() {
+        if (opt.key === 'games' && opt.type === 'ach') return describeAch();
         const all = filtered(), t = T[lang()], isGames = opt.key === 'games';
         const sorted = ordered(all.slice());
         const cap = opt.grid === 'auto' ? 49 : opt.grid === 'all' ? 300 : Number(opt.grid) ** 2;
@@ -637,10 +744,11 @@
     const seg = (id, rows) => `<div class="hx-seg flex-wrap" id="${id}">${rows.map(([k, l]) => `<button type="button" data-v="${k}">${l}</button>`).join('')}</div>`;
     const chk = (id, label, cls = '') => `<label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer ${cls}"><input type="checkbox" id="${id}" class="accent-purple-500"> ${label}</label>`;
     const LBL = 'text-[10px] uppercase font-black tracking-widest text-gray-500 mb-2';
+    const HINT = 'text-[11px] text-gray-500 mt-1.5';
     const SEL = 'w-full bg-white/5 p-2.5 rounded-xl border border-white/10 text-white text-sm';
     const BTN = 'bg-white/5 border border-white/10 hover:bg-white/10 text-white px-3 py-2 rounded-xl text-sm font-bold transition-all';
 
-    const SEGS = { 'sc-format': 'format', 'sc-order': 'order', 'sc-grid': 'grid', 'sc-bg': 'bg', 'sc-round': 'round', 'sc-gap': 'gap' };
+    const SEGS = { 'sc-type': 'type', 'sc-aorder': 'aorder', 'sc-format': 'format', 'sc-order': 'order', 'sc-grid': 'grid', 'sc-bg': 'bg', 'sc-round': 'round', 'sc-gap': 'gap' };
     const CHKS = { 'sc-titles': 'titles', 'sc-rating': 'rating', 'sc-chip': 'platformChip', 'sc-done': 'completed', 'sc-cover': 'withCover', 'sc-stats': 'stats', 'sc-name': 'name', 'sc-price': 'price' };
     const TXTS = { 'sc-title': 'title', 'sc-caption': 'caption' };
 
@@ -664,17 +772,21 @@
                         ${seg('sc-tabs', [['main', 'Основное'], ['bg', 'Фон'], ['tiles', 'Плитки'], ['text', 'Текст']])}
 
                         <div data-panel="main" class="space-y-4">
-                            <div><p class="${LBL}">Формат</p>${seg('sc-format', [['story', '📱 Телефон 1080×1920'], ['wide', '🖥 ПК 1920×1080']])}</div>
-                            <div><p class="${LBL}">Порядок</p>${seg('sc-order', [['best', 'Лучшие по оценке'], ['recent', 'Недавно добавленные'], ['alpha', 'По алфавиту'], ['price', 'Сначала дорогие'], ['random', '🎲 Случайно']])}</div>
-                            <div><p class="${LBL}">Сколько обложек (сетка)</p>${seg('sc-grid', [['auto', 'Авто'], ['3', '3×3'], ['4', '4×4'], ['5', '5×5'], ['6', '6×6'], ['7', '7×7'], ['8', '8×8'], ['10', '10×10'], ['12', '12×12'], ['all', 'Все']])}</div>
+                            <div id="sc-type-box" class="hidden"><p class="${LBL}">Что показать</p>${seg('sc-type', [['games', '🎮 Игры'], ['ach', '🏆 Достижения']])}
+                                <p class="${HINT}" id="sc-type-hint"></p></div>
+                            <div><p class="${LBL}">Формат</p>${seg('sc-format', [['story', '📱 Телефон 1080×1920'], ['wide', '🖥 ПК 1920×1080']])}<p class="${HINT}">Телефон — для истории, ПК — для обоев.</p></div>
+                            <div id="sc-aorder-box" class="hidden"><p class="${LBL}">Порядок платин</p>${seg('sc-aorder', [['recent', 'Сначала свежие'], ['oldest', 'Сначала старые'], ['alpha', 'По алфавиту'], ['random', '🎲 Случайно']])}</div>
+                            <div id="sc-order-box"><p class="${LBL}">Порядок</p>${seg('sc-order', [['best', 'Лучшие по оценке'], ['recent', 'Недавно добавленные'], ['alpha', 'По алфавиту'], ['price', 'Сначала дорогие'], ['random', '🎲 Случайно']])}</div>
+                            <div><p class="${LBL}">Сколько обложек (сетка)</p>${seg('sc-grid', [['auto', 'Авто'], ['3', '3×3'], ['4', '4×4'], ['5', '5×5'], ['6', '6×6'], ['7', '7×7'], ['8', '8×8'], ['10', '10×10'], ['12', '12×12'], ['all', 'Все']])}<p class="${HINT}">«Авто» — до 49 обложек, плитки покрупнее.</p></div>
                             <div id="sc-games" class="sc-only-games grid grid-cols-2 gap-3 hidden">
                                 <div><p class="${LBL}">Платформа</p><select id="sc-platform" class="${SEL}"></select></div>
                                 <div><p class="${LBL}">Статус</p><select id="sc-status" class="${SEL}"></select></div>
                             </div>
-                            <div class="grid grid-cols-2 gap-3 items-end">
+                            <details id="sc-more" class="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2"><summary class="cursor-pointer text-sm font-bold text-gray-300 select-none">Ещё настройки</summary>
+                            <div class="grid grid-cols-2 gap-3 items-end mt-3">
                                 <div><p class="${LBL}">Оценка</p><select id="sc-minrating" class="${SEL}"><option value="0">Любая</option><option value="3">★ 3 и выше</option><option value="4">★ 4 и выше</option><option value="5">Только ★ 5</option></select></div>
                                 ${chk('sc-cover', 'Только с обложками', 'pb-2.5')}
-                            </div>
+                            </div></details>
                         </div>
 
                         <div data-panel="bg" class="space-y-4 hidden">
@@ -726,6 +838,11 @@
                 </div>
             </div>`;
         document.body.appendChild(modal);
+        if (!document.getElementById('sc-css')) {
+            const st = document.createElement('style'); st.id = 'sc-css';
+            st.textContent = '@media(max-width:639px){#sc-prev{position:sticky;top:-8px;z-index:5;padding:6px 0;background:rgba(14,12,24,.96)}#sc-img{max-height:34vh;width:auto!important;margin:0 auto;display:block}}#sc-more>summary{list-style:none}#sc-more[open]>summary{margin-bottom:2px}';
+            document.head.appendChild(st);
+        }
 
         $('sc-tabs').addEventListener('click', e => {
             const b = e.target.closest('[data-v]'); if (!b) return;
@@ -772,12 +889,12 @@
         $('sc-reset').addEventListener('click', () => { Object.assign(opt, clone(DEF)); saveOpts(); syncControls(); refresh(); });
         $('sc-save').onclick = () => {
             if (!blob) return;
-            const a = document.createElement('a'); a.href = url; a.download = `mirvel-${opt.key}-${opt.format}.png`;
+            const a = document.createElement('a'); a.href = url; a.download = `mirvel-${fname()}-${opt.format}.png`;
             document.body.appendChild(a); a.click(); a.remove();
         };
         $('sc-send').onclick = async () => {
             if (!blob) return;
-            try { await navigator.share({ files: [new File([blob], `mirvel-${opt.key}-${opt.format}.png`, { type: 'image/png' })] }); }
+            try { await navigator.share({ files: [new File([blob], `mirvel-${fname()}-${opt.format}.png`, { type: 'image/png' })] }); }
             catch (e) { if (e && e.name !== 'AbortError') showToast('Не удалось поделиться — скачайте картинку', 'error'); }
         };
         modal.addEventListener('mousedown', e => { if (e.target === modal) closeModal('share-collection-modal'); });
@@ -789,6 +906,7 @@
         return modal;
     }
 
+    const fname = () => (opt.key === 'games' && opt.type === 'ach' ? 'achievements' : opt.key);
     function syncControls() {
         if (!modal) return;
         Object.keys(SEGS).forEach(id => $(id).querySelectorAll('[data-v]').forEach(b => b.classList.toggle('is-on', b.dataset.v === opt[SEGS[id]])));
@@ -806,13 +924,19 @@
         $('sc-photo-del').classList.toggle('hidden', !photo.img);
         $('sc-blur-box').classList.toggle('hidden', opt.bg !== 'cover' && opt.bg !== 'photo');
         $('sc-color-box').classList.toggle('hidden', opt.bg !== 'solid');
+        const isG = opt.key === 'games', isA = isG && opt.type === 'ach';
+        $('sc-type-box').classList.toggle('hidden', !isG);
+        $('sc-type-hint').textContent = isA ? 'Витрина платин: обложки, трофейный уровень, число ачивок и последние платины.' : 'Мозаика обложек всей коллекции игр.';
+        $('sc-aorder-box').classList.toggle('hidden', !isA);
+        $('sc-order-box').classList.toggle('hidden', isA);
+        $('sc-more').classList.toggle('hidden', isA);
         const wide = opt.format === 'wide';
         $('sc-prev').style.maxWidth = wide ? '480px' : '300px';
         $('sc-img').style.aspectRatio = wide ? '16/9' : '9/16';
     }
 
     function fillGameFilters() {
-        const isGames = opt.key === 'games';
+        const isGames = opt.key === 'games' && opt.type !== 'ach';
         modal.querySelectorAll('.sc-only-games').forEach(el => el.classList.toggle('hidden', !isGames));
         if (!isGames) return;
         const games = (data.games || []).filter(g => !isGameHidden(g));
@@ -849,11 +973,12 @@
         } finally { if (my === token) img.style.opacity = '1'; }
     }
 
-    function open(key) {
+    function open(key, type) {
         if (!KINDS[key]) return;
-        if (!(data[key] || []).length) { showToast('В коллекции пока пусто'); return; }
+        const ach = key === 'games' && type === 'ach';
+        if (!ach && !(data[key] || []).length) { showToast('В коллекции пока пусто'); return; }
         if (opt.key !== key) { opt.platform = ''; opt.status = ''; }
-        opt.key = key;
+        opt.key = key; opt.type = ach ? 'ach' : 'games';
         ensureModal();
         fillGameFilters();
         syncControls();
@@ -874,13 +999,25 @@
             b.className = 'bg-white/5 border border-white/10 hover:bg-white/10 text-white p-3 rounded-xl text-sm font-bold transition-all';
             b.title = 'Картинка для истории и рабочего стола';
             b.textContent = '📤 Поделиться';
-            b.addEventListener('click', () => open(key));
+            b.addEventListener('click', () => open(key, 'games'));
             bar.insertBefore(b, bar.firstChild);
         });
     }
 
+    function addAchButton() {
+        const bar = document.querySelector('#achievements > div:first-child');
+        if (!bar || bar.querySelector('[data-share-ach]')) return;
+        const b = document.createElement('button');
+        b.type = 'button'; b.dataset.shareAch = '1';
+        b.className = 'bg-white/5 border border-white/10 hover:bg-white/10 text-white px-4 py-3 rounded-xl text-sm font-bold transition-all shrink-0';
+        b.title = 'Картинка с платинами и достижениями';
+        b.textContent = '📤 Поделиться';
+        b.addEventListener('click', () => open('games', 'ach'));
+        bar.appendChild(b);
+    }
+
     const renderBase = renderAll;
-    renderAll = function () { renderBase(); addButtons(); };
-    addButtons();
+    renderAll = function () { renderBase(); addButtons(); addAchButton(); };
+    addButtons(); addAchButton();
     updateUI();
 })();

@@ -549,8 +549,8 @@
         btn.type = 'button';
         btn.id = 'mh-copy-games-btn';
         btn.className = viewBtn ? viewBtn.className : 'mh-btn';
-        btn.title = 'Скопировать названия игр (например, для нейросети)';
-        btn.textContent = '📋 Копировать';
+        btn.title = 'Скопировать названия игр списком (например, для нейросети)';
+        btn.textContent = '📋 Список для нейросети';
         btn.addEventListener('click', open);
         if (viewBtn) viewBtn.insertAdjacentElement('beforebegin', btn);
         else (sec.firstElementChild || sec).appendChild(btn);
