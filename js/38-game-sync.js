@@ -38,11 +38,16 @@
     const primaryOf = g => groupOf(g).find(x => opts(x).prio) || null;
     function setPrimary(g, id) { groupOf(g).forEach(x => setOpt(x, { prio: id != null && x.id === id })); }
 
-    /* ---------- слияние ---------- */
-    const DLC_FIELDS = ['title', 'type', 'price', 'date', 'owned', 'done', 'note', 'url', 'img', 'from', 'free', 'giftFrom', 'rating', 'status', 'approx'];
-    function copyDlc(src, from) { const r = { id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5) }; DLC_FIELDS.forEach(k => { if (src[k] !== undefined) r[k] = Array.isArray(src[k]) ? [...src[k]] : src[k]; }); if (!r.from || !r.from.length) r.from = from && from.platform ? [from.platform] : []; return r; }
+    /* ---------- слияние ----------
+       Общий «каталог» дополнения (название, тип, картинка, ссылка, заметка, оценка) синхронизируется между версиями.
+       Личное по версии — «есть/нет», дата, цена, статус прохождения, подарок/бесплатно, платформа — у каждой версии своё:
+       DLC может быть куплено в PS5, но не в Steam. */
+    const DLC_SHARED = ['title', 'type', 'img', 'url', 'note', 'rating'];
+    const DLC_OWN = ['owned', 'date', 'price', 'approx', 'free', 'giftFrom', 'status', 'done', 'from'];
+    /** новая запись у другой версии: каталог копируется, «куплено» — нет (по умолчанию «Хочу купить» на этой платформе) */
+    function copyDlc(src, to) { const r = { id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), owned: false, from: to && to.platform ? [to.platform] : [] }; DLC_SHARED.forEach(k => { if (src[k] !== undefined) r[k] = src[k]; }); return r; }
 
-    /** источник правды — g: добавляет недостающие дополнения и обновляет совпавшие по названию */
+    /** источник правды — g: добавляет недостающие дополнения (как «не куплено») и обновляет общие поля совпавших по названию */
     function pushDlcs(g, overwrite) {
         if (!opts(g).dlcs) return 0;
         let changed = 0;
@@ -51,13 +56,21 @@
             if (!Array.isArray(s.dlcs)) s.dlcs = [];
             dlcsOf(g).forEach(d => {
                 const ex = s.dlcs.find(x => normT(x.title) === normT(d.title));
-                if (!ex) { s.dlcs.push(copyDlc(d, g)); changed++; }
-                else if (overwrite) { DLC_FIELDS.forEach(k => { if (k === 'from') return; if (d[k] !== undefined && ex[k] !== d[k]) { ex[k] = d[k]; changed++; } }); }
-                else DLC_FIELDS.forEach(k => { if ((ex[k] === undefined || ex[k] === '' || ex[k] === 0) && d[k]) { ex[k] = d[k]; changed++; } });
+                if (!ex) { s.dlcs.push(copyDlc(d, s)); changed++; }
+                else if (overwrite) { DLC_SHARED.forEach(k => { if (d[k] !== undefined && d[k] !== '' && ex[k] !== d[k]) { ex[k] = d[k]; changed++; } }); }
+                else DLC_SHARED.forEach(k => { if ((ex[k] === undefined || ex[k] === '' || ex[k] === 0) && d[k]) { ex[k] = d[k]; changed++; } });
             });
         });
         return changed;
     }
+    /** где ещё есть это дополнение: для подписи на карточке («PS5 ✓ · Steam ✗») */
+    window.mhDlcOtherVersions = (g, d) => {
+        if (!g || !d || !opts(g).dlcs) return [];
+        return siblings(g).filter(s => opts(s.g).dlcs).map(s => {
+            const x = dlcsOf(s.g).find(y => normT(y.title) === normT(d.title));
+            return x ? { platform: s.g.platform || 'Другое', owned: !!x.owned } : null;
+        }).filter(Boolean);
+    };
     /** полная синхронизация: сначала собираем недостающее со всех, потом раздаём */
     function syncAll(g) {
         let n = 0;
@@ -208,7 +221,7 @@
                     siblings(g).forEach(({ g: s }) => {
                         if (!opts(s).dlcs || !Array.isArray(s.dlcs)) return;
                         const before = s.dlcs.length;
-                        s.dlcs = s.dlcs.filter(x => normT(x.title) !== normT(l.d.title));
+                        s.dlcs = s.dlcs.filter(x => normT(x.title) !== normT(l.d.title) || x.owned);   // купленное на другой платформе не трогаем
                         n += before - s.dlcs.length;
                     });
                     window.__mhLastDlc = null;

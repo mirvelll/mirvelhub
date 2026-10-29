@@ -190,9 +190,10 @@
     }
     const priceText = d => { const n = num(d.price); return n ? `${d.approx ? '~' : ''}${money(n)}` : (d.owned && !kindOf(d) ? 'без цены' : ''); };
 
-    function dlcItemHTML(d) {
+    function dlcItemHTML(d, g) {
         const t = TYPES[d.type] || TYPES.dlc;
-        const from = Array.isArray(d.from) ? d.from : [];
+        const from = Array.isArray(d.from) && d.from.length ? d.from : (g && g.platform ? [g.platform] : []);   // пусто → платформа самой версии
+        const others = (window.mhDlcOtherVersions && g ? window.mhDlcOtherVersions(g, d) : []);
         const k = kindOf(d), st = stOf(d), S = st ? ST[st] : null;
         const meta = [t.label, k ? '' : priceText(d), d.date ? fmtDate(d.date) : ''].filter(Boolean).map(esc).join(' · ');
         const link = d.url && /^https?:\/\//i.test(d.url) ? d.url : '';
@@ -207,6 +208,7 @@
                 <p>${meta}</p>
                 ${who}
                 ${from.length ? `<div class="gdx-from"><span class="text-[10px] text-gray-500">из</span>${from.map(pill).join('')}</div>` : ''}
+                ${others.length ? `<div class="gdx-from"><span class="text-[10px] text-gray-500">на других версиях</span>${others.map(o => `${pill(o.platform)}<span class="text-[11px] font-black" style="color:${o.owned ? '#34d399' : '#9ca3af'}">${o.owned ? '✓' : '✗'}</span>`).join('')}</div>` : ''}
                 ${d.note ? `<div class="gdx-note">${esc(d.note)}</div>` : ''}
                 <div class="gdx-acts mt-auto" style="justify-content:flex-start">
                     <button type="button" class="gdx-btn${d.owned ? ' is-on' : ''}" data-act="dlc-own" aria-pressed="${!!d.owned}" title="Есть ли дополнение в библиотеке">${d.owned ? '✓ Есть' : '🛒 Хочу купить'}</button>
@@ -279,7 +281,7 @@
             </div>
             ${sum.length ? `<div class="gdx-sum">${sum.map(x => `<span>${x}</span>`).join('')}${play.length ? `<span class="gdx-bar" title="Пройдено ${doneN} из ${play.length}"><i style="width:${Math.round(doneN / play.length * 100)}%"></i></span>` : ''}</div>` : ''}
             ${chips ? `<div class="gdx-flt">${chips}</div>` : ''}
-            ${sorted.length ? `<div class="gdx-grid">${sorted.map(dlcItemHTML).join('')}</div>`
+            ${sorted.length ? `<div class="gdx-grid">${sorted.map(d => dlcItemHTML(d, g)).join('')}</div>`
                 : '<p class="gdx-empty">Дополнений пока нет. Появилось DLC, сезонный пропуск или саундтрек — добавьте сюда. Подарки, бесплатные, из семьи/аккаунта друга, по коду и из наборов в «потрачено» не считаются.</p>'}
             ${formOpen ? formHTML(g) : ''}
         </div>`;
