@@ -119,15 +119,31 @@
         none: t => !t.r
     };
 
-    /** Разбор текста «1. Название 3:45» построчно; строка «# Сторона B» — заголовок секции */
+    /** Строка-заголовок секции без «#»: «Сторона B», «Side A», «Disc 2», «LP 1 · Сторона A», «Бонус-треки» */
+    const SECTION_RE = /^(?:(?:сторона|side|диск|disc|disk|cd|lp|пластинка|vinyl|record)\s*[A-Za-zА-Яа-я]?\d*(?:\s*[·:\-–—(].*)?|бонус[\w\- ]{0,30}|bonus[\w\- ]{0,30})\s*:?$/i;
+    const SEC_TITLE = l => l.replace(/^#+\s*/, '').replace(/\s*:$/, '').slice(0, 80) || '—';
+
+    /** Разбор текста «1. Название 3:45» построчно. Секции: «# Сторона B» или просто «Сторона B» / «Side B» / «Disc 2»;
+        буквенные номера A1, A2, B1… тоже сами создают секции «Сторона A», «Сторона B». Блоки ``` и маркдаун чистятся. */
     function parseTracks(text) {
+        const lines = String(text || '').split(/\r?\n/)
+            .filter(l => !/^\s*```/.test(l))
+            .map(l => l.replace(/^\s*(?:[-*•]\s+)/, '').replace(/\*\*|__|`/g, '').trim())
+            .filter(Boolean);
+        const isSec = l => l[0] === '#' || (SECTION_RE.test(l) && !/\d:\d{2}$/.test(l));
+        const explicit = lines.some(isSec);
         const out = [];
-        String(text || '').split(/\r?\n/).forEach(raw => {
-            let s = raw.trim();
-            if (!s) return;
-            if (s[0] === '#') { out.push({ id: newTid(), sep: true, t: s.replace(/^#+\s*/, '').slice(0, 80) || '—' }); return; }
+        let side = '';
+        lines.forEach(raw => {
+            let s = raw;
+            if (isSec(s)) { out.push({ id: newTid(), sep: true, t: SEC_TITLE(s) }); return; }
             if (/^\d{1,3}[.)]?$/.test(s)) return; // пустой шаблон «1. »
-            s = s.replace(/^(?:\d{1,3}|[A-Za-z]\d{1,2})\s*[.)]\s+/, '').replace(/^\d{1,3}\s+[-–—]\s+/, '');
+            const sm = /^([A-Za-z])(\d{1,2})\s*[.)\-–—]\s+/.exec(s);
+            if (sm && !explicit) {
+                const L = sm[1].toUpperCase();
+                if (L !== side) { side = L; out.push({ id: newTid(), sep: true, t: `Сторона ${L}` }); }
+            }
+            s = s.replace(/^(?:\d{1,3}|[A-Za-z]\d{1,2})\s*[.)]\s+/, '').replace(/^(?:\d{1,3}|[A-Za-z]\d{1,2})\s+[-–—]\s+/, '');
             let d = '';
             const m = /[\s\t]+[(\[]?(\d{1,2}(?::\d{2}){1,2})[)\]]?$/.exec(s);
             if (m) { d = m[1]; s = s.slice(0, m.index).trim(); }
@@ -220,12 +236,13 @@
             ${tr.length > 3 ? `<div class="tr-flt">${FLT_LABELS.map(([k, t]) => `<button type="button" class="gd-pchip${trFilter === k ? ' is-on' : ''}" data-act="trflt" data-v="${k}">${t}</button>`).join('')}</div>` : ''}
             ${rows ? `<div class="tr-list">${rows}</div>` : (tr.length ? '<p class="text-xs text-gray-500 mt-3">В этом фильтре ничего нет.</p>' : '')}
             <div class="flex gap-2 mt-3">
-                <input id="tr-new" class="gd-input" maxlength="120" placeholder="Название трека — Enter, чтобы добавить" aria-label="Новый трек">
+                <input id="tr-new" class="gd-input" maxlength="120" placeholder="Название трека — Enter; можно вставить сразу весь список" aria-label="Новый трек">
                 <button type="button" class="gd-tool shrink-0" data-act="tradd">＋ Трек</button>
             </div>
             ${trBulk ? `<div class="mt-3">
-                <textarea id="tr-bulk" class="gd-input gd-note" style="min-height:140px" placeholder="1. Название 3:45&#10;2. Другой трек 4:02&#10;# Сторона B&#10;3. Ещё один 2:58"></textarea>
-                <p class="text-[11px] text-gray-500 mt-1">Номера и время (3:45) подхватятся сами. Строка с «#» — заголовок секции.</p>
+                <textarea id="tr-bulk" class="gd-input gd-note" style="min-height:140px" placeholder="Сторона A&#10;1. Название 3:45&#10;2. Другой трек 4:02&#10;Сторона B&#10;3. Ещё один 2:58"></textarea>
+                <p id="tr-bulk-info" class="text-[11px] text-emerald-400 mt-1 min-h-[1em]"></p>
+                <p class="text-[11px] text-gray-500 mt-1">Номера и время (3:45) подхватятся сами. «Сторона B», «Side A», «Disc 2», «# Любой заголовок» — станут секциями (A1, A2, B1… тоже разделят на стороны). Рамку из нейросети (три апострофа) можно не вырезать.</p>
                 <div class="flex flex-wrap gap-2 mt-2">
                     <button type="button" class="gd-tool" data-act="trbulkgo" data-v="add">＋ Добавить в конец</button>
                     ${tr.length ? '<button type="button" class="gd-tool is-danger" data-act="trbulkgo" data-v="replace">Заменить список (оценки совпавших сохранятся)</button>' : ''}
@@ -303,7 +320,11 @@
                 <button type="button" class="gd-tool" data-act="edit">✏️ Изменить</button>
                 ${link ? `<a class="gd-tool text-center" href="${esc(link)}" target="_blank" rel="noopener noreferrer">🔗 Ссылка</a>` : ''}
                 <button type="button" class="gd-tool is-danger" data-act="del">🗑 Удалить</button>
-                <button type="button" class="gd-tool" data-act="close" aria-label="Закрыть">✕</button>
+                <div class="flex gap-2 sm:justify-end">
+                    <button type="button" class="gd-tool" data-act="nav" data-v="-1" aria-label="Предыдущий релиз" title="Предыдущий (←)">‹</button>
+                    <button type="button" class="gd-tool" data-act="nav" data-v="1" aria-label="Следующий релиз" title="Следующий (→)">›</button>
+                    <button type="button" class="gd-tool" data-act="close" aria-label="Закрыть">✕</button>
+                </div>
             </div>
         </div>
 
@@ -356,6 +377,30 @@
         if (sc) sc.scrollTop = top;
     }
 
+    /** соседние релизы — в том порядке, в каком карточки стоят в сетке (с учётом поиска и сортировки) */
+    function go(dir) {
+        if (!cur) return;
+        flushNote();
+        const gid = cur.key === 'cds' ? 'cd-grid' : 'vinyl-grid';
+        let ids = [...new Set([...document.querySelectorAll(`#${gid} [data-mid]`)].map(c => Number(c.dataset.mid)))];
+        if (!ids.includes(cur.id)) ids = (data[cur.key] || []).map(x => x.id);
+        if (ids.length < 2) return;
+        const next = ids[(ids.indexOf(cur.id) + dir + ids.length) % ids.length];
+        openDetail(cur.key, next);
+        if (detail.firstElementChild) detail.firstElementChild.scrollTop = 0;
+    }
+    document.addEventListener('keydown', e => {
+        if (detail.classList.contains('hidden') || !lightbox.classList.contains('hidden')) return;
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+        const t = e.target;
+        if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
+        const sh = document.getElementById('share-card-modal');
+        if (sh && !sh.classList.contains('hidden')) return;
+        e.preventDefault();
+        go(e.key === 'ArrowLeft' ? -1 : 1);
+    });
+
     function openDetail(key, id) {
         if (!KEYS.includes(key) || !find(key, id)) return;
         if (!cur || cur.key !== key || cur.id !== Number(id)) { trFilter = 'all'; trBulk = false; physOpen = false; }
@@ -378,6 +423,12 @@
     }
 
     body.addEventListener('input', e => {
+        if (e.target.id === 'tr-bulk') {
+            const info = $('tr-bulk-info'), ps = parseTracks(e.target.value);
+            const n = ps.filter(t => !t.sep).length, m = ps.length - n;
+            if (info) info.textContent = n ? `Распознано: ${n} треков${m ? `, секций: ${m}` : ''}` : '';
+            return;
+        }
         if (e.target.id !== 'md-note') return;
         dirty = true;
         const flag = $('md-saved');
@@ -418,14 +469,30 @@
     function addTrackFromInput() {
         const item = current(), inp = $('tr-new');
         if (!item || !inp) return;
-        const parsed = parseTracks(inp.value).filter(t => !t.sep);
-        if (!parsed.length) { inp.focus(); return; }
+        addParsed(parseTracks(inp.value));
+    }
+
+    /** добавить в конец разобранные треки/секции (из поля ввода, из вставки или из панели «списком») */
+    function addParsed(parsed) {
+        const item = current();
+        if (!item) return;
+        if (!parsed.length) { $('tr-new')?.focus(); return; }
         const list = tracksOf(item);
         if (list.length >= MAX_TRACKS) { showToast(`Максимум ${MAX_TRACKS} треков на релиз`, 'error'); return; }
         item.tracks = [...list, ...parsed].slice(0, MAX_TRACKS);
         persistData(); refreshTracks();
+        if (parsed.length > 1) showToast(`Добавлено треков: ${parsed.filter(t => !t.sep).length} 🎵`, 'success');
         $('tr-new')?.focus();
     }
+
+    /* вставка многострочного списка прямо в поле «Название трека» — раньше переносы строк терялись и всё слипалось в один трек */
+    body.addEventListener('paste', e => {
+        if (e.target.id !== 'tr-new') return;
+        const txt = ((e.clipboardData || window.clipboardData)?.getData('text')) || '';
+        if (!/\r?\n/.test(txt.trim())) return;
+        e.preventDefault();
+        addParsed(parseTracks(txt));
+    });
 
     onHidden(detail, () => {
         const wasOpen = cur != null;
@@ -561,6 +628,7 @@
                 break;
             }
             case 'trflt': trFilter = v; refreshTracks(); break;
+            case 'nav': go(Number(v)); break;
             case 'physedit': physOpen = !physOpen; refreshPhys(); break;
             case 'addphoto': fileInput.click(); break;
             case 'zoom':
