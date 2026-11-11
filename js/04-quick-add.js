@@ -81,7 +81,7 @@ function cyclePriority(id) {
     const item = data.wishlists.find(x => x.id === id);
     if (!item) return;
 
-    const priorities = ["🔥 Высокий", "⚡ Средний", "⏳ Низкий", ""];
+    const priorities = [...WISH_PRIOS.map(p => p.v), ""];
     let currentIdx = priorities.indexOf(item.priority || "");
     let nextIdx = (currentIdx + 1) % priorities.length;
     item.priority = priorities[nextIdx];

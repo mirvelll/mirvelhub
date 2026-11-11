@@ -140,6 +140,7 @@
     function decorateCards(key) {
         const cfg = SECTIONS[key], grid = $(cfg.grid);
         if (!grid) return;
+        if (key === 'wishlists') return;      // в «Желаемом» избранное не нужно (кнопка ⭐ мешала 🛒 набора покупки)
         for (const card of grid.children) {
             const id = card.dataset && card.dataset[cfg.attr];
             if (!id || card.querySelector(':scope > .mh-fav')) continue;
@@ -271,7 +272,7 @@
                 <span class="mh-row-year">${E(i.year || '')}</span>
                 <span class="mh-row-price">${E(priceOf(i))}</span>
                 <span class="mh-row-rate">${stars(i.rating)}</span>
-                <button type="button" class="mh-fav" data-k="${key}" data-id="${i.id}"></button>
+                ${key === 'wishlists' ? '' : `<button type="button" class="mh-fav" data-k="${key}" data-id="${i.id}"></button>`}
             </div>`;
         }).join('');
         syncFavButtons();

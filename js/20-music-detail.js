@@ -26,6 +26,7 @@
     let pendingReopen = null;  // после «Изменить» → «Сохранить» снова открываем страницу релиза
     let trFilter = 'all';      // фильтр трек-листа
     let trBulk = false;        // открыта ли панель «Вставить списком»
+    let trOpen = false;        // раскрыт ли раздел «Трек-лист» (по умолчанию свёрнут; пустой — всегда раскрыт)
     let physOpen = false;      // открыта ли форма «Об издании»
     let lastTrack = null;      // последний удалённый трек — можно вернуть
     let seq = 0;
@@ -222,10 +223,23 @@
             return FLT[trFilter](t) ? trackRowHTML(t, n, trFilter, tr.length < 2) : '';
         }).join('');
         const FLT_LABELS = [['all', 'Все'], ['fav', '♥ Любимые'], ['top', '★ 4–5'], ['low', '👎 1–2'], ['none', 'Без оценки']];
+        const st = trackStats(list);
+        const open = trOpen || !tr.length;     // пустой список раскрыт — сразу можно добавлять треки
+        const mini = tr.length ? [
+            `<span>${st.count} ${st.count === 1 ? 'трек' : (st.count >= 2 && st.count <= 4 ? 'трека' : 'треков')}</span>`,
+            st.rated ? `<span class="tr-mini-star">★ ${st.avg.toFixed(1)}</span>` : '',
+            st.favs ? `<span class="tr-mini-fav">♥ ${st.favs}</span>` : ''
+        ].filter(Boolean).join('') : '';
         return `
-            <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
-                <p class="gd-sec-title mb-0">🎵 Трек-лист${tr.length ? ` · ${tr.length}` : ''}
-                    ${undo ? '<button type="button" class="gd-tool ml-2 normal-case tracking-normal" data-act="trundo">↩ Вернуть трек</button>' : ''}</p>
+            <button type="button" class="tr-toggle" data-act="trtoggle" id="tr-toggle" aria-expanded="${open}" aria-controls="tr-body"${tr.length ? '' : ' aria-disabled="true"'}>
+                <span class="gd-sec-title mb-0">🎵 Трек-лист</span>
+                <span class="tr-mini-sum" id="tr-mini">${mini}</span>
+                <span class="tr-chev" aria-hidden="true">▾</span>
+            </button>
+            <div class="tr-collapse${open ? ' is-open' : ''}" id="tr-body"${open ? '' : ' inert'}><div class="tr-collapse-in">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-2 mt-3">
+                <p class="gd-sec-title mb-0">
+                    ${undo ? '<button type="button" class="gd-tool normal-case tracking-normal" data-act="trundo">↩ Вернуть трек</button>' : ''}</p>
                 <div class="flex flex-wrap gap-2">
                     ${imp ? `<button type="button" class="gd-tool" data-act="trimport">📥 Перенести из заметок (${imp.tracks.filter(t => !t.sep).length})</button>` : ''}
                     <button type="button" class="gd-tool" data-act="trbulk">${trBulk ? 'Скрыть' : '📋 Вставить списком'}</button>
@@ -247,7 +261,8 @@
                     <button type="button" class="gd-tool" data-act="trbulkgo" data-v="add">＋ Добавить в конец</button>
                     ${tr.length ? '<button type="button" class="gd-tool is-danger" data-act="trbulkgo" data-v="replace">Заменить список (оценки совпавших сохранятся)</button>' : ''}
                 </div>
-            </div>` : ''}`;
+            </div>` : ''}
+            </div></div>`;
     }
 
     function physInner(i) {
@@ -403,7 +418,7 @@
 
     function openDetail(key, id) {
         if (!KEYS.includes(key) || !find(key, id)) return;
-        if (!cur || cur.key !== key || cur.id !== Number(id)) { trFilter = 'all'; trBulk = false; physOpen = false; }
+        if (!cur || cur.key !== key || cur.id !== Number(id)) { trFilter = 'all'; trBulk = false; trOpen = false; physOpen = false; }
         cur = { key, id: Number(id) };
         renderDetail();
         detail.classList.remove('hidden');
@@ -480,6 +495,7 @@
         const list = tracksOf(item);
         if (list.length >= MAX_TRACKS) { showToast(`Максимум ${MAX_TRACKS} треков на релиз`, 'error'); return; }
         item.tracks = [...list, ...parsed].slice(0, MAX_TRACKS);
+        trOpen = true;
         persistData(); refreshTracks();
         if (parsed.length > 1) showToast(`Добавлено треков: ${parsed.filter(t => !t.sep).length} 🎵`, 'success');
         $('tr-new')?.focus();
@@ -573,7 +589,7 @@
                 const t = list[k], a = act.dataset.act;
                 if (a === 'trrate') t.r = t.r === Number(v) ? 0 : Number(v);
                 else if (a === 'trfav') t.f = !t.f;
-                else if (a === 'trdel') { lastTrack = { key: cur.key, id: item.id, track: t, idx: k }; list.splice(k, 1); }
+                else if (a === 'trdel') { lastTrack = { key: cur.key, id: item.id, track: t, idx: k }; list.splice(k, 1); trOpen = true; }
                 else {
                     const to = a === 'trup' ? k - 1 : k + 1;
                     if (to < 0 || to >= list.length) break;
@@ -611,7 +627,7 @@
                     parsed.forEach(t => { const o = !t.sep && old.get(t.t.toLowerCase()); if (o) { t.r = o.r || 0; t.f = !!o.f; if (!t.d) t.d = o.d || ''; } });
                     item.tracks = parsed.slice(0, MAX_TRACKS);
                 } else item.tracks = [...tracksOf(item), ...parsed].slice(0, MAX_TRACKS);
-                trBulk = false;
+                trBulk = false; trOpen = true;
                 persistData(); refreshTracks();
                 showToast(`Треков в списке: ${tracksOf(item).filter(x => !x.sep).length} 🎵`, 'success');
                 break;
@@ -623,11 +639,20 @@
                 item.note = imp.rest;
                 const ta = $('md-note'); if (ta) ta.value = imp.rest;
                 dirty = false; clearTimeout(noteTimer);
-                persistData(); refreshTracks();
+                trOpen = true; persistData(); refreshTracks();
                 showToast(`Перенёс треков из заметок: ${imp.tracks.filter(x => !x.sep).length} 🎵`, 'success');
                 break;
             }
             case 'trflt': trFilter = v; refreshTracks(); break;
+            case 'trtoggle': {
+                // без перерисовки: меняем класс на месте — работает плавная анимация высоты
+                if (act.getAttribute('aria-disabled') === 'true') break;
+                trOpen = !trOpen;
+                const b = $('tr-body');
+                act.setAttribute('aria-expanded', String(trOpen));
+                if (b) { b.classList.toggle('is-open', trOpen); if (trOpen) b.removeAttribute('inert'); else b.setAttribute('inert', ''); }
+                break;
+            }
             case 'nav': go(Number(v)); break;
             case 'physedit': physOpen = !physOpen; refreshPhys(); break;
             case 'addphoto': fileInput.click(); break;

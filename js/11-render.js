@@ -229,9 +229,8 @@ function renderAll() {
             } else if (activeSort === 'year_desc') {
                 return (parseInt(b.year) || 0) - (parseInt(a.year) || 0);
             } else if (activeSort === 'priority') {
-                // 🔥 Высокий → ⚡ Средний → ⏳ Низкий → без приоритета; внутри — дешёвые первыми
-                const rank = x => ({ '🔥 Высокий': 0, '⚡ Средний': 1, '⏳ Низкий': 2 }[x.priority] ?? 3);
-                return rank(a) - rank(b) || (a.price || 0) - (b.price || 0);
+                // 🚨 Очень нужно → 🔥 Высокий → ⚡ Средний → ⏳ Низкий → 🤷 Не обязательно → без приоритета; внутри — дешёвые первыми
+                return wishPrioRank(a) - wishPrioRank(b) || (a.price || 0) - (b.price || 0);
             }
             return 0;
         });
@@ -318,7 +317,7 @@ function renderAll() {
                 } else if (itemCat === 'gear') {
                     disc.className += " bg-amber-900 border-2 border-amber-500/30 flex items-center justify-center";
                     disc.innerHTML = `<span class="text-3xl">🔌</span>`;
-                } else if (['merch', 'collectible', 'event'].includes(itemCat)) {
+                } else if (['merch', 'collectible', 'event', 'book'].includes(itemCat)) {
                     const wc = WISH_CATS.find(c => c.id === itemCat);
                     disc.className += " border-2 flex items-center justify-center";
                     disc.style.background = wc.hex + '33'; disc.style.borderColor = wc.hex + '4d';
@@ -429,14 +428,47 @@ function renderAll() {
                         metaDetails.appendChild(gearDetails);
                     }
                 }
-if (key === 'wishlists' && i.priority) {
-                    // Кликабельный приоритет
-                    const prioDetails = document.createElement('button');
-                    prioDetails.className = "inline-block bg-white/5 border border-white/10 hover:border-purple-500/50 hover:bg-white/10 px-2 py-1 rounded-xl text-[8px] font-bold mt-1 text-yellow-400 transition-all active:scale-95";
-                    prioDetails.title = "Нажмите, чтобы изменить";
-                    prioDetails.innerHTML = `${esc(i.priority)} 🔄`;
-                    prioDetails.onclick = (e) => { e.stopPropagation(); cyclePriority(i.id); };
-                    metaDetails.appendChild(prioDetails);
+if (key === 'wishlists') {
+                    // Приоритет — крупная цветная плашка; по нажатию открывается меню выбора (56-wish-groups.js)
+                    const wp = WISH_PRIOS.find(p => p.v === i.priority);
+                    const prioBtn = document.createElement('button');
+                    prioBtn.type = 'button';
+                    prioBtn.className = 'wl-prio' + (wp ? '' : ' is-empty');
+                    prioBtn.dataset.wlPrio = i.id;
+                    if (wp) prioBtn.style.setProperty('--pc', wp.hex);
+                    prioBtn.title = 'Приоритет покупки — нажмите, чтобы выбрать';
+                    prioBtn.setAttribute('aria-haspopup', 'true');
+                    prioBtn.innerHTML = wp ? `<span class="wl-prio-ico">${wp.ico}</span>${esc(wp.short)}<span class="wl-prio-car">▾</span>` : `＋ Приоритет<span class="wl-prio-car">▾</span>`;
+                    metaDetails.appendChild(prioBtn);
+
+                    // хочу к дате / дата события, место, заметка, «дороже бюджета месяца»
+                    const chips = [];
+                    if (i.wantBy) {
+                        const d = new Date(i.wantBy + 'T00:00:00');
+                        if (!isNaN(d)) {
+                            const t0 = new Date(); t0.setHours(0, 0, 0, 0);
+                            const days = Math.round((d - t0) / 864e5);
+                            const ev = itemCat === 'event';
+                            const when = days > 1 ? `через ${days} дн.` : days === 1 ? 'завтра' : days === 0 ? 'сегодня' : (ev ? 'уже прошло' : `просрочено на ${-days} дн.`);
+                            const cls = days < 0 ? 'is-past' : days <= 7 ? 'is-soon' : '';
+                            chips.push(`<span class="wl-chip ${cls}" title="${esc(d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }))}">${ev ? '🎟' : '📅'} ${ev ? '' : 'к '}${esc(d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }))} · ${when}</span>`);
+                        }
+                    }
+                    if (i.eventPlace) chips.push(`<span class="wl-chip" title="Место">📍 ${esc(i.eventPlace)}</span>`);
+                    if ((Number(i.price) || 0) > (data.hobbyBudget || 2500)) chips.push(`<span class="wl-chip is-over" title="Цена выше месячного бюджета на хобби (${esc(data.hobbyBudget || 2500)} ₴)">💸 дороже бюджета месяца</span>`);
+                    if (chips.length) {
+                        const chipRow = document.createElement('div');
+                        chipRow.className = 'wl-chips';
+                        chipRow.innerHTML = chips.join('');
+                        metaDetails.appendChild(chipRow);
+                    }
+                    if (i.wishNote) {
+                        const wn = document.createElement('div');
+                        wn.className = 'wl-note';
+                        wn.title = i.wishNote;
+                        wn.innerText = `📝 ${i.wishNote}`;
+                        metaDetails.appendChild(wn);
+                    }
                 }
 
                 infoContainer.appendChild(metaDetails);
@@ -473,7 +505,7 @@ if (key === 'wishlists' && i.priority) {
                     } else if (itemCat === 'gear') {
                         catBadge.className += " bg-amber-500/20 text-amber-300 border border-amber-500/20";
                         catBadge.innerText = "🔌 Техника";
-                    } else if (['merch', 'collectible', 'event'].includes(itemCat)) {
+                    } else if (['merch', 'collectible', 'event', 'book'].includes(itemCat)) {
                         const wc = WISH_CATS.find(c => c.id === itemCat);
                         catBadge.style.cssText = `background:${wc.hex}33;color:${wc.hex};border:1px solid ${wc.hex}33`;
                         catBadge.innerText = `${wc.ico} ${wc.name}`;
@@ -534,7 +566,7 @@ if (key === 'wishlists' && i.priority) {
                 card.appendChild(footerContainer);
 
                 const actionsContainer = document.createElement('div');
-                actionsContainer.className = "absolute right-3 top-3 flex gap-1 opacity-0 group-hover:opacity-100 transition duration-350 z-20";
+                actionsContainer.className = key === 'wishlists' ? 'wl-acts' : "absolute right-3 top-3 flex gap-1 opacity-0 group-hover:opacity-100 transition duration-350 z-20";
 
                 const openNoteBtn = document.createElement('button');
                 openNoteBtn.className = "bg-black/80 hover:bg-black p-1.5 rounded-xl text-xs border border-white/10";
@@ -546,12 +578,14 @@ if (key === 'wishlists' && i.priority) {
                 editBtn.className = "bg-black/80 hover:bg-black p-1.5 rounded-xl text-xs border border-white/10";
                 editBtn.title = "Редактировать";
                 editBtn.innerText = "✏️";
+                if (key === 'wishlists') { editBtn.className = 'wl-edit'; editBtn.type = 'button'; editBtn.title = 'Изменить'; editBtn.dataset.tip = 'Изменить'; editBtn.setAttribute('aria-label', 'Изменить'); }
                 editBtn.onclick = (e) => { e.stopPropagation(); openModal(key, i.id); };
 
                 const delBtn = document.createElement('button');
                 delBtn.className = "bg-red-950/80 hover:bg-red-900 p-1.5 rounded-xl text-red-400 text-xs border border-red-500/25";
                 delBtn.title = "Удалить";
                 delBtn.innerText = "✕";
+                if (key === 'wishlists') { delBtn.className = 'wl-del'; delBtn.type = 'button'; delBtn.title = 'Удалить (можно вернуть кнопкой «↩ Вернуть»)'; delBtn.setAttribute('aria-label', 'Удалить'); }
                 delBtn.onclick = (e) => {
                     e.stopPropagation();
                     data[key] = data[key].filter(x => x.id !== i.id);

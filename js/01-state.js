@@ -7,6 +7,7 @@ const WISH_CATS = [
     { id: 'gear', ico: '🔌', name: 'Техника', hex: '#f59e0b' },
     { id: 'collectible', ico: '🗿', name: 'Коллекционки', hex: '#38bdf8' },
     { id: 'event', ico: '🎟', name: 'Концерты', hex: '#84cc16' },
+    { id: 'book', ico: '📚', name: 'Книги', hex: '#fb923c' },
     { id: 'other', ico: '🎁', name: 'Другое', hex: '#94a3b8' }
 ];
 const WISH_CAT_IDS = WISH_CATS.map(c => c.id);
@@ -17,6 +18,15 @@ function wishCat(i) {
     if (c && c !== 'music') return c;
     return /винил|vinyl/i.test(String((i && i.formatDetails) || '')) || (Number(i && i.price) || 0) >= WISH_VINYL_FROM ? 'vinyl' : 'cd';
 }
+// Приоритет покупки (поле priority — строка как раньше; старые значения продолжают работать, пустое = «без приоритета»)
+const WISH_PRIOS = [
+    { v: '🚨 Очень нужно', ico: '🚨', short: 'Очень нужно', hex: '#ef4444' },
+    { v: '🔥 Высокий', ico: '🔥', short: 'Высокий', hex: '#f97316' },
+    { v: '⚡ Средний', ico: '⚡', short: 'Средний', hex: '#eab308' },
+    { v: '⏳ Низкий', ico: '⏳', short: 'Низкий', hex: '#38bdf8' },
+    { v: '🤷 Не обязательно', ico: '🤷', short: 'Не обязательно', hex: '#94a3b8' }
+];
+function wishPrioRank(i) { const k = WISH_PRIOS.findIndex(p => p.v === (i && i.priority)); return k < 0 ? WISH_PRIOS.length : k; }
 const isMusCat = c => c === 'music' || c === 'cd' || c === 'vinyl';
 const defaultQuotes = [
     { id: 1, author: "Kurt Cobain", textOriginal: "Wanting to be someone else is a waste of the person you are.", textTranslation: "Желание быть кем-то другим — это растрата того, кто ты есть.", song: "" },

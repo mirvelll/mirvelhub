@@ -59,26 +59,81 @@
     #wishlist-grid>[data-mid]{position:relative}
     [data-bulk-active] .wp-btn{display:none}
     #wishlist-grid.wp-only>[data-mid]:not(.wp-in){display:none}
-    .wp-bar{position:fixed;left:50%;bottom:calc(1rem + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:60;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:.5rem .75rem;
-        max-width:calc(100vw - 1.5rem);padding:.65rem .9rem;border-radius:1.1rem;background:rgba(14,14,24,.96);border:1px solid rgba(34,211,238,.45);box-shadow:0 14px 40px rgba(0,0,0,.55);backdrop-filter:blur(12px)}
-    .wp-bar.hidden{display:none}
-    .wp-bar b{font-size:.8rem;color:#67e8f9;font-weight:800}
-    .wp-bar .wp-sum{font-size:.95rem;font-weight:900;color:#fff;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-    .wp-bar small{font-size:.7rem;color:#9ca3af}
-    .wp-bar button{font-size:.75rem;padding:.45rem .8rem;border-radius:.7rem;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.07);color:#e5e7eb;font-weight:700;cursor:pointer}
-    .wp-bar button:hover{background:rgba(255,255,255,.15)}
-    .wp-bar button.is-on{background:rgba(6,182,212,.25);border-color:rgba(34,211,238,.6);color:#fff}
+    .wp-bar{position:fixed;left:50%;bottom:calc(1rem + env(safe-area-inset-bottom,0px));z-index:60;display:flex;flex-direction:column;align-items:center;width:max-content;max-width:calc(100vw - 1.5rem);
+        transform:translate(-50%,28px);opacity:0;visibility:hidden;pointer-events:none;transition:transform .3s cubic-bezier(.2,.8,.2,1),opacity .25s ease,visibility 0s linear .3s}
+    .wp-bar.is-vis{transform:translate(-50%,0);opacity:1;visibility:visible;pointer-events:auto;transition-delay:0s}
+    .wp-pill{display:inline-flex;align-items:center;gap:.55rem;min-height:2.6rem;padding:.4rem .95rem;border-radius:999px;background:rgba(14,14,24,.96);border:1px solid rgba(34,211,238,.5);
+        box-shadow:0 10px 30px rgba(0,0,0,.5);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:#fff;font-size:.85rem;font-weight:800;cursor:pointer;transition:border-color .2s,background-color .2s,transform .15s}
+    .wp-pill:hover{border-color:rgba(34,211,238,.9);background:rgba(20,24,36,.98)}
+    .wp-pill:active{transform:scale(.97)}
+    .wp-pill:focus-visible,.wp-bar button:focus-visible{outline:2px solid #22d3ee;outline-offset:2px}
+    .wp-pill .wp-dot{color:#4b5563}
+    .wp-pill .wp-sum{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88rem;font-weight:900;color:#fff}
+    .wp-pill .wp-car{font-size:.75rem;color:#67e8f9;transition:transform .25s ease}
+    .wp-bar.is-open .wp-car{transform:rotate(180deg)}
+    .wp-bump{animation:wp-bump .35s ease}
+    @keyframes wp-bump{0%{transform:scale(1)}40%{transform:scale(1.18);color:#67e8f9}100%{transform:scale(1)}}
+    .wp-drawer{order:-1;display:grid;grid-template-rows:0fr;opacity:0;width:min(32rem,calc(100vw - 1.5rem));transition:grid-template-rows .25s ease,opacity .2s ease}
+    .wp-bar.is-open .wp-drawer{grid-template-rows:1fr;opacity:1}
+    .wp-drawer > div{min-height:0;overflow:hidden}
+    .wp-card{margin-bottom:.5rem;padding:.8rem .9rem;border-radius:1.1rem;background:rgba(14,14,24,.97);border:1px solid rgba(34,211,238,.4);box-shadow:0 14px 40px rgba(0,0,0,.55);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+        display:flex;flex-direction:column;gap:.6rem;max-height:min(60vh,26rem);overflow-y:auto}
+    .wp-head{display:flex;align-items:baseline;justify-content:space-between;gap:.6rem;flex-wrap:wrap}
+    .wp-parts{font-size:.8rem;font-weight:800;color:#e5e7eb}
+    .wp-card .wp-sum2{font-size:1.05rem;font-weight:900;color:#fff;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+    .wp-card small{font-size:.7rem;color:#9ca3af}
+    .wp-acts{display:flex;flex-wrap:wrap;gap:.4rem}
+    .wp-bar .wp-acts button{font-size:.75rem;padding:.5rem .8rem;min-height:2.25rem;border-radius:.7rem;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.07);color:#e5e7eb;font-weight:700;cursor:pointer}
+    .wp-bar .wp-acts button:hover{background:rgba(255,255,255,.15)}
+    .wp-bar .wp-acts button.is-on{background:rgba(6,182,212,.25);border-color:rgba(34,211,238,.6);color:#fff}
+    .wp-bar .wp-acts button[data-wp="copy"]{background:rgba(var(--theme-rgb),.28);border-color:rgba(var(--theme-rgb),.55);color:#fff}
+    #wishlists.has-wp{padding-bottom:4.5rem}
+    @media (prefers-reduced-motion:reduce){.wp-bar,.wp-drawer,.wp-pill .wp-car{transition:none}.wp-bump{animation:none}}
     #wishlist-grid .release-card{transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}
     #wishlist-grid>[data-mid]:hover .release-card{transform:translateY(-3px);box-shadow:0 14px 34px rgba(0,0,0,.45),0 0 0 1px rgba(var(--theme-rgb),.35)}
     #category-budget-breakdown [data-cat]{border-radius:1.1rem;background-image:linear-gradient(160deg,rgba(255,255,255,.04),transparent 60%)}
-    .wp-bar button[data-wp="copy"]{background:rgba(var(--theme-rgb),.28);border-color:rgba(var(--theme-rgb),.55);color:#fff}
     .wp-sub{margin-top:.25rem;font-size:9px;font-weight:700;color:#9ca3af;line-height:1.35}
     @media (max-width:767px){.wp-bar{bottom:calc(5rem + env(safe-area-inset-bottom,0px))}}`;
     document.head.appendChild(css2);
 
+    let expanded = false;       // панель по умолчанию свёрнута в маленькую «таблетку»
     const bar = document.createElement('div');
-    bar.className = 'wp-bar hidden'; bar.setAttribute('role', 'region'); bar.setAttribute('aria-label', 'Набор покупки');
+    bar.className = 'wp-bar'; bar.setAttribute('role', 'region'); bar.setAttribute('aria-label', 'Набор покупки');
+    bar.innerHTML = `<div class="wp-drawer" id="wp-drawer" inert><div><div class="wp-card">
+            <div class="wp-head"><span class="wp-parts" id="wp-parts"></span><span class="wp-sum2" id="wp-sum2"></span></div>
+            <small id="wp-months"></small>
+            <div class="wp-acts">
+                <button type="button" data-wp="only" id="wp-only">👁 Только набор</button>
+                <button type="button" data-wp="setcd" title="Поставить категорию «CD» всем музыкальным в наборе">→ 💿 CD</button>
+                <button type="button" data-wp="setvinyl" title="Поставить категорию «Винил» всем музыкальным в наборе">→ 💽 Винил</button>
+                <button type="button" data-wp="copy" title="Скопировать список набора текстом">📋 Скопировать</button>
+                <button type="button" data-wp="clear">Очистить</button>
+            </div>
+        </div></div></div>
+        <button type="button" class="wp-pill" id="wp-pill" aria-expanded="false" aria-controls="wp-drawer" title="Набор покупки — нажми, чтобы раскрыть">
+            <span>🛒</span><b id="wp-n">0</b><span class="wp-dot">·</span><span class="wp-sum" id="wp-sum">0 ₴</span><span class="wp-car" aria-hidden="true">▴</span>
+        </button>`;
     document.body.appendChild(bar);
+    const $w = id => bar.querySelector('#' + id);
+    const page = grid.closest('section');
+    let shownN = 0, shownSum = 0;
+    const reduce = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function tween(el, from, to, fmt) {
+        cancelAnimationFrame(el._raf); clearTimeout(el._fin);
+        el.textContent = fmt(to);   // сразу ставим итог: если анимация не доиграет (фоновая вкладка), сумма всё равно верная
+        if (reduce() || from === to || document.hidden) return;
+        const t0 = performance.now(), D = 320;
+        const step = now => { const k = Math.min(1, (now - t0) / D), e = 1 - Math.pow(1 - k, 3); el.textContent = fmt(from + (to - from) * e); if (k < 1) el._raf = requestAnimationFrame(step); else el.textContent = fmt(to); };
+        el._raf = requestAnimationFrame(step);
+        el._fin = setTimeout(() => { cancelAnimationFrame(el._raf); el.textContent = fmt(to); }, D + 120);
+    }
+    function bump(el) { el.classList.remove('wp-bump'); void el.offsetWidth; el.classList.add('wp-bump'); }
+    function setOpen(on) {
+        expanded = !!on;
+        bar.classList.toggle('is-open', expanded);
+        $w('wp-pill').setAttribute('aria-expanded', String(expanded));
+        const dr = $w('wp-drawer'); if (expanded) dr.removeAttribute('inert'); else dr.setAttribute('inert', '');
+    }
 
     function summary() {
         const sel = items().filter(i => plan.has(Number(i.id)));
@@ -112,18 +167,21 @@
 
     function paintBar() {
         const visible = plan.size > 0 && grid.offsetParent !== null;
-        bar.classList.toggle('hidden', !visible);
-        if (!visible) return;
-        const { sel, parts, total } = summary();
+        bar.classList.toggle('is-vis', visible);
+        if (page) page.classList.toggle('has-wp', visible);
+        if (!visible) { if (expanded) setOpen(false); if (!plan.size) { shownN = 0; shownSum = 0; } return; }
+        const { parts, total } = summary();
         const budget = (typeof data !== 'undefined' && data.hobbyBudget) || 2500;
+        // не заезжаем на панель массового режима
         bar.style.marginBottom = document.getElementById('bulk-bar')?.classList.contains('hidden') === false ? '3.8rem' : '';
-        bar.innerHTML = `<span>🛒 <b>Набор:</b> <b style="color:#fff">${parts.join(' · ') || '—'}</b></span>
-            <span class="wp-sum">${money(total)}</span><small>≈ ${(total / budget).toFixed(1)} мес. бюджета</small>
-            <button type="button" data-wp="only" class="${only ? 'is-on' : ''}">${only ? '👁 Показать все' : '👁 Только набор'}</button>
-            <button type="button" data-wp="setcd" title="Поставить категорию «CD» всем музыкальным в наборе">→ 💿 CD</button>
-            <button type="button" data-wp="setvinyl" title="Поставить категорию «Винил» всем музыкальным в наборе">→ 💽 Винил</button>
-            <button type="button" data-wp="copy" title="Скопировать список набора текстом">📋 Скопировать</button>
-            <button type="button" data-wp="clear">Очистить</button>`;
+        const n = plan.size;
+        if (n !== shownN) { $w('wp-n').textContent = n; bump($w('wp-n')); }
+        if (total !== shownSum) { tween($w('wp-sum'), shownSum, total, money); tween($w('wp-sum2'), shownSum, total, money); bump($w('wp-sum')); }
+        else { $w('wp-sum').textContent = money(total); $w('wp-sum2').textContent = money(total); }
+        shownN = n; shownSum = total;
+        $w('wp-parts').textContent = parts.join(' · ') || '—';
+        $w('wp-months').textContent = `≈ ${(total / budget).toFixed(1)} мес. бюджета`;
+        const ob = $w('wp-only'); ob.classList.toggle('is-on', only); ob.textContent = only ? '👁 Показать все' : '👁 Только набор';
     }
 
     grid.addEventListener('click', e => {
@@ -134,6 +192,7 @@
         save(); decorate();
     }, true);
     bar.addEventListener('click', e => {
+        if (e.target.closest('#wp-pill')) { setOpen(!expanded); return; }
         const b = e.target.closest('[data-wp]'); if (!b) return;
         if (b.dataset.wp === 'copy') {
             const { sel, parts, total } = summary();
@@ -150,14 +209,18 @@
             try { showToast(`Категория «${to === 'cd' ? 'CD' : 'Винил'}»: ${mus.length} шт.`, 'success'); } catch (_) {}
             return;
         }
-        if (b.dataset.wp === 'clear') { plan.clear(); only = false; save(); }
+        if (b.dataset.wp === 'clear') { plan.clear(); only = false; save(); setOpen(false); }
         else only = !only;
         decorate();
     });
 
     new MutationObserver(decorate).observe(grid, { childList: true });
     addEventListener('hashchange', () => setTimeout(paintBar, 60));
-    document.addEventListener('click', () => setTimeout(paintBar, 80));
+    document.addEventListener('click', e => {
+        if (expanded && !bar.contains(e.target) && !(e.target.closest && e.target.closest('.wp-btn'))) setOpen(false);
+        setTimeout(paintBar, 80);
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && expanded) { setOpen(false); $w('wp-pill').focus(); } });
     decorate();
 
 })();

@@ -332,7 +332,6 @@
         return { days: Math.round((d - t) / 864e5), d };
     }
     const hit = i => num(i.targetPrice) > 0 && num(i.price) > 0 && num(i.price) <= num(i.targetPrice);
-    const PRIO = { '🔥 Высокий': 0, '⚡ Средний': 1, '⏳ Низкий': 2 };
 
     function decorate() {
         const grid = $('wishlist-grid'); if (!grid) return;
@@ -383,7 +382,7 @@
         if (sortM === 'release') return r ? (r.days >= 0 ? r.days : 5000 - r.days) : 99999;
         if (sortM === 'deal') return hit(i) ? -100000 + num(i.price) : (num(i.targetPrice) > 0 && num(i.price) > 0 ? Math.round(num(i.price) - num(i.targetPrice)) : 99999);
         if (sortM === 'cheap') return num(i.price) || 99999;
-        if (sortM === 'prio') return (PRIO[i.priority] != null ? PRIO[i.priority] : 3) * 1000 + (r && r.days >= 0 ? Math.min(r.days, 999) : 999);
+        if (sortM === 'prio') return wishPrioRank(i) * 1000 + (r && r.days >= 0 ? Math.min(r.days, 999) : 999);
         return 0;
     }
 

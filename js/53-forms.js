@@ -15,9 +15,10 @@
 
     // подписи пунктов в списке: для вещей и общие (для желаемого)
     const STUFF = { clothing: '👕 Одежда', music: '🎵 Мерч (музыкальный)', gear: '🎧 Техника / Аудио', other: '📦 Другое' };
-    const WISHL = { cd: '💿 CD', vinyl: '💽 Винил', music: '💿 Музыка (CD / Винил)', merch: '🎤 Мерч (постеры, значки, сумки…)', clothing: '👕 Одежда', gear: '🔌 Техника / Аудио', collectible: '🗿 Коллекционки (стилбуки, фигурки, артбуки)', event: '🎟 Концерты и билеты', other: '🎁 Другое' };
-    const NEWC = ['merch', 'collectible', 'event', 'cd', 'vinyl'];   // эти категории только для «Желаемого»
+    const WISHL = { cd: '💿 CD', vinyl: '💽 Винил', music: '💿 Музыка (CD / Винил)', merch: '🎤 Мерч (постеры, значки, сумки…)', clothing: '👕 Одежда', gear: '🔌 Техника / Аудио', collectible: '🗿 Коллекционки (стилбуки, фигурки, артбуки)', event: '🎟 Концерты и билеты', book: '📚 Книги', other: '🎁 Другое' };
+    const NEWC = ['merch', 'collectible', 'event', 'book', 'cd', 'vinyl'];   // эти категории только для «Желаемого»
     const ARTIST_CATS = ['music', 'cd', 'vinyl', 'merch', 'event'];
+    const AUTHOR_CATS = ['book'];   // у книги поле «Исполнитель» работает как «Автор»
     const BRAND_PH = { collectible: 'Издатель / бренд (опционально)', clothing: 'Бренд (опционально)', gear: 'Бренд и модель устройства', other: 'Бренд / производитель (опционально)' };
     let mode = '';           // cds | vinyls | stuff | wishlists
 
@@ -41,19 +42,19 @@
         const cat = $('item-category') && $('item-category').value;
         if (!cat || cat === 'games') return;                         // «Игры» в желаемом настраивает 45-wishlist-games.js
         const artist = $('item-artist'), brand = $('item-brand'), gearBox = $('gear-fields-container');
-        const music = ARTIST_CATS.includes(cat);
+        const music = ARTIST_CATS.includes(cat), author = AUTHOR_CATS.includes(cat);
         const keepArtist = artist && artist.value.trim() && !music;  // старые данные не прячем
-        artist && artist.classList.toggle('hidden', !music && !keepArtist);
+        artist && artist.classList.toggle('hidden', !music && !author && !keepArtist);
         // бренд: у одежды, техники и «другого» (поле лежит в блоке техники)
         if (gearBox && brand) {
-            gearBox.classList.toggle('hidden', music);
+            gearBox.classList.toggle('hidden', music || author);
             brand.placeholder = BRAND_PH[cat] || BRAND_PH.other;
         }
-        const aa = $('aa-row'); if (aa) aa.style.display = (music || keepArtist) ? '' : 'none';   // «Фото артиста» — только для музыки
+        const aa = $('aa-row'); if (aa) aa.style.display = (music || (keepArtist && !author)) ? '' : 'none';   // «Фото артиста» — только для музыки
         const t = $('item-title');
-        const TITLE_PH = { merch: 'Название мерча', event: 'Название концерта / события', collectible: 'Название (стилбук, фигурка, артбук…)' };
+        const TITLE_PH = { merch: 'Название мерча', event: 'Название концерта / события', collectible: 'Название (стилбук, фигурка, артбук…)', book: 'Название книги' };
         if (t) t.placeholder = TITLE_PH[cat] || (['music', 'cd', 'vinyl'].includes(cat) ? (mode === 'stuff' || mode === 'wishlists' ? 'Название мерча / релиза' : 'Название альбома') : 'Название вещи');
-        if (artist) artist.placeholder = 'Исполнитель / Артист (опционально)';
+        if (artist) artist.placeholder = author ? 'Автор (опционально)' : 'Исполнитель / Артист (опционально)';
     }
 
     window.toggleCategoryFields = function () {
