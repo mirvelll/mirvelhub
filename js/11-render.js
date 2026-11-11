@@ -189,6 +189,7 @@ function renderAll() {
                 (i.label || '').toLowerCase().includes(query) ||
                 (i.whereBought || '').toLowerCase().includes(query) ||
                 (i.formatDetails || '').toLowerCase().includes(query) ||
+                (Array.isArray(i.tracks) && i.tracks.some(t => !t.sep && (t.t || '').toLowerCase().includes(query))) ||
                 (i.tags || []).some(t => (t.text || '').toLowerCase().includes(query)) ||
                 (i.year || '').toString().includes(query)
             );

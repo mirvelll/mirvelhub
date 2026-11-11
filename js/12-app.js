@@ -119,6 +119,11 @@ const PALETTE_ACTIONS = [
 let paletteEntries = [];
 let paletteIndex = 0;
 
+/** трек релиза, чьё название содержит запрос (для поиска по трек-листу) */
+function trackHit(item, q) {
+    return Array.isArray(item.tracks) ? item.tracks.find(t => t && !t.sep && String(t.t || '').toLowerCase().includes(q)) : null;
+}
+
 function buildPaletteEntries(query) {
     const q = query.trim().toLowerCase();
     const entries = [];
@@ -135,12 +140,12 @@ function buildPaletteEntries(query) {
             (data[sec.key] || [])
                 .filter(i => sec.key !== 'games' || !isGameHidden(i))
                 .filter(i => [i.title, i.artist, i.platform, i.brand, i.label, i.year, i.developer]
-                    .some(v => String(v ?? '').toLowerCase().includes(q)))
+                    .some(v => String(v ?? '').toLowerCase().includes(q)) || trackHit(i, q))
                 .slice(0, 6)
                 .forEach(i => entries.push({
                     icon: sec.icon,
                     title: i.title || 'Без названия',
-                    hint: `${sec.label}${i.artist || i.platform ? ' · ' + (i.artist || i.platform) : ''}${i.price ? ' · ' + i.price + ' ₴' : ''}`,
+                    hint: `${sec.label}${i.artist || i.platform ? ' · ' + (i.artist || i.platform) : ''}${i.price ? ' · ' + i.price + ' ₴' : ''}${trackHit(i, q) ? ' · 🎵 ' + trackHit(i, q).t : ''}`,
                     group: 'Коллекция',
                     run: () => jumpToItem(sec, i)
                 }));

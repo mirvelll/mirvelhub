@@ -2,7 +2,11 @@
    MIRVEL HUB — 20-music-detail.js (подключать после 19-features.js)
    Страница релиза для CD и винила (клик по карточке):
    • заметки и личное мнение (то же поле note, что раньше открывалось кнопкой 💬 — ничего не потеряется)
-   • шаблоны: впечатления, треклист, об издании
+   • шаблоны: впечатления, об издании
+   • ТРЕК-ЛИСТ (отдельный раздел): треки с оценкой ★1–5, ♥ «любимый», длительность, секции (Сторона A / Диск 2),
+     вставка списком, перенос старого треклиста из заметок — поле tracks[] ({id,t,d,r,f} или {id,sep,t})
+   • «Об издании» (физическая копия): кат. номер, штрихкод, страна, номер экземпляра, состояние конверта,
+     запечатан / автограф / лимитка — поле phys{}
    • фото (диск, конверт, буклет…) с галереей — поле photos[]
    • оценка, «Изменить», «Удалить» (с возвратом через «↩ Вернуть» внизу)
    Без статусов, ачивок и комплектности — это только для игр.
@@ -20,6 +24,12 @@
     let noteTimer = null;
     let lastPhoto = null;      // последнее удалённое фото — можно вернуть
     let pendingReopen = null;  // после «Изменить» → «Сохранить» снова открываем страницу релиза
+    let trFilter = 'all';      // фильтр трек-листа
+    let trBulk = false;        // открыта ли панель «Вставить списком»
+    let physOpen = false;      // открыта ли форма «Об издании»
+    let lastTrack = null;      // последний удалённый трек — можно вернуть
+    let seq = 0;
+    const MAX_TRACKS = 120;
 
     const find = (key, id) => (data[key] || []).find(x => x.id === Number(id));
     const current = () => (cur ? find(cur.key, cur.id) : null);
@@ -90,6 +100,181 @@
     fileInput.className = 'hidden';
     document.body.appendChild(fileInput);
 
+    /* =====================================================
+       Трек-лист: данные
+       ===================================================== */
+    const tracksOf = i => (Array.isArray(i?.tracks) ? i.tracks : []);
+    const newTid = () => 't' + Date.now().toString(36) + (seq++).toString(36);
+    const DUR_RE = /^\d{1,2}(?::\d{2}){1,2}$/;
+    const durSec = s => DUR_RE.test(s || '') ? String(s).split(':').reduce((a, n) => a * 60 + Number(n), 0) : 0;
+    const fmtDur = sec => {
+        const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
+        return h ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : `${m}:${String(s).padStart(2, '0')}`;
+    };
+    const FLT = {
+        all: () => true,
+        fav: t => t.f,
+        top: t => t.r >= 4,
+        low: t => t.r >= 1 && t.r <= 2,
+        none: t => !t.r
+    };
+
+    /** Разбор текста «1. Название 3:45» построчно; строка «# Сторона B» — заголовок секции */
+    function parseTracks(text) {
+        const out = [];
+        String(text || '').split(/\r?\n/).forEach(raw => {
+            let s = raw.trim();
+            if (!s) return;
+            if (s[0] === '#') { out.push({ id: newTid(), sep: true, t: s.replace(/^#+\s*/, '').slice(0, 80) || '—' }); return; }
+            if (/^\d{1,3}[.)]?$/.test(s)) return; // пустой шаблон «1. »
+            s = s.replace(/^(?:\d{1,3}|[A-Za-z]\d{1,2})\s*[.)]\s+/, '').replace(/^\d{1,3}\s+[-–—]\s+/, '');
+            let d = '';
+            const m = /[\s\t]+[(\[]?(\d{1,2}(?::\d{2}){1,2})[)\]]?$/.exec(s);
+            if (m) { d = m[1]; s = s.slice(0, m.index).trim(); }
+            s = s.slice(0, 120);
+            if (s) out.push({ id: newTid(), t: s, d, r: 0, f: false });
+        });
+        return out;
+    }
+
+    /** Старый треклист из заметок («🎵 Треклист:» + строки до пустой строки) */
+    function extractNoteTracks(note) {
+        const lines = String(note || '').split('\n');
+        const start = lines.findIndex(l => /^\s*🎵?\s*(трек-?лист|tracklist|track list)\s*:?\s*$/i.test(l));
+        if (start < 0) return null;
+        let end = start + 1;
+        while (end < lines.length && lines[end].trim() && !/^\s*(💬|💿|🎵)/.test(lines[end])) end++;
+        const tracks = parseTracks(lines.slice(start + 1, end).join('\n'));
+        if (!tracks.length) return null;
+        const rest = [...lines.slice(0, start), ...lines.slice(end)].join('\n').replace(/\n{3,}/g, '\n\n').trim();
+        return { tracks, rest };
+    }
+
+    function trackStats(list) {
+        const tr = list.filter(t => !t.sep);
+        const rated = tr.filter(t => t.r > 0);
+        const avg = rated.length ? rated.reduce((s, t) => s + t.r, 0) / rated.length : 0;
+        const secs = tr.map(t => durSec(t.d));
+        const total = tr.length && secs.every(s => s > 0) ? secs.reduce((a, b) => a + b, 0) : 0;
+        const best = rated.reduce((b, t) => (!b || t.r > b.r ? t : b), null);
+        return { count: tr.length, rated: rated.length, avg, favs: tr.filter(t => t.f).length, total, best };
+    }
+
+    function statsHTML(list) {
+        const s = trackStats(list);
+        if (!s.count) return '';
+        return [
+            `<span>${s.count} ${s.count === 1 ? 'трек' : 'треков'}</span>`,
+            s.total ? `<span>⏱ ${fmtDur(s.total)}</span>` : '',
+            s.rated ? `<span>★ <b>${s.avg.toFixed(1)}</b> средняя (${s.rated}/${s.count} оценено)</span>` : '<span>Оценок пока нет</span>',
+            s.favs ? `<span>♥ <b style="color:#f472b6">${s.favs}</b> любимых</span>` : '',
+            s.best && s.best.r >= 4 ? `<span>🔥 Лучший: <b style="color:#fff">${esc(s.best.t)}</b></span>` : ''
+        ].filter(Boolean).join('');
+    }
+
+    function trackRowHTML(t, n, flt, single) {
+        if (t.sep) {
+            return flt === 'all' ? `<div class="tr-sep">
+                <input class="tr-sep-t" data-tf="t" data-tid="${t.id}" value="${esc(t.t)}" maxlength="80" aria-label="Название секции">
+                <span class="tr-ctl"><button type="button" class="tr-mini" data-act="trup" data-tid="${t.id}" aria-label="Выше">↑</button><button type="button" class="tr-mini" data-act="trdn" data-tid="${t.id}" aria-label="Ниже">↓</button><button type="button" class="tr-mini" data-act="trdel" data-tid="${t.id}" aria-label="Удалить секцию">✕</button></span>
+            </div>` : '';
+        }
+        const r = t.r || 0;
+        const cls = r >= 4 || t.f ? ' is-top' : (r >= 1 && r <= 2 ? ' is-low' : '');
+        return `<div class="tr-row${cls}">
+            <span class="tr-n">${n}</span>
+            <input class="tr-t" data-tf="t" data-tid="${t.id}" value="${esc(t.t)}" maxlength="120" aria-label="Название трека">
+            <input class="tr-d" data-tf="d" data-tid="${t.id}" value="${esc(t.d || '')}" maxlength="8" placeholder="0:00" inputmode="numeric" aria-label="Длительность">
+            <span class="tr-ctl">
+                <span class="tr-stars" role="group" aria-label="Оценка трека">${[1, 2, 3, 4, 5].map(k => `<button type="button" class="tr-star${r >= k ? ' is-on' : ''}" data-act="trrate" data-tid="${t.id}" data-v="${k}" aria-label="Оценка ${k}">★</button>`).join('')}</span>
+                <button type="button" class="tr-fav${t.f ? ' is-on' : ''}" data-act="trfav" data-tid="${t.id}" aria-label="Любимый трек" aria-pressed="${t.f ? 'true' : 'false'}">♥</button>
+                ${single || flt !== 'all' ? '' : `<button type="button" class="tr-mini" data-act="trup" data-tid="${t.id}" aria-label="Выше">↑</button><button type="button" class="tr-mini" data-act="trdn" data-tid="${t.id}" aria-label="Ниже">↓</button>`}
+                <button type="button" class="tr-mini" data-act="trdel" data-tid="${t.id}" aria-label="Удалить трек">✕</button>
+            </span>
+        </div>`;
+    }
+
+    function tracksInner(i) {
+        const list = tracksOf(i);
+        const tr = list.filter(t => !t.sep);
+        const imp = !tr.length ? extractNoteTracks(i.note) : null;
+        const undo = lastTrack && lastTrack.key === cur?.key && lastTrack.id === i.id;
+        let n = 0;
+        const rows = list.map(t => {
+            if (t.sep) return trackRowHTML(t, 0, trFilter, false);
+            n++;
+            return FLT[trFilter](t) ? trackRowHTML(t, n, trFilter, tr.length < 2) : '';
+        }).join('');
+        const FLT_LABELS = [['all', 'Все'], ['fav', '♥ Любимые'], ['top', '★ 4–5'], ['low', '👎 1–2'], ['none', 'Без оценки']];
+        return `
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <p class="gd-sec-title mb-0">🎵 Трек-лист${tr.length ? ` · ${tr.length}` : ''}
+                    ${undo ? '<button type="button" class="gd-tool ml-2 normal-case tracking-normal" data-act="trundo">↩ Вернуть трек</button>' : ''}</p>
+                <div class="flex flex-wrap gap-2">
+                    ${imp ? `<button type="button" class="gd-tool" data-act="trimport">📥 Перенести из заметок (${imp.tracks.filter(t => !t.sep).length})</button>` : ''}
+                    <button type="button" class="gd-tool" data-act="trbulk">${trBulk ? 'Скрыть' : '📋 Вставить списком'}</button>
+                    <button type="button" class="gd-tool" data-act="trsep" title="Заголовок: Сторона B, Диск 2…">＋ Секция</button>
+                </div>
+            </div>
+            ${tr.length ? `<p id="tr-stats" class="tr-sum">${statsHTML(list)}</p>` : '<p class="text-xs text-gray-500">Добавь треки — и оценивай каждый: ★ 1–5 и ♥ для любимых.</p>'}
+            ${tr.length > 3 ? `<div class="tr-flt">${FLT_LABELS.map(([k, t]) => `<button type="button" class="gd-pchip${trFilter === k ? ' is-on' : ''}" data-act="trflt" data-v="${k}">${t}</button>`).join('')}</div>` : ''}
+            ${rows ? `<div class="tr-list">${rows}</div>` : (tr.length ? '<p class="text-xs text-gray-500 mt-3">В этом фильтре ничего нет.</p>' : '')}
+            <div class="flex gap-2 mt-3">
+                <input id="tr-new" class="gd-input" maxlength="120" placeholder="Название трека — Enter, чтобы добавить" aria-label="Новый трек">
+                <button type="button" class="gd-tool shrink-0" data-act="tradd">＋ Трек</button>
+            </div>
+            ${trBulk ? `<div class="mt-3">
+                <textarea id="tr-bulk" class="gd-input gd-note" style="min-height:140px" placeholder="1. Название 3:45&#10;2. Другой трек 4:02&#10;# Сторона B&#10;3. Ещё один 2:58"></textarea>
+                <p class="text-[11px] text-gray-500 mt-1">Номера и время (3:45) подхватятся сами. Строка с «#» — заголовок секции.</p>
+                <div class="flex flex-wrap gap-2 mt-2">
+                    <button type="button" class="gd-tool" data-act="trbulkgo" data-v="add">＋ Добавить в конец</button>
+                    ${tr.length ? '<button type="button" class="gd-tool is-danger" data-act="trbulkgo" data-v="replace">Заменить список (оценки совпавших сохранятся)</button>' : ''}
+                </div>
+            </div>` : ''}`;
+    }
+
+    function physInner(i) {
+        const p = i.phys || {};
+        const chips = [
+            p.cat && `<span class="gd-chip" title="Номер по каталогу">🔢 ${esc(p.cat)}</span>`,
+            p.bar && `<span class="gd-chip" title="Штрихкод">🏷️ ${esc(p.bar)}</span>`,
+            p.country && `<span class="gd-chip" title="Страна прессинга">🌍 ${esc(p.country)}</span>`,
+            p.num && `<span class="gd-chip" title="Номер экземпляра / тираж">🔖 ${esc(p.num)}</span>`,
+            p.sleeve && `<span class="gd-chip" title="Состояние конверта / обложки">🖼 Конверт ${esc(p.sleeve)}</span>`,
+            p.sealed && '<span class="gd-chip is-ok">📦 Запечатан</span>',
+            p.signed && '<span class="gd-chip is-gold">✍️ Автограф</span>',
+            p.ltd && '<span class="gd-chip is-gold">💎 Лимитированное</span>'
+        ].filter(Boolean);
+        const inp = (k, label, ph, extra = '') => `<label class="block"><span class="ph-lbl">${label}</span><input class="gd-input" data-ph="${k}" maxlength="60" value="${esc(p[k] || '')}" placeholder="${ph}" ${extra}></label>`;
+        const chk = (k, label) => `<label class="gd-part${p[k] ? ' is-on' : ''}"><input type="checkbox" class="hidden" data-ph="${k}"${p[k] ? ' checked' : ''}>${label}</label>`;
+        const COND = ['M', 'NM', 'VG+', 'VG', 'G+', 'G', 'F', 'P'];
+        return `
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <p class="gd-sec-title mb-0">💿 Об издании</p>
+                <button type="button" class="gd-tool" data-act="physedit">${physOpen ? '✓ Готово' : (chips.length ? '✏️ Изменить' : '＋ Заполнить')}</button>
+            </div>
+            ${physOpen ? `
+                <div class="ph-grid">
+                    ${inp('cat', 'Номер по каталогу', 'напр. 0602547 / SRX-123')}
+                    ${inp('bar', 'Штрихкод', '4 006 ...')}
+                    ${inp('country', 'Страна прессинга', 'EU, US, JP…')}
+                    ${inp('num', 'Номер экземпляра / тираж', '123 / 500')}
+                    <label class="block"><span class="ph-lbl">Состояние конверта</span><select class="gd-input" style="background:#0d0d14" data-ph="sleeve"><option value="">—</option>${COND.map(c => `<option${p.sleeve === c ? ' selected' : ''}>${c}</option>`).join('')}</select></label>
+                </div>
+                <div class="flex flex-wrap gap-2 mt-3">${chk('sealed', '📦 Запечатан')}${chk('signed', '✍️ Автограф')}${chk('ltd', '💎 Лимитированное')}</div>`
+                : (chips.length ? `<div class="flex flex-wrap gap-2">${chips.join('')}</div>`
+                    : '<p class="text-xs text-gray-500">Каталожный номер, штрихкод, номер экземпляра — всё, что делает копию именно твоей.</p>')}`;
+    }
+
+    function refreshTracks() {
+        const el = $('md-tracks'), item = current();
+        if (el && item) el.innerHTML = tracksInner(item);
+    }
+    function refreshPhys() {
+        const el = $('md-phys'), item = current();
+        if (el && item) el.innerHTML = physInner(item);
+    }
+
     function detailHTML(i, key) {
         const src = imgSrc(i.img);
         const photos = photosOf(i);
@@ -122,15 +307,18 @@
             </div>
         </div>
 
+        <div class="gd-sec mt-5" id="md-tracks">${tracksInner(i)}</div>
+
+        <div class="gd-sec mt-5" id="md-phys">${physInner(i)}</div>
+
         <div class="gd-sec mt-5">
             <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <p class="gd-sec-title mb-0">Заметки и личное мнение</p>
                 <span id="md-saved" class="text-[11px] text-gray-500"></span>
             </div>
-            <textarea id="md-note" class="gd-input gd-note" placeholder="Впечатления, треклист, об издании (лейбл, номер по каталогу, страна прессинга), особенности диска, что понравилось и что нет…">${esc(i.note || '')}</textarea>
+            <textarea id="md-note" class="gd-input gd-note" placeholder="Впечатления, особенности диска и издания, что понравилось и что нет…">${esc(i.note || '')}</textarea>
             <div class="flex flex-wrap gap-2 mt-2">
                 <button type="button" class="gd-tool" data-act="tpl" data-v="💬 Впечатления:\n">＋ Впечатления</button>
-                <button type="button" class="gd-tool" data-act="tpl" data-v="🎵 Треклист:\n1. ">＋ Треклист</button>
                 <button type="button" class="gd-tool" data-act="tpl" data-v="💿 Об издании:\nЛейбл: \nНомер по каталогу: \nСтрана / год прессинга: \n">＋ Об издании</button>
             </div>
         </div>
@@ -163,11 +351,14 @@
         const item = current();
         if (!item) { detail.classList.add('hidden'); return; }
         flushNote();
+        const sc = detail.firstElementChild; const top = sc ? sc.scrollTop : 0;
         body.innerHTML = detailHTML(item, cur.key);
+        if (sc) sc.scrollTop = top;
     }
 
     function openDetail(key, id) {
         if (!KEYS.includes(key) || !find(key, id)) return;
+        if (!cur || cur.key !== key || cur.id !== Number(id)) { trFilter = 'all'; trBulk = false; physOpen = false; }
         cur = { key, id: Number(id) };
         renderDetail();
         detail.classList.remove('hidden');
@@ -194,6 +385,47 @@
         clearTimeout(noteTimer);
         noteTimer = setTimeout(flushNote, 600);
     });
+
+    /* ---------- Трек-лист и «Об издании»: правка полей и Enter ---------- */
+    body.addEventListener('change', e => {
+        const item = current(), el = e.target;
+        if (!item) return;
+        if (el.dataset.tf) {
+            const t = tracksOf(item).find(x => x.id === el.dataset.tid);
+            if (!t) return;
+            if (el.dataset.tf === 't') {
+                const v = el.value.trim().slice(0, t.sep ? 80 : 120);
+                if (v) t.t = v; else el.value = t.t;
+            } else {
+                const v = el.value.trim();
+                t.d = DUR_RE.test(v) ? v : '';
+                el.value = t.d;
+                const st = $('tr-stats'); if (st) st.innerHTML = statsHTML(tracksOf(item));
+            }
+            persistData();
+        } else if (el.dataset.ph) {
+            if (!item.phys || typeof item.phys !== 'object') item.phys = {};
+            if (el.type === 'checkbox') { item.phys[el.dataset.ph] = el.checked; el.closest('label')?.classList.toggle('is-on', el.checked); }
+            else item.phys[el.dataset.ph] = el.value.trim().slice(0, 60);
+            persistData();
+        }
+    });
+    body.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && e.target.id === 'tr-new') { e.preventDefault(); addTrackFromInput(); }
+        else if (e.key === 'Enter' && e.target.dataset && e.target.dataset.tf) e.target.blur();
+    });
+
+    function addTrackFromInput() {
+        const item = current(), inp = $('tr-new');
+        if (!item || !inp) return;
+        const parsed = parseTracks(inp.value).filter(t => !t.sep);
+        if (!parsed.length) { inp.focus(); return; }
+        const list = tracksOf(item);
+        if (list.length >= MAX_TRACKS) { showToast(`Максимум ${MAX_TRACKS} треков на релиз`, 'error'); return; }
+        item.tracks = [...list, ...parsed].slice(0, MAX_TRACKS);
+        persistData(); refreshTracks();
+        $('tr-new')?.focus();
+    }
 
     onHidden(detail, () => {
         const wasOpen = cur != null;
@@ -266,6 +498,70 @@
                 ta.dispatchEvent(new Event('input', { bubbles: true }));
                 break;
             }
+            /* ----- трек-лист ----- */
+            case 'trrate': case 'trfav': case 'trdel': case 'trup': case 'trdn': {
+                const list = [...tracksOf(item)];
+                const k = list.findIndex(x => x.id === act.dataset.tid);
+                if (k < 0) break;
+                const t = list[k], a = act.dataset.act;
+                if (a === 'trrate') t.r = t.r === Number(v) ? 0 : Number(v);
+                else if (a === 'trfav') t.f = !t.f;
+                else if (a === 'trdel') { lastTrack = { key: cur.key, id: item.id, track: t, idx: k }; list.splice(k, 1); }
+                else {
+                    const to = a === 'trup' ? k - 1 : k + 1;
+                    if (to < 0 || to >= list.length) break;
+                    [list[k], list[to]] = [list[to], list[k]];
+                }
+                item.tracks = list;
+                persistData(); refreshTracks();
+                break;
+            }
+            case 'trundo': {
+                if (!lastTrack || lastTrack.key !== cur.key || lastTrack.id !== item.id) break;
+                const list = [...tracksOf(item)];
+                if (list.length >= MAX_TRACKS) break;
+                list.splice(Math.min(lastTrack.idx, list.length), 0, lastTrack.track);
+                item.tracks = list; lastTrack = null;
+                persistData(); refreshTracks();
+                break;
+            }
+            case 'tradd': addTrackFromInput(); break;
+            case 'trsep': {
+                const list = tracksOf(item);
+                if (list.length >= MAX_TRACKS) break;
+                const n = list.filter(x => x.sep).length;
+                item.tracks = [...list, { id: newTid(), sep: true, t: n ? `Секция ${n + 1}` : 'Сторона A' }];
+                persistData(); refreshTracks();
+                break;
+            }
+            case 'trbulk': trBulk = !trBulk; refreshTracks(); if (trBulk) $('tr-bulk')?.focus(); break;
+            case 'trbulkgo': {
+                const parsed = parseTracks($('tr-bulk')?.value);
+                if (!parsed.length) { showToast('Нечего добавлять — вставь список треков', 'error'); break; }
+                if (v === 'replace') {
+                    // оценки и ♥ у треков с тем же названием сохраняем
+                    const old = new Map(tracksOf(item).filter(x => !x.sep).map(x => [x.t.toLowerCase(), x]));
+                    parsed.forEach(t => { const o = !t.sep && old.get(t.t.toLowerCase()); if (o) { t.r = o.r || 0; t.f = !!o.f; if (!t.d) t.d = o.d || ''; } });
+                    item.tracks = parsed.slice(0, MAX_TRACKS);
+                } else item.tracks = [...tracksOf(item), ...parsed].slice(0, MAX_TRACKS);
+                trBulk = false;
+                persistData(); refreshTracks();
+                showToast(`Треков в списке: ${tracksOf(item).filter(x => !x.sep).length} 🎵`, 'success');
+                break;
+            }
+            case 'trimport': {
+                const imp = extractNoteTracks(item.note);
+                if (!imp) break;
+                item.tracks = imp.tracks.slice(0, MAX_TRACKS);
+                item.note = imp.rest;
+                const ta = $('md-note'); if (ta) ta.value = imp.rest;
+                dirty = false; clearTimeout(noteTimer);
+                persistData(); refreshTracks();
+                showToast(`Перенёс треков из заметок: ${imp.tracks.filter(x => !x.sep).length} 🎵`, 'success');
+                break;
+            }
+            case 'trflt': trFilter = v; refreshTracks(); break;
+            case 'physedit': physOpen = !physOpen; refreshPhys(); break;
             case 'addphoto': fileInput.click(); break;
             case 'zoom':
                 if (!e.target.closest('.gd-photo-act')) openLightbox(cur.key, item.id, idx);
@@ -455,8 +751,10 @@
         /* обложка */
         /* у игры с данными обложка меньше — внизу нужно место для статов и дополнений */
         const rich = !!(o.stats && o.stats.length);
+        const tk = !rich && !!(o.tracks && o.tracks.length);   // у релиза есть оценённые треки → компактная обложка + список лучших
+        const compact = rich || tk;
         const roomy = rich && !(o.dlcs && o.dlcs.length);   // без дополнений места больше — обложка крупнее
-        const S = rich ? (roomy ? 640 : 500) : 840, cx = (W - S) / 2, cy = rich ? (roomy ? 150 : 110) : 250;
+        const S = rich ? (roomy ? 640 : 500) : tk ? 560 : 840, cx = (W - S) / 2, cy = rich ? (roomy ? 150 : 110) : tk ? 120 : 250;
         c.save();
         c.shadowColor = 'rgba(0,0,0,0.65)'; c.shadowBlur = 90; c.shadowOffsetY = 36;
         rrect(c, cx, cy, S, S, 44); c.fillStyle = '#0d0d14'; c.fill();
@@ -475,7 +773,7 @@
 
         /* значок формата / платформы */
         c.textBaseline = 'alphabetic'; c.textAlign = 'center';
-        let y = cy + S + (rich ? 76 : 84);
+        let y = cy + S + (compact ? 76 : 84);
         c.font = `800 38px ${FONT_U}`;
         const badge = `${o.icon}  ${o.badge}`;
         const bw = Math.min(W - 160, c.measureText(badge).width + 64);
@@ -484,9 +782,9 @@
         c.fillStyle = '#fff'; c.fillText(badge, W / 2, y);
 
         /* название (подбираем размер, чтобы влезло в 3 строки) */
-        y += rich ? 104 : 120;
-        let size = rich ? 66 : 82, res;
-        for (const s of (rich ? [66, 58, 50, 44] : [82, 70, 60, 50])) {
+        y += compact ? 104 : 120;
+        let size = compact ? 66 : 82, res;
+        for (const s of (compact ? [66, 58, 50, 44] : [82, 70, 60, 50])) {
             size = s; c.font = `800 ${s}px ${FONT_D}`;
             res = wrap(c, o.title, 900, rich ? 2 : 3);
             if (res.ok) break;
@@ -500,25 +798,48 @@
             const r2 = wrap(c, o.sub, 900, 1); c.fillText(r2.lines[0], W / 2, y);
         }
         if (o.meta) {
-            y += rich ? 52 : 56; c.font = `500 ${rich ? 32 : 34}px ${FONT_U}`; c.fillStyle = 'rgba(255,255,255,0.55)';
+            y += compact ? 52 : 56; c.font = `500 ${compact ? 32 : 34}px ${FONT_U}`; c.fillStyle = 'rgba(255,255,255,0.55)';
             const r3 = wrap(c, o.meta, 900, 1); c.fillText(r3.lines[0], W / 2, y);
         }
 
         /* оценка */
         const rating = Math.max(0, Math.min(5, Number(o.rating) || 0));
         if (rating) {
-            const fs = rich ? 64 : 92, step = rich ? 78 : 112;
-            const sy = rich ? y + 92 : Math.max(y + 130, 1690);
+            const fs = compact ? 64 : 92, step = compact ? 78 : 112;
+            const sy = compact ? y + 92 : Math.max(y + 130, 1690);
             c.font = `900 ${fs}px ${FONT_U}`; c.textAlign = 'left';
-            const x0 = (W - step * 5) / 2 + (rich ? 6 : 8);
+            const x0 = (W - step * 5) / 2 + (compact ? 6 : 8);
             for (let i = 0; i < 5; i++) {
                 c.fillStyle = i < rating ? '#facc15' : 'rgba(255,255,255,0.2)';
-                if (i < rating) { c.shadowColor = 'rgba(250,204,21,0.55)'; c.shadowBlur = rich ? 18 : 26; }
+                if (i < rating) { c.shadowColor = 'rgba(250,204,21,0.55)'; c.shadowBlur = compact ? 18 : 26; }
                 c.fillText('★', x0 + i * step, sy);
                 c.shadowBlur = 0; c.shadowColor = 'transparent';
             }
             c.textAlign = 'center';
             y = sy;
+        }
+
+        /* лучшие треки (только у CD / винила): оценённые и любимые */
+        if (tk) {
+            const rowH = 64, rowGap = 10, foot = H - 125;
+            let dy = y + (rating ? 80 : 70);
+            c.textAlign = 'left'; c.font = `800 26px ${FONT_U}`; c.fillStyle = 'rgba(255,255,255,0.6)';
+            c.fillText('🎵 ЛУЧШИЕ ТРЕКИ', 90, dy); dy += 24;
+            const fit = Math.max(1, Math.floor((foot - dy + rowGap) / (rowH + rowGap)));
+            o.tracks.slice(0, Math.min(fit, 5)).forEach((t, k) => {
+                rrect(c, 90, dy, 900, rowH, 20);
+                c.fillStyle = t.r >= 4 ? 'rgba(250,204,21,0.09)' : 'rgba(255,255,255,0.06)'; c.fill();
+                c.lineWidth = 2; c.strokeStyle = t.r >= 4 ? 'rgba(250,204,21,0.35)' : 'rgba(255,255,255,0.12)'; c.stroke();
+                c.textAlign = 'left'; c.font = `900 28px ${FONT_U}`; c.fillStyle = 'rgba(255,255,255,0.35)';
+                c.fillText(String(k + 1), 118, dy + 43);
+                let rx = 990 - 24; c.textAlign = 'right'; c.font = `900 30px ${FONT_U}`;
+                if (t.r) { const st = '★ ' + t.r; c.fillStyle = '#facc15'; c.fillText(st, rx, dy + 43); rx -= c.measureText(st).width + 22; }
+                if (t.f) { c.fillStyle = '#f472b6'; c.fillText('♥', rx, dy + 43); rx -= 52; }
+                c.textAlign = 'left'; c.font = `700 30px ${FONT_U}`; c.fillStyle = '#fff';
+                c.fillText(wrap(c, t.t, rx - 164, 1).lines[0], 164, dy + 43);
+                dy += rowH + rowGap;
+            });
+            c.textAlign = 'center';
         }
 
         /* плитки со статами + дополнения (только у игр) */
@@ -689,12 +1010,18 @@
         return { stats: stats.slice(0, 6), dlcs, dlcOwned };
     }
 
+    /* оценённые или любимые треки: сначала любимые с высокой оценкой */
+    function topTracks(it) {
+        return (Array.isArray(it.tracks) ? it.tracks : []).filter(t => t && !t.sep && (t.r > 0 || t.f))
+            .sort((a, b) => (b.r || 0) - (a.r || 0) || (b.f ? 1 : 0) - (a.f ? 1 : 0));
+    }
+
     async function share(item, key) {
         if (!item) return;
         const isGame = key === 'games';
         const o = isGame
             ? { img: safeImg(item.img), icon: '🎮', badge: item.platform || 'Игра', title: item.title || 'Без названия', sub: '', meta: [item.year, item.developer, item.publisher].filter(Boolean).join(' • '), rating: item.rating, ...gameCardData(item) }
-            : { img: safeImg(item.img), icon: key === 'cds' ? '💿' : '💽', badge: key === 'cds' ? 'CD' : 'VINYL', title: item.title || 'Без названия', sub: item.artist || '', meta: [item.year, item.label].filter(Boolean).join(' • '), rating: item.rating };
+            : { img: safeImg(item.img), icon: key === 'cds' ? '💿' : '💽', badge: key === 'cds' ? 'CD' : 'VINYL', title: item.title || 'Без названия', sub: item.artist || '', meta: [item.year, item.label].filter(Boolean).join(' • '), rating: item.rating, tracks: topTracks(item) };
         try {
             showToast('Собираю карточку…');
             const cv = await build(o);
