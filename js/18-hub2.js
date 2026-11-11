@@ -48,6 +48,337 @@
     let nSel = null, nQ = '', nGrp = 'all', lastDel = null, undoTimer = null, linkEdit = null, linkImg = '';
     const nuid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
+    /* ---- форматирование заметок (markdown-подобное): **жирный** _курсив_ __подчёркнутый__ ~~зачёркнутый~~ `код` ||спойлер|| ==маркер==
+       # / ## заголовки, > цитата, - список, - [ ] галочки, ![[img:ID]] — картинка прямо в тексте ---- */
+    const IMG_LINE = /^\s*!\[\[img:([\w-]+)\]\]\s*$/;
+    const inlineIds = n => new Set([...String(n ? n.text || '' : '').matchAll(/!\[\[img:([\w-]+)\]\]/g)].map(m => m[1]));
+    const stripLine = l => String(l).replace(/^\s*(#{1,3} |> ?|[-*•] (\[[ xX]\] )?)/, '').replace(/\|\||~~|==|\*\*|__|`/g, '').replace(/(^|[^\w])_([^_\n]+)_(?!\w)/g, '$1$2');
+    const mdStrip = t => String(t || '').split('\n').filter(l => !IMG_LINE.test(l)).map(stripLine).join('\n');
+    const exTxt = t => String(t || '').split('\n').map(l => IMG_LINE.test(l) ? '🖼 [картинка]' : l).join('\n');
+
+    function mdInline(raw) {
+        const hold = [], put = h => '\u0001' + (hold.push(h) - 1) + '\u0001';
+        let s = esc(raw);
+        s = s.replace(/`([^`\n]+)`/g, (_, c) => put(`<code>${c}</code>`));
+        s = s.replace(/\bhttps?:\/\/[^\s<]+/g, u => {
+            const m = u.match(/[.,;:!?)]+$/), tail = m ? m[0] : '';
+            const url = u.slice(0, u.length - tail.length);
+            return put(`<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`) + tail;
+        });
+        s = s.replace(/\|\|(.+?)\|\|/g, '<span class="np-spoil" tabindex="0" title="Нажми, чтобы показать">$1</span>')
+             .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+             .replace(/__(.+?)__/g, '<u>$1</u>')
+             .replace(/~~(.+?)~~/g, '<s>$1</s>')
+             .replace(/==(.+?)==/g, '<mark>$1</mark>')
+             .replace(/(^|[^\w*])_([^_\n]+?)_(?!\w)/g, '$1<i>$2</i>')
+             .replace(/(^|[^\w*])\*([^*\n]+?)\*(?!\w)/g, '$1<i>$2</i>');
+        return s.replace(/\u0001(\d+)\u0001/g, (_, i) => hold[i]);
+    }
+
+    function mdRender(n) {
+        const imgs = n.images || [];
+        return String(n.text || '').split('\n').map((ln, i) => {
+            let m;
+            if ((m = ln.match(IMG_LINE))) {
+                const im = imgs.find(x => x.id === m[1]); if (!im) return '';
+                return `<figure class="np-vim"><img src="${esc(imgSrc(im.src))}" data-ap="zoom" data-aid="${esc(im.id)}" alt="Картинка в заметке" title="Нажми, чтобы увеличить"><button type="button" class="np-vx" data-ap="imgdel" data-aid="${esc(im.id)}" title="Убрать картинку" aria-label="Убрать картинку">✕</button></figure>`;
+            }
+            if (!ln.trim()) return '<div class="np-sp"></div>';
+            if ((m = ln.match(/^(#{1,3}) (.*)$/))) return `<div class="np-h np-h${m[1].length}">${mdInline(m[2])}</div>`;
+            if ((m = ln.match(/^> ?(.*)$/))) return `<div class="np-q">${mdInline(m[1])}</div>`;
+            if ((m = ln.match(/^(\s*)- \[([ xX])\] ?(.*)$/))) return `<div class="np-td${m[2] === ' ' ? '' : ' is-done'}" style="margin-left:${Math.min(m[1].length, 8) * 6}px"><i class="np-cb" data-chk="${i}" role="checkbox" aria-checked="${m[2] !== ' '}"></i><span>${mdInline(m[3])}</span></div>`;
+            if ((m = ln.match(/^(\s*)[-*•] (.*)$/))) return `<div class="np-li" style="margin-left:${Math.min(m[1].length, 8) * 6}px"><b>•</b><span>${mdInline(m[2])}</span></div>`;
+            if (/^-{3,}$/.test(ln.trim())) return '<hr class="np-hr">';
+            return `<div class="np-p">${mdInline(ln)}</div>`;
+        }).join('');
+    }
+
+    function renderView() {
+        const n = nCur(), v = $('np-view'); if (!v) return;
+        v.innerHTML = n && String(n.text || '').trim() ? mdRender(n) : '<p class="np-vempty">Пусто — нажми, чтобы писать</p>';
+    }
+    function setView(on) {
+        const ed = $('np-edit'); if (!ed) return;
+        ed.classList.toggle('is-view', !!on);
+        if (on) renderView();
+        renderAtt();
+    }
+    function enterEdit() {
+        if (!nCur()) return;
+        const v = $('np-view'), st = v ? v.scrollTop : 0, ta = $('np-text');
+        setView(false);
+        ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); ta.scrollTop = st;
+    }
+
+    /* вставка в textarea с сохранением Ctrl+Z */
+    function taEdit(a, b, text, selA, selB) {
+        const ta = $('np-text');
+        ta.focus(); ta.setSelectionRange(a, b);
+        let ok = false;
+        try { ok = text === '' ? document.execCommand('delete') : document.execCommand('insertText', false, text); } catch (_) {}
+        if (!ok) { ta.setRangeText(text, a, b, 'end'); ta.dispatchEvent(new Event('input', { bubbles: true })); }
+        ta.setSelectionRange(selA, selB);
+    }
+
+    const FMT = { b: ['**', '**'], i: ['_', '_'], u: ['__', '__'], s: ['~~', '~~'], c: ['`', '`'], sp: ['||', '||'], hl: ['==', '=='] };
+    const wordCh = c => /[\p{L}\p{N}_]/u.test(c || '');
+    function fmtInfo(kind) {
+        const ta = $('np-text'), [o, c] = FMT[kind], v = ta.value;
+        let s = ta.selectionStart, e = ta.selectionEnd;
+        if (s === e) { while (s > 0 && wordCh(v[s - 1])) s--; while (e < v.length && wordCh(v[e])) e++; }
+        else { while (s < e && /\s/.test(v[s])) s++; while (e > s && /\s/.test(v[e - 1])) e--; }
+        const sel = v.slice(s, e), one = o.length === 1;
+        const inner = sel.length > o.length + c.length && sel.startsWith(o) && sel.endsWith(c) && !(one && sel[1] === o);
+        const outer = v.slice(s - o.length, s) === o && v.slice(e, e + c.length) === c && !(one && v[s - o.length - 1] === o && v[e + c.length] === c);
+        return { s, e, sel, inner, outer, wrapped: inner || outer };
+    }
+    function wrapSel(kind) {
+        const [o, c] = FMT[kind], f = fmtInfo(kind);
+        if (f.s === f.e) { taEdit(f.s, f.e, o + c, f.s + o.length, f.s + o.length); return; }
+        if (f.sel.includes('\n')) {   // несколько строк — оборачиваем каждую отдельно
+            const lines = f.sel.split('\n'), real = lines.filter(l => l.trim());
+            const all = real.every(l => l.trim().length > o.length + c.length && l.trim().startsWith(o) && l.trim().endsWith(c));
+            const out = lines.map(l => {
+                if (!l.trim()) return l;
+                const m = l.match(/^(\s*)(.*?)(\s*)$/);
+                return m[1] + (all ? m[2].slice(o.length, m[2].length - c.length) : o + m[2] + c) + m[3];
+            }).join('\n');
+            taEdit(f.s, f.e, out, f.s, f.s + out.length); return;
+        }
+        if (f.inner) { const t = f.sel.slice(o.length, f.sel.length - c.length); taEdit(f.s, f.e, t, f.s, f.s + t.length); }
+        else if (f.outer) { taEdit(f.s - o.length, f.e + c.length, f.sel, f.s - o.length, f.s - o.length + f.sel.length); }
+        else taEdit(f.s, f.e, o + f.sel + c, f.s + o.length, f.s + o.length + f.sel.length);
+    }
+    const FAM = {
+        '# ': { re: /^#{1,3} /, has: l => l.startsWith('# ') },
+        '## ': { re: /^#{1,3} /, has: l => l.startsWith('## ') },
+        '> ': { re: /^> ?/, has: l => l.startsWith('> ') },
+        '- ': { re: /^- (\[[ xX]\] )?/, has: l => /^- (?!\[[ xX]\] )/.test(l) },
+        '- [ ] ': { re: /^- (\[[ xX]\] )?/, has: l => /^- \[[ xX]\] /.test(l) }
+    };
+    function lineRange() {
+        const ta = $('np-text'), v = ta.value, s = ta.selectionStart, e = ta.selectionEnd;
+        const ls = v.lastIndexOf('\n', s - 1) + 1, ee = e > s && v[e - 1] === '\n' ? e - 1 : e, x = v.indexOf('\n', ee);
+        return { ls, le: x < 0 ? v.length : x, v };
+    }
+    function linePrefix(prefix) {
+        const { ls, le, v } = lineRange(), f = FAM[prefix], lines = v.slice(ls, le).split('\n');
+        const has = lines.every(l => !l.trim() || f.has(l));
+        const out = lines.map(l => has ? l.replace(f.re, '') : prefix + l.replace(f.re, '')).join('\n');
+        taEdit(ls, le, out, ls, ls + out.length);
+    }
+    function clearFmt() {
+        const ta = $('np-text'); let s = ta.selectionStart, e = ta.selectionEnd;
+        if (s === e) { const r = lineRange(); s = r.ls; e = r.le; }
+        const src = ta.value.slice(s, e), out = src.split('\n').map(stripLine).join('\n');
+        if (out === src) return;
+        taEdit(s, e, out, s, s + out.length);
+    }
+
+    function insertImgTokens(n, ids) {
+        const tk = ids.map(id => `![[img:${id}]]`).join('\n'), ta = $('np-text');
+        if (nCur() !== n) { n.text = (n.text ? String(n.text).replace(/\n*$/, '\n') : '') + tk + '\n'; return; }
+        const v = ta.value, view = $('np-edit').classList.contains('is-view');
+        const s = view ? v.length : ta.selectionStart, e = view ? v.length : ta.selectionEnd;
+        const ins = (s > 0 && v[s - 1] !== '\n' ? '\n' : '') + tk + '\n';
+        if (view) { ta.value = v + ins; n.text = ta.value; }
+        else taEdit(s, e, ins, s + ins.length, s + ins.length);
+    }
+    function dropImgToken(n, id) {
+        n.text = String(n.text || '').split('\n').filter(l => !l.includes('![[img:' + id + ']]')).join('\n');
+        if (nCur() === n) $('np-text').value = n.text;
+    }
+
+    function notesCss2() {
+        const s = document.createElement('style'); s.id = 'np-pro-css2';
+        s.textContent = `
+        .np-back{display:none;flex:none;align-items:center;justify-content:center;width:36px;height:34px;margin-left:8px;border-radius:10px;font-size:18px;color:#d1d5db;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);cursor:pointer}
+        .np-fmt{display:flex;align-items:center;gap:3px;padding:6px 10px;border-bottom:1px solid rgba(255,255,255,.07);overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+        .np-fmt::-webkit-scrollbar{display:none}
+        .np-fmt button{flex:none;min-width:30px;height:30px;padding:0 7px;border-radius:8px;font-size:13px;font-weight:800;color:#d1d5db;cursor:pointer;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);white-space:nowrap}
+        .np-fmt button:hover{color:#fff;background:rgba(var(--theme-rgb),.28);border-color:rgba(var(--theme-rgb),.5)}
+        .np-fmt i.sep{flex:none;width:1px;height:18px;margin:0 3px;background:rgba(255,255,255,.12)}
+        .np-edit.is-empty .np-fmt{opacity:.4;pointer-events:none}
+        .np-edit.is-view .np-fmt,.np-edit.is-view .np-text{display:none}
+        .np-edit:not(.is-view) .np-view{display:none}
+        .np-view{flex:1;min-height:84px;overflow-y:auto;padding:14px 16px;font-size:14px;line-height:1.6;color:#f3f4f6;cursor:text;word-break:break-word;overscroll-behavior:contain}
+        .np-view a{color:#67e8f9;text-decoration:underline;text-underline-offset:2px}
+        .np-view code{padding:1px 6px;border-radius:6px;font-size:.9em;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:rgba(255,255,255,.1)}
+        .np-view mark{padding:0 3px;border-radius:4px;color:inherit;background:rgba(250,204,21,.3)}
+        .np-view b{font-weight:800}
+        .np-sp{height:.7em}
+        .np-h{font-family:var(--font-display);font-weight:900;letter-spacing:-.01em;margin:.4em 0 .15em;line-height:1.25}
+        .np-h1{font-size:1.55em}.np-h2{font-size:1.25em}.np-h3{font-size:1.08em}
+        .np-q{margin:.2em 0;padding:.1em 0 .1em 12px;border-left:3px solid rgba(var(--theme-rgb),.8);color:#cbd5e1}
+        .np-li,.np-td{display:flex;gap:8px;align-items:flex-start}
+        .np-li>b{flex:none;width:12px;text-align:center;color:rgba(var(--theme-rgb),1)}
+        .np-cb{flex:none;position:relative;width:18px;height:18px;margin-top:3px;border-radius:6px;cursor:pointer;border:2px solid rgba(255,255,255,.35);background:rgba(255,255,255,.04)}
+        .np-td.is-done .np-cb{background:var(--theme-btn);border-color:transparent}
+        .np-td.is-done .np-cb::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-style:normal;font-weight:900;color:#fff}
+        .np-td.is-done>span{text-decoration:line-through;color:#6b7280}
+        .np-hr{border:0;height:1px;margin:.7em 0;background:rgba(255,255,255,.14)}
+        .np-spoil{border-radius:5px;padding:0 3px;cursor:pointer;color:transparent;background:#4b5563;transition:background-color .2s,color .2s}
+        .np-spoil.on{color:inherit;background:rgba(255,255,255,.1)}
+        .np-vim{position:relative;display:block;width:fit-content;max-width:100%;margin:8px 0}
+        .np-vim img{display:block;max-width:100%;max-height:460px;border-radius:12px;cursor:zoom-in;border:1px solid rgba(255,255,255,.12)}
+        .np-vx{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;font-size:12px;font-weight:800;color:#fff;cursor:pointer;background:rgba(0,0,0,.6);opacity:0;transition:opacity .15s}
+        .np-vim:hover .np-vx,.np-vx:focus-visible{opacity:1}
+        .np-vx:hover{background:rgba(239,68,68,.85)}
+        .np-vempty{color:#6b7280;font-style:italic}
+        .np-ctx{position:fixed;z-index:100000;min-width:230px;padding:6px;border-radius:14px;background:rgba(18,18,30,.97);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 50px rgba(0,0,0,.65);backdrop-filter:blur(14px)}
+        .np-ctx.hidden{display:none}
+        .np-ctx button{display:flex;align-items:center;gap:10px;width:100%;padding:7px 10px;border-radius:9px;font-size:13px;font-weight:600;color:#e5e7eb;text-align:left;cursor:pointer}
+        .np-ctx button i{flex:none;width:22px;text-align:center;font-style:normal;font-size:13px}
+        .np-ctx button span{flex:1}
+        .np-ctx button kbd{font-size:10px;color:#6b7280;font-family:inherit}
+        .np-ctx button:hover:not(:disabled){background:rgba(var(--theme-rgb),.3);color:#fff}
+        .np-ctx button.is-on{color:#fff;background:rgba(var(--theme-rgb),.16)}
+        .np-ctx button:disabled{opacity:.35;cursor:default}
+        .np-ctx hr{border:0;height:1px;margin:5px 4px;background:rgba(255,255,255,.1)}
+        @media (max-width:640px){
+            .np{left:0!important;right:0!important;top:var(--np-t,0px)!important;bottom:auto!important;width:100%!important;max-width:100vw;height:var(--np-h,100dvh)!important;max-height:none;min-height:0;min-width:0;border-radius:0;animation:none;resize:none}
+            .np-head{padding:calc(10px + env(safe-area-inset-top,0px)) 10px 10px 14px}
+            .np-head button{min-height:36px}
+            .np-head [data-np="min"],.np-head .np-dl span{display:none}
+            .np-back{display:inline-flex}
+            .np .np-side{width:100%!important;max-height:none;min-width:0;flex:1;border:0;padding:12px;gap:10px}
+            .np.m-edit .np-side{display:none}
+            .np:not(.m-edit) .np-edit{display:none}
+            .np-gbox{max-height:30%}
+            .np-groups{max-height:none}
+            .np-in,.np-new,.np-title,.np-text,.np-sel,.np-emopop button{font-size:16px!important}
+            .np-in,.np-new{padding:11px 12px}
+            .np-item{padding:12px 13px;font-size:15px}
+            .np-item small{font-size:12px}
+            .np-title{padding:12px 10px}
+            .np-view,.np-text{font-size:16px;padding:12px 14px}
+            .np-fmt{padding:7px 10px}
+            .np-fmt button{min-width:38px;height:38px;font-size:15px}
+            .np .np-tools{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:6px;padding:7px 10px}
+            .np .np-tools::-webkit-scrollbar{display:none}
+            .np .np-tools>*{flex:none;white-space:nowrap}
+            .np .np-tools button{min-height:38px;padding:0 11px}
+            .np-edit{padding-bottom:env(safe-area-inset-bottom,0px)}
+            .np-vx{opacity:1}
+            .np-cb{width:22px;height:22px}
+            .np-undo{bottom:calc(120px + env(safe-area-inset-bottom,0px))}
+        }`;
+        document.head.appendChild(s);
+    }
+
+    function initNotesPro(p) {
+        const ta = $('np-text'), view = $('np-view'), fmt = $('np-fmt');
+        let keepEdit = false;
+        const coarse = () => matchMedia('(pointer:coarse)').matches;
+        ta.placeholder = coarse() ? 'Пишите здесь… кнопки сверху — форматирование, 🖼 — картинка' : 'Пишите здесь… ПКМ — форматирование, Ctrl+V — вставить скриншот прямо в текст';
+
+        // телефон: панель на весь экран и подстраивается под клавиатуру
+        if (window.visualViewport) {
+            const sync = () => {
+                const m = innerWidth <= 640;
+                p.style.setProperty('--np-h', m ? visualViewport.height + 'px' : '');
+                p.style.setProperty('--np-t', m ? visualViewport.offsetTop + 'px' : '');
+            };
+            visualViewport.addEventListener('resize', sync); visualViewport.addEventListener('scroll', sync); addEventListener('resize', sync); sync();
+        }
+
+        // пункты меню / панели форматирования
+        const LB = { b: ['Жирный', 'Убрать жирный'], i: ['Курсив', 'Убрать курсив'], u: ['Подчёркнутый', 'Убрать подчёркивание'], s: ['Зачёркнутый', 'Убрать зачёркивание'], c: ['Код', 'Убрать код'], sp: ['Спойлер', 'Убрать спойлер'], hl: ['Маркер', 'Убрать маркер'] };
+        const ITEMS = [
+            ['b', '<b>Ж</b>', 'Ctrl+B'], ['i', '<i>К</i>', 'Ctrl+I'], ['u', '<u>Ч</u>', 'Ctrl+U'], ['s', '<s>З</s>', 'Ctrl+⇧+X'], ['c', '‹›', 'Ctrl+E'], ['sp', '▒', ''], ['hl', '🖍', 'Ctrl+⇧+H'], '-',
+            ['h1', 'H1', 'Заголовок 1'], ['h2', 'H2', 'Заголовок 2'], ['q', '❝', 'Цитата'], ['ul', '•', 'Список'], ['td', '☑', 'Пункт-галочка'], '-',
+            ['img', '🖼', 'Вставить картинку…'], ['date', '🕒', 'Вставить дату'], ['clr', '🧹', 'Убрать форматирование'], '-',
+            ['cut', '✂️', 'Вырезать'], ['copy', '📋', 'Копировать'], ['paste', '📥', 'Вставить']
+        ];
+        const PFX = { h1: '# ', h2: '## ', q: '> ', ul: '- ', td: '- [ ] ' };
+
+        fmt.innerHTML = [['b', '<b>Ж</b>', 'Жирный (Ctrl+B)'], ['i', '<i>К</i>', 'Курсив (Ctrl+I)'], ['u', '<u>Ч</u>', 'Подчёркнутый (Ctrl+U)'], ['s', '<s>З</s>', 'Зачёркнутый (Ctrl+Shift+X)'], ['c', '‹›', 'Код (Ctrl+E)'], ['sp', '▒', 'Спойлер'], ['hl', '🖍', 'Маркер (Ctrl+Shift+H)'], 0,
+            ['h1', 'H1', 'Заголовок'], ['h2', 'H2', 'Подзаголовок'], ['q', '❝', 'Цитата'], ['ul', '•', 'Список'], ['td', '☑', 'Пункт-галочка'], 0, ['img', '🖼', 'Вставить картинку']]
+            .map(x => x ? `<button type="button" data-f="${x[0]}" title="${x[2]}" aria-label="${x[2]}">${x[1]}</button>` : '<i class="sep"></i>').join('');
+
+        function doFmt(a) {
+            const n = nCur(); if (!n) return;
+            if ($('np-edit').classList.contains('is-view')) { setView(false); ta.setSelectionRange(ta.value.length, ta.value.length); }
+            ta.focus();
+            if (FMT[a]) return wrapSel(a);
+            if (PFX[a]) return linePrefix(PFX[a]);
+            if (a === 'img') return $('np-file').click();
+            if (a === 'date') return noteAction('date');
+            if (a === 'clr') return clearFmt();
+            const sel = ta.value.slice(ta.selectionStart, ta.selectionEnd);
+            if (a === 'copy' && sel) navigator.clipboard?.writeText(sel).then(() => showToast('Скопировано 📋', 'success'), () => {});
+            else if (a === 'cut' && sel) navigator.clipboard?.writeText(sel).then(() => taEdit(ta.selectionStart, ta.selectionEnd, '', ta.selectionStart, ta.selectionStart), () => showToast('Не вышло — нажми Ctrl+X', 'info'));
+            else if (a === 'paste') {
+                if (!navigator.clipboard?.readText) return showToast('Нажми Ctrl+V', 'info');
+                navigator.clipboard.readText().then(t => { if (t) taEdit(ta.selectionStart, ta.selectionEnd, t, ta.selectionStart + t.length, ta.selectionStart + t.length); }, () => showToast('Браузер не дал доступ — нажми Ctrl+V', 'info'));
+            }
+        }
+
+        // панель форматирования
+        const hold = () => { keepEdit = true; setTimeout(() => { keepEdit = false; }, 600); };
+        fmt.addEventListener('pointerdown', hold);
+        fmt.addEventListener('mousedown', e => e.preventDefault());
+        fmt.addEventListener('click', e => { const b = e.target.closest('[data-f]'); if (b) doFmt(b.dataset.f); });
+
+        // ПКМ-меню
+        const ctx = document.createElement('div'); ctx.id = 'np-ctx'; ctx.className = 'np-ctx hidden'; ctx.setAttribute('role', 'menu');
+        document.body.appendChild(ctx);
+        const hideCtx = () => ctx.classList.add('hidden');
+        function openCtx(x, y) {
+            const has = ta.selectionStart !== ta.selectionEnd;
+            ctx.innerHTML = ITEMS.map(it => {
+                if (it === '-') return '<hr>';
+                const [k, ic, tail] = it;
+                let on = false, label = tail, key = '';
+                if (FMT[k]) { on = fmtInfo(k).wrapped; label = LB[k][on ? 1 : 0]; key = tail; }
+                else if (PFX[k]) { const { ls, le, v } = lineRange(); on = v.slice(ls, le).split('\n').every(l => !l.trim() || FAM[PFX[k]].has(l)) && !!v.slice(ls, le).trim(); label = (on ? 'Убрать: ' : '') + tail; }
+                return `<button type="button" role="menuitem" data-f="${k}" class="${on ? 'is-on' : ''}"${(k === 'cut' || k === 'copy') && !has ? ' disabled' : ''}><i>${ic}</i><span>${label}</span><kbd>${key}</kbd></button>`;
+            }).join('');
+            ctx.classList.remove('hidden');
+            const w = ctx.offsetWidth, h = ctx.offsetHeight;
+            ctx.style.left = Math.max(6, Math.min(x, innerWidth - w - 6)) + 'px';
+            ctx.style.top = Math.max(6, Math.min(y, innerHeight - h - 6)) + 'px';
+        }
+        ta.addEventListener('contextmenu', e => { if (coarse()) return; e.preventDefault(); openCtx(e.clientX, e.clientY); });
+        ctx.addEventListener('mousedown', e => e.preventDefault());
+        ctx.addEventListener('pointerdown', hold);
+        ctx.addEventListener('click', e => { const b = e.target.closest('[data-f]'); if (!b || b.disabled) return; hideCtx(); doFmt(b.dataset.f); });
+        document.addEventListener('pointerdown', e => { if (!ctx.contains(e.target)) hideCtx(); }, true);
+        document.addEventListener('scroll', hideCtx, true);
+        addEventListener('resize', hideCtx);
+        document.addEventListener('keydown', e => { if (e.key === 'Escape' && !ctx.classList.contains('hidden')) { e.stopPropagation(); hideCtx(); } }, true);
+
+        // горячие клавиши
+        ta.addEventListener('keydown', e => {
+            if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+            const map = e.shiftKey ? { KeyX: 's', KeyH: 'hl' } : { KeyB: 'b', KeyI: 'i', KeyU: 'u', KeyE: 'c' };
+            if (map[e.code]) { e.preventDefault(); wrapSel(map[e.code]); }
+        });
+
+        // «чтение» ↔ «правка»: когда не пишешь — текст красиво отрисован (жирный, заголовки, картинки внутри текста)
+        ta.addEventListener('blur', () => setTimeout(() => {
+            const a = document.activeElement, n = nCur();
+            if (keepEdit || a === ta || !n || !String(n.text || '').trim()) return;
+            if (a && p.contains(a) && a.matches('input,select,textarea')) return;
+            if (!ctx.classList.contains('hidden')) return;
+            setView(true);
+        }, 140));
+        view.addEventListener('click', e => {
+            const t = e.target, n = nCur();
+            const chk = t.closest('[data-chk]');
+            if (chk && n) {
+                const lines = String(n.text || '').split('\n'), i = Number(chk.dataset.chk), m = (lines[i] || '').match(/^(\s*- \[)([ xX])(\] ?.*)$/);
+                if (m) { lines[i] = m[1] + (m[2] === ' ' ? 'x' : ' ') + m[3]; n.text = lines.join('\n'); ta.value = n.text; n.ts = Date.now(); persistSoon(); renderView(); renderNotes(true); }
+                return;
+            }
+            const sp = t.closest('.np-spoil'); if (sp) { sp.classList.toggle('on'); return; }
+            if (t.closest('a,[data-ap]')) return;
+            if (String(getSelection() || '').length) return;
+            enterEdit();
+        });
+    }
+
+
     /* ---- группы и подгруппы: data.noteGroups = [{ id, name, parent, closed }]; у заметки note.gid ---- */
     const groups = () => Array.isArray(data.noteGroups) ? data.noteGroups : (data.noteGroups = []);
     const gById = id => groups().find(g => g.id === id);
@@ -67,7 +398,7 @@
     };
     const lkHost = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (_) { return ''; } };
 
-    const nTitle = n => (String(n.title || '').trim() || String(n.text || '').split('\n').find(l => l.trim()) || 'Пустая заметка').trim().slice(0, 48);
+    const nTitle = n => (String(n.title || '').trim() || mdStrip(n.text).split('\n').find(l => l.trim()) || 'Пустая заметка').trim().slice(0, 48);
     const nHay = n => lc([n.title, n.text, hasG(n) ? gPath(n.gid) : '', ...(n.links || []).map(l => (l.title || '') + ' ' + (l.url || ''))].join(' '));
     // при поиске ищем по ВСЕМ группам; без поиска — только в выбранной
     const nSorted = () => [...data.quickNotes]
@@ -77,6 +408,7 @@
 
     function notesCss() {
         if ($('np-pro-css')) return;
+        notesCss2();
         const s = document.createElement('style'); s.id = 'np-pro-css';
         s.textContent = `
         .np{width:760px;height:540px;min-width:420px;min-height:380px}
@@ -174,11 +506,14 @@
             </div>
             <div class="np-edit is-empty" id="np-edit">
                 <div class="np-titlebar">
+                    <button type="button" class="np-back" data-np="back" title="К списку заметок" aria-label="К списку заметок">←</button>
                     <button type="button" id="np-emo" class="np-emo" data-np="emoji" title="Иконка заметки" aria-label="Иконка заметки">🙂</button>
                     <input id="np-title" class="np-title" type="text" maxlength="80" placeholder="Заголовок / тема заметки" aria-label="Заголовок заметки" autocomplete="off">
                 </div>
                 <div id="np-emopop" class="np-emopop hidden"></div>
+                <div id="np-fmt" class="np-fmt" role="toolbar" aria-label="Форматирование"></div>
                 <textarea id="np-text" class="np-text" placeholder="Пишите здесь… (картинку можно вставить Ctrl+V или перетащить сюда)"></textarea>
+                <div id="np-view" class="np-view"></div>
                 <div id="np-att" class="np-att hidden"></div>
                 <div id="np-linkform" class="np-linkform hidden">
                     <input id="np-lk-url" class="np-in" type="text" placeholder="Ссылка: https://…" aria-label="Адрес ссылки" autocomplete="off">
@@ -214,6 +549,7 @@
         </div>
         <div id="np-undo" class="np-undo hidden"><span>Заметка удалена</span><button type="button" data-np="undo">↩ Вернуть</button></div>`;
         document.body.appendChild(p);
+        initNotesPro(p);
         $('np-emopop').innerHTML = NEMO.map(e => `<button type="button" data-emo="${e}">${e}</button>`).join('') + '<button type="button" class="np-pill" data-emo="">Убрать иконку</button>';
 
         const st = ui.get('np', {});
@@ -234,7 +570,7 @@
             const ap = t.closest('[data-ap]');
             if (ap) { attAction(ap.dataset.ap, ap.dataset.aid); return; }
             const item = t.closest('[data-id]');
-            if (item) { selectNote(Number(item.dataset.id)); return; }
+            if (item) { selectNote(Number(item.dataset.id)); p.classList.add('m-edit'); return; }
             const b = t.closest('[data-np]');
             if (b) noteAction(b.dataset.np);
         });
@@ -353,6 +689,7 @@
         p.style.top = Math.max(8, Math.min(innerHeight - 60, y)) + 'px';
     }
     function saveNotesRect() {
+        if (innerWidth <= 640) return;
         const p = $('notes-panel'), { x, y } = notesPos(p);
         if (p.classList.contains('is-min')) { ui.set('np', { ...ui.get('np', {}), x, y }); return; }
         ui.set('np', { x, y, w: p.offsetWidth, h: p.offsetHeight });
@@ -373,6 +710,7 @@
         ensure();
         const p = $('notes-panel');
         const first = p.classList.contains('hidden');
+        if (first) p.classList.remove('m-edit');
         p.classList.remove('hidden');
         syncNotesBtn();
         if (first) {
@@ -398,9 +736,10 @@
         $('np-emopop').classList.add('hidden');
         closeLinkForm();
         updateEmo();
-        renderAtt();
+        const asView = !!(n && String(n.text || '').trim());
+        setView(asView);
         renderNotes();
-        if (n && !noFocus && innerWidth > 640) (n.title || n.text ? $('np-text') : $('np-title')).focus();
+        if (n && !noFocus && innerWidth > 640 && !asView) (n.title || n.text ? $('np-text') : $('np-title')).focus();
     }
 
     const updateEmo = () => { const n = nCur(); $('np-emo').textContent = (n && n.icon) || '🙂'; };
@@ -453,7 +792,7 @@
         const list = nSorted(), cur = nCur();
         $('np-count').textContent = data.quickNotes.length ? `· ${data.quickNotes.length}` : '';
         $('np-list').innerHTML = list.map(n => {
-            const lines = String(n.text || '').split('\n').filter(l => l.trim());
+            const lines = mdStrip(n.text).split('\n').filter(l => l.trim());
             const body = (String(n.title || '').trim() ? lines : lines.slice(1)).join(' ');
             const im = (n.images || []).length, lk = (n.links || []).length;
             const badges = (im ? `🖼${im} ` : '') + (lk ? `🔗${lk} ` : '') + ((nQ || curGrp() === 'all') && hasG(n) ? `📁${gPath(n.gid)} · ` : '');
@@ -464,7 +803,7 @@
         const pin = $('notes-panel').querySelector('[data-np="pin"]');
         pin.classList.toggle('is-on', !!(cur && cur.pinned));
         pin.textContent = cur && cur.pinned ? '📌 Закреплено' : '📌 Закрепить';
-        const t = cur ? String(cur.text || '') : '';
+        const t = cur ? mdStrip(cur.text) : '';
         $('np-meta').textContent = cur ? `${t.trim() ? t.trim().split(/\s+/).length : 0} сл. · ${t.length} зн.` : '';
         if (!listOnly) renderGroups();
     }
@@ -472,7 +811,8 @@
     /* ---- вложения: картинки и ссылки ---- */
     function renderAtt() {
         const n = nCur(), box = $('np-att');
-        const imgs = n ? n.images || [] : [], lks = n ? n.links || [] : [];
+        const inl = $('np-edit').classList.contains('is-view') ? inlineIds(n) : new Set();
+        const imgs = (n ? n.images || [] : []).filter(im => !inl.has(im.id)), lks = n ? n.links || [] : [];
         if (!imgs.length && !lks.length) { box.innerHTML = ''; box.classList.add('hidden'); return; }
         box.classList.remove('hidden');
         const hImgs = imgs.map(im => `<figure class="np-im"><img src="${esc(imgSrc(im.src))}" data-ap="zoom" data-aid="${esc(im.id)}" alt="Картинка в заметке" title="Нажми, чтобы увеличить"><button type="button" data-ap="imgdel" data-aid="${esc(im.id)}" title="Убрать эту картинку из заметки">🗑 Убрать</button></figure>`).join('');
@@ -489,12 +829,12 @@
         files = [...files].filter(f => /^image\//i.test(f.type));
         if (!files.length) return;
         n.images = Array.isArray(n.images) ? n.images : [];
-        let added = 0;
+        let added = 0; const ids = [];
         for (const f of files) {
             if (n.images.length >= MAX_IMG) { showToast(`В одной заметке максимум ${MAX_IMG} картинок`, 'info'); break; }
-            try { n.images.push({ id: nuid(), src: await compressImage(f, 'photo') }); added++; } catch (_) { showToast('Не удалось обработать картинку', 'error'); }
+            try { const id = nuid(); n.images.push({ id, src: await compressImage(f, 'photo') }); ids.push(id); added++; } catch (_) { showToast('Не удалось обработать картинку', 'error'); }
         }
-        if (added) { n.ts = Date.now(); persistSoon(); if (nCur() === n) renderAtt(); renderNotes(); }
+        if (added) { insertImgTokens(n, ids); n.ts = Date.now(); persistSoon(); if (nCur() === n) { renderAtt(); renderView(); } renderNotes(); }
     }
 
     function zoomImg(src) {
@@ -527,7 +867,7 @@
         if (a === 'zoom') { const im = (n.images || []).find(x => x.id === id); if (im) zoomImg(im.src); return; }
         if (a === 'imgdel') {
             if (!(await mhConfirm('Убрать эту картинку из заметки?', { title: 'Убрать картинку?', okText: 'Убрать', danger: true }))) return;
-            n.images = (n.images || []).filter(x => x.id !== id); n.ts = Date.now(); persistSoon(); renderAtt(); renderNotes(); return;
+            n.images = (n.images || []).filter(x => x.id !== id); dropImgToken(n, id); n.ts = Date.now(); persistSoon(); renderAtt(); renderView(); renderNotes(); return;
         }
         if (a === 'lkedit') { const l = (n.links || []).find(x => x.id === id); if (l) openLinkForm(l); return; }
         if (a === 'lkdel') {
@@ -554,18 +894,20 @@
         const p = $('notes-panel'), n = nCur(), ta = $('np-text');
         if (a === 'close') return closeNotes();
         if (a === 'min') { p.classList.toggle('is-min'); return; }
+        if (a === 'back') { p.classList.remove('m-edit'); return; }
         if (a === 'new') {
             const g = curGrp();
             const note = { id: Date.now(), text: '', pinned: false, color: '', ts: Date.now() };
             if (g !== 'all' && g !== 'none') note.gid = g;
             data.quickNotes.push(note); nQ = ''; $('np-search').value = '';
+            p.classList.add('m-edit');
             persistSoon(); selectNote(note.id); return;
         }
         if (a === 'export') {
             if (!data.quickNotes.length) return showToast('Заметок пока нет');
             const one = x => [
                 (hasG(x) ? `[${gPath(x.gid)}] ` : '') + (x.icon ? x.icon + ' ' : '') + (x.title || ''),
-                x.text || '',
+                exTxt(x.text),
                 ...(x.links || []).map(l => '🔗 ' + (l.title ? l.title + ' — ' : '') + l.url),
                 (x.images || []).length ? `(картинок: ${x.images.length})` : ''
             ].filter(s => s && s.trim()).join('\n');
@@ -605,11 +947,12 @@
         }
         if (!n) return;
         if (a === 'emoji') { $('np-emopop').classList.toggle('hidden'); return; }
+        if ((a === 'todo' || a === 'check' || a === 'date') && $('np-edit').classList.contains('is-view')) setView(false);
         if (a === 'link') return openLinkForm(null);
         if (a === 'img') return $('np-file').click();
         if (a === 'pin') { n.pinned = !n.pinned; persistSoon(); renderNotes(); }
         else if (a === 'copy') {
-            const txt = (n.title ? n.title + '\n' : '') + (n.text || '') + ((n.links || []).length ? '\n\n' + n.links.map(l => (l.title ? l.title + ': ' : '') + l.url).join('\n') : '');
+            const txt = (n.title ? n.title + '\n' : '') + exTxt(n.text) + ((n.links || []).length ? '\n\n' + n.links.map(l => (l.title ? l.title + ': ' : '') + l.url).join('\n') : '');
             navigator.clipboard?.writeText(txt).then(() => showToast('Заметка скопирована 📋', 'success'), () => showToast('Не удалось скопировать', 'error'));
         }
         else if (a === 'check') {
@@ -630,7 +973,7 @@
         } else if (a === 'del') {
             const next = nSorted().find(x => x.id !== n.id);
             lastDel = n; data.quickNotes = data.quickNotes.filter(x => x.id !== n.id);
-            persistSoon(); selectNote(next ? next.id : null, true);
+            persistSoon(); selectNote(next ? next.id : null, true); p.classList.remove('m-edit');
             $('np-undo').classList.remove('hidden');
             clearTimeout(undoTimer); undoTimer = setTimeout(() => $('np-undo').classList.add('hidden'), 6000);
         }
