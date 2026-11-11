@@ -177,7 +177,7 @@
         }
         if (!title) return { error: true, raw };
 
-        let category = 'music';
+        let category = type === 'wishlists' ? (vinylHint ? 'vinyl' : 'cd') : 'music';
         if (type === 'stuff') {
             const low = raw.toLowerCase();
             category = /худи|футболк|свитшот|кепк|куртк|толстовк|шапк|hoodie|shirt/.test(low) ? 'clothing'

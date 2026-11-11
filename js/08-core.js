@@ -105,7 +105,7 @@ function updateHobbyBudgetPlanner() {
         // Отбираем элементы конкретной категории из Wishlist
         const catItems = wishlists.filter(i => {
             // Если категория не прописана, по умолчанию "music"
-            const itemCat = i.category || 'music';
+            const itemCat = wishCat(i);
             return itemCat === cat.id;
         });
 
@@ -158,7 +158,7 @@ window.toggleCategoryFields = () => {
     gearContainer.classList.add('hidden');
     ratingStarsWrapper.classList.add('hidden');
 
-    if (category === 'music') {
+    if (category === 'music' || category === 'cd' || category === 'vinyl') {
         musicContainer.classList.remove('hidden');
         ratingStarsWrapper.classList.remove('hidden');
     } else if (category === 'clothing') {
@@ -621,7 +621,7 @@ window.openModal = (type, id = null) => {
 
     if(id) {
         const item = data[type].find(x => x.id === parseInt(id));
-        document.getElementById('item-category').value = item.category || 'music';
+        document.getElementById('item-category').value = type === 'wishlists' ? wishCat(item) : (item.category || 'music');
         document.getElementById('item-title').value = item.title;
         document.getElementById('item-artist').value = item.artist || '';
         document.getElementById('item-price').value = item.price;
@@ -649,7 +649,7 @@ document.getElementById('item-year').value = item.year || '';
         if (type === 'stuff') {
             document.getElementById('item-category').value = 'clothing';
         } else {
-            document.getElementById('item-category').value = 'music';
+            document.getElementById('item-category').value = type === 'wishlists' ? 'cd' : 'music';
         }
 
         document.getElementById('item-title').value = '';

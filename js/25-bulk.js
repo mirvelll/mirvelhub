@@ -231,11 +231,12 @@
                 if (n.note == null) n.note = '';
                 if (!n.imgPos) n.imgPos = 'center';
             } else if (dest === 'stuff') {
-                if (!n.category || n.category === 'music') n.category = 'other';
+                if (!n.category || ['music', 'cd', 'vinyl'].includes(n.category)) n.category = 'other';
                 if (n.note == null) n.note = '';
             } else if (dest === 'wishlists') {
                 if (!n.tags) n.tags = [];
                 if (n.priority == null) n.priority = '';
+                if (!n.category || n.category === 'music') n.category = src === 'vinyls' ? 'vinyl' : src === 'cds' ? 'cd' : 'merch';
             }
             m.copy = n;
             target.push(n);

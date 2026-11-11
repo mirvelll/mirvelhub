@@ -175,7 +175,7 @@ function renderAll() {
         // Фильтрация
         if(key === 'wishlists' && currentFilter) {
             if (WISH_CAT_IDS.includes(currentFilter)) {
-                items = items.filter(i => (i.category || 'music') === currentFilter);
+                items = items.filter(i => wishCat(i) === currentFilter);
             } else {
                 items = items.filter(i => (i.tags || []).find(t => t.text === currentFilter));
             }
@@ -295,16 +295,16 @@ function renderAll() {
                 const disc = document.createElement('div');
                 disc.className = "media-disc absolute left-4 top-4 w-36 h-36 rounded-full flex items-center justify-center pointer-events-none z-0 shadow-2xl spin-slow";
 
-                const itemCat = i.category || 'music';
+                const itemCat = key === 'wishlists' ? wishCat(i) : (i.category || 'music');
 
-                if (key === 'cds' || (key === 'wishlists' && itemCat === 'music' && !i.formatDetails?.toLowerCase().includes('винил'))) {
+                if (key === 'cds' || (key === 'wishlists' && itemCat === 'cd')) {
                     disc.className += " bg-gradient-to-tr from-zinc-850 via-zinc-200 to-zinc-650 border-4 border-zinc-900";
                     disc.innerHTML = `
                         <div class="w-12 h-12 rounded-full bg-zinc-900 border border-white/20 flex items-center justify-center">
                             <div class="w-4 h-4 rounded-full bg-black"></div>
                         </div>
                     `;
-                } else if (key === 'vinyls' || (key === 'wishlists' && itemCat === 'music' && i.formatDetails?.toLowerCase().includes('винил'))) {
+                } else if (key === 'vinyls' || (key === 'wishlists' && itemCat === 'vinyl')) {
                     disc.className += " bg-zinc-950 border-4 border-zinc-900";
                     disc.innerHTML = `
                         <div class="w-14 h-14 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center">
@@ -347,7 +347,7 @@ function renderAll() {
                     imgContainer.appendChild(noPhoto);
                 }
 
-                if (itemCat === 'music' && i.rating > 0) {
+                if (isMusCat(itemCat) && i.rating > 0) {
                     const ratingBadge = document.createElement('div');
                     ratingBadge.className = "absolute bottom-1 right-1 bg-black/75 px-1.5 py-0.5 rounded text-[9px] text-yellow-400 font-bold border border-yellow-500/20";
                     ratingBadge.innerText = `⭐ ${i.rating}`;
@@ -386,7 +386,7 @@ function renderAll() {
                 const metaDetails = document.createElement('div');
                 metaDetails.className = "text-[10px] text-gray-500 mt-2 space-y-0.5 font-medium";
 
-                if (itemCat === 'music') {
+                if (isMusCat(itemCat)) {
                     if (i.year || i.label || i.condition || i.formatDetails || i.priority) {
                         let metaString = '';
                         if (i.year) metaString += `📅 ${i.year} `;
@@ -463,9 +463,9 @@ if (key === 'wishlists' && i.priority) {
                 if (key === 'wishlists' || key === 'stuff') {
                     const catBadge = document.createElement('span');
                     catBadge.className = "px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider";
-                    if (itemCat === 'music') {
+                    if (isMusCat(itemCat)) {
                         catBadge.className += " bg-purple-500/20 text-purple-300 border border-purple-500/20";
-                        catBadge.innerText = "💿 Музыка";
+                        catBadge.innerText = itemCat === 'cd' ? "💿 CD" : itemCat === 'vinyl' ? "💽 Винил" : "💿 Музыка";
                     } else if (itemCat === 'clothing') {
                         catBadge.className += " bg-teal-500/20 text-teal-300 border border-teal-500/20";
                         catBadge.innerText = "👕 Одежда";

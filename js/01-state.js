@@ -1,6 +1,7 @@
 // Категории «Желаемого» (общий список: фильтр, бюджет, карточки). 'music' — диски, остальное — вещи.
 const WISH_CATS = [
-    { id: 'music', ico: '💿', name: 'Музыка', hex: '#a855f7' },
+    { id: 'cd', ico: '💿', name: 'CD', hex: '#a855f7' },
+    { id: 'vinyl', ico: '💽', name: 'Винил', hex: '#6366f1' },
     { id: 'merch', ico: '🎤', name: 'Мерч', hex: '#ec4899' },
     { id: 'clothing', ico: '👕', name: 'Одежда', hex: '#14b8a6' },
     { id: 'gear', ico: '🔌', name: 'Техника', hex: '#f59e0b' },
@@ -9,6 +10,14 @@ const WISH_CATS = [
     { id: 'other', ico: '🎁', name: 'Другое', hex: '#94a3b8' }
 ];
 const WISH_CAT_IDS = WISH_CATS.map(c => c.id);
+// «Музыка» в желаемом разделена на CD и Винил. Старое значение 'music' (или пусто) определяем так: в формате написано «винил» или цена ≥ 1000 ₴ → винил, иначе CD.
+const WISH_VINYL_FROM = 1000;
+function wishCat(i) {
+    const c = i && i.category;
+    if (c && c !== 'music') return c;
+    return /винил|vinyl/i.test(String((i && i.formatDetails) || '')) || (Number(i && i.price) || 0) >= WISH_VINYL_FROM ? 'vinyl' : 'cd';
+}
+const isMusCat = c => c === 'music' || c === 'cd' || c === 'vinyl';
 const defaultQuotes = [
     { id: 1, author: "Kurt Cobain", textOriginal: "Wanting to be someone else is a waste of the person you are.", textTranslation: "Желание быть кем-то другим — это растрата того, кто ты есть.", song: "" },
     { id: 2, author: "Lana Del Rey", textOriginal: "Live fast. Die young. Be wild. And have fun.", textTranslation: "Живи быстро. Умри молодым. Будь диким. И веселись.", song: "Ride" },

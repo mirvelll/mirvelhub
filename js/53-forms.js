@@ -15,9 +15,9 @@
 
     // подписи пунктов в списке: для вещей и общие (для желаемого)
     const STUFF = { clothing: '👕 Одежда', music: '🎵 Мерч (музыкальный)', gear: '🎧 Техника / Аудио', other: '📦 Другое' };
-    const WISHL = { music: '💿 Музыка (CD / Винил)', merch: '🎤 Мерч (постеры, значки, сумки…)', clothing: '👕 Одежда', gear: '🔌 Техника / Аудио', collectible: '🗿 Коллекционки (стилбуки, фигурки, артбуки)', event: '🎟 Концерты и билеты', other: '🎁 Другое' };
-    const NEWC = ['merch', 'collectible', 'event'];   // эти категории только для «Желаемого»
-    const ARTIST_CATS = ['music', 'merch', 'event'];
+    const WISHL = { cd: '💿 CD', vinyl: '💽 Винил', music: '💿 Музыка (CD / Винил)', merch: '🎤 Мерч (постеры, значки, сумки…)', clothing: '👕 Одежда', gear: '🔌 Техника / Аудио', collectible: '🗿 Коллекционки (стилбуки, фигурки, артбуки)', event: '🎟 Концерты и билеты', other: '🎁 Другое' };
+    const NEWC = ['merch', 'collectible', 'event', 'cd', 'vinyl'];   // эти категории только для «Желаемого»
+    const ARTIST_CATS = ['music', 'cd', 'vinyl', 'merch', 'event'];
     const BRAND_PH = { collectible: 'Издатель / бренд (опционально)', clothing: 'Бренд (опционально)', gear: 'Бренд и модель устройства', other: 'Бренд / производитель (опционально)' };
     let mode = '';           // cds | vinyls | stuff | wishlists
 
@@ -31,6 +31,7 @@
             const lab = mode === 'stuff' ? STUFF : mode === 'wishlists' ? WISHL : null;
             o.textContent = (lab && lab[o.value]) || o.dataset.orig;
             if (NEWC.includes(o.value)) { o.hidden = mode !== 'wishlists'; o.disabled = o.hidden; }
+            if (o.value === 'music') { o.hidden = mode === 'wishlists'; o.disabled = o.hidden; }
         });
         const h = document.querySelector('#modal h2');
         if (h) { if (!h.dataset.orig) h.dataset.orig = h.textContent; h.textContent = mode === 'stuff' ? 'Редактор вещи' : h.dataset.orig; }
@@ -51,7 +52,7 @@
         const aa = $('aa-row'); if (aa) aa.style.display = (music || keepArtist) ? '' : 'none';   // «Фото артиста» — только для музыки
         const t = $('item-title');
         const TITLE_PH = { merch: 'Название мерча', event: 'Название концерта / события', collectible: 'Название (стилбук, фигурка, артбук…)' };
-        if (t) t.placeholder = TITLE_PH[cat] || (cat === 'music' ? (mode === 'stuff' || mode === 'wishlists' ? 'Название мерча / релиза' : 'Название альбома') : 'Название вещи');
+        if (t) t.placeholder = TITLE_PH[cat] || (['music', 'cd', 'vinyl'].includes(cat) ? (mode === 'stuff' || mode === 'wishlists' ? 'Название мерча / релиза' : 'Название альбома') : 'Название вещи');
         if (artist) artist.placeholder = 'Исполнитель / Артист (опционально)';
     }
 
