@@ -204,7 +204,7 @@
             let left = Math.min(Math.max(8, r.left), window.innerWidth - mw - 8);
             let top = r.bottom + 6; if (top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 6);
             m.style.left = left + 'px'; m.style.top = top + 'px';
-            menu = m; m.dataset.id = it.id;
+            menu = m; m.dataset.id = it.id; menuY = window.scrollY || 0;
             requestAnimationFrame(() => m.classList.add('is-in'));
             const cur = m.querySelector('.is-on') || m.querySelector('button'); cur && cur.focus({ preventScroll: true });
         }
@@ -232,7 +232,9 @@
                 bs[(k + (e.key === 'ArrowDown' ? 1 : -1) + bs.length) % bs.length].focus();
             }
         });
-        window.addEventListener('scroll', closeMenu, { passive: true });
+        // закрываем меню только при заметной прокрутке (небольшой сдвиг страницы при нажатии его не закрывает)
+        let menuY = 0;
+        window.addEventListener('scroll', () => { if (menu && Math.abs((window.scrollY || 0) - menuY) > 40) closeMenu(); }, { passive: true });
         window.addEventListener('resize', closeMenu);
 
         /* ---------- 3. Доп. поля хотелки: заметка, «хочу к…», место ---------- */

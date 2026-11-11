@@ -373,6 +373,10 @@
                 const out = [
                     { k: 'banner', t: 'Приветствие, уровень, кнопки', el: $('greeting-banner') },
                     { k: 'fav', t: 'Ряд «Любимое»', el: $('mh-fav-row') },
+                    { k: 'goal', t: '🎯 Цели (день и месяц)', el: $('home-goal') },
+                    { k: 'plat', t: '🏆 Платины', el: $('home-ach'), soft: true },
+                    { k: 'prog', t: '🎯 В процессе (ачивки)', el: $('home-ach'), soft: true },
+                    { k: 'otd', t: '📅 Этот день в прошлом', el: $('home-ach'), soft: true },
                     { k: 'stats', t: 'ВСЕ карточки статистики сразу', el: g },
                     { k: 'month', t: 'Артист и альбом месяца', el: $('fav-artist-img-wrapper')?.closest('.grid') },
                     { k: 'artists', t: 'Статистика по артистам', el: $('artist-stats-grid')?.closest('.glass') },
@@ -415,13 +419,17 @@
         const cfg = PAGES[page], sec = $(cfg.sec);
         if (!sec) return;
         const v = (data.pageView && data.pageView[page]) || {}, hide = v.hide || {};
-        cfg.blocks().forEach(b => { if (b.el) b.el.toggleAttribute('data-mh-hidden', !!hide[b.k]); });
+        cfg.blocks().forEach(b => { if (b.el && !b.soft) b.el.toggleAttribute('data-mh-hidden', !!hide[b.k]); });
+        // «мягкие» блоки (карточки внутри общей полосы «Достижения») прячет сам модуль, который их рисует
+        if (page === 'home') { try { typeof window.mhRenderHomeAch === 'function' && window.mhRenderHomeAch(); } catch (_) {} }
         if (cfg.grid) {
             const card = Number(v.card) || 0;
             sec.classList.toggle('mh-sized', card > 0);
             if (card > 0) sec.style.setProperty('--mh-card', card + 'px'); else sec.style.removeProperty('--mh-card');
         }
     }
+
+    window.mhApplyHome = () => { try { applyPage('home'); } catch (_) {} };
 
     function fillPanel(page, panel) {
         const cfg = PAGES[page], v = pv(page);

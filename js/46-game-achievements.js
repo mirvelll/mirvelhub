@@ -982,6 +982,11 @@
             if (pl) ev.push({ y: pl, t: `💎 Платина · ${g.title}` });
         });
         ev.sort((a, b) => b.y - a.y);
+        // какие карточки скрыты в настройках главной (⚙️): ключи plat / prog / otd
+        const off = (data.pageView && data.pageView.home && data.pageView.home.hide) || {};
+        if (off.plat) plats.length = 0;
+        if (off.prog) prog.length = 0;
+        if (off.otd) ev.length = 0;
         if (!plats.length && !prog.length && !ev.length) { host.innerHTML = ''; return; }
         const card = (cls, h, body) => `<div class="hach-card ${cls}"><p class="hach-h">${h}</p>${body}</div>`;
         const open = id => `data-gbopen="${id}"`;
@@ -1073,10 +1078,11 @@
         const G = goalsOf();
         if (ensureMonth(G)) { try { persistData(); } catch (_) {} }
         checkGoals();
-        if (G.hidden) { host.innerHTML = '<button type="button" class="goal-show" data-goal="show">🎯 Показать цели</button>'; return; }
+        // скрытие карточки теперь — в настройках главной (⚙️ → «Цели»); старую отметку «скрыто» переносим туда один раз
+        if (G.hidden) { delete G.hidden; try { const pv = (data.pageView = data.pageView || {}), o = (pv.home = pv.home || {}); o.hide = o.hide || {}; o.hide.goal = true; persistData(); } catch (_) {} try { window.mhApplyHome && window.mhApplyHome(); } catch (_) {} }
         const n = Math.max(1, G.dayN || 1), c = todayCount(), dpct = Math.min(100, Math.round(c / n * 100)), ok = c >= n;
         const hist = (G.history || []).slice(0, 10);
-        host.innerHTML = `<div class="goal-card"><div class="goal-top"><p class="goal-h">🎯 Цели</p><div class="goal-tr"><button type="button" class="goal-ico" data-goal="hide" title="Скрыть карточку" aria-label="Скрыть">✕</button></div></div>
+        host.innerHTML = `<div class="goal-card"><div class="goal-top"><p class="goal-h">🎯 Цели</p></div>
             ${monthBanner(G)}
             <div class="goal-day"><div class="goal-day-l"><p class="goal-k">Сегодня</p><p class="goal-t">${c} / ${n} ${n === 1 ? 'ачивка' : 'ачивок'}${ok ? ' ✓' : ''}</p></div>
             <div class="goal-bar goal-day-bar${ok ? ' is-done' : ''}"><i style="width:${dpct}%"></i></div>
@@ -1104,9 +1110,7 @@
         if (!b) return;
         const G = goalsOf(), act = b.dataset.goal;
         G.touched = true;
-        if (act === 'hide') { G.hidden = true; persistData(); renderGoal(); }
-        else if (act === 'show') { G.hidden = false; persistData(); renderGoal(); }
-        else if (act === 'dayminus' || act === 'dayplus') {
+        if (act === 'dayminus' || act === 'dayplus') {
             const n = Math.min(50, Math.max(1, (G.dayN || 1) + (act === 'dayplus' ? 1 : -1)));
             G.dayN = n; if (G.dayNotified === dayKey() && todayCount() < n) delete G.dayNotified;
             persistData(); renderGoal();

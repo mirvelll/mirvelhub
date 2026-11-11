@@ -451,7 +451,7 @@ if (key === 'wishlists') {
                             const ev = itemCat === 'event';
                             const when = days > 1 ? `через ${days} дн.` : days === 1 ? 'завтра' : days === 0 ? 'сегодня' : (ev ? 'уже прошло' : `просрочено на ${-days} дн.`);
                             const cls = days < 0 ? 'is-past' : days <= 7 ? 'is-soon' : '';
-                            chips.push(`<span class="wl-chip ${cls}" title="${esc(d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }))}">${ev ? '🎟' : '📅'} ${ev ? '' : 'к '}${esc(d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }))} · ${when}</span>`);
+                            chips.push(`<span class="wl-chip ${cls}" title="${esc(d.toLocaleDateString(window.mirvelLocale ? window.mirvelLocale() : 'ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }))}">${ev ? '🎟' : '📅'} ${ev ? '' : '<span>к</span> '}${esc(d.toLocaleDateString(window.mirvelLocale ? window.mirvelLocale() : 'ru-RU', { day: 'numeric', month: 'short' }))} · <span>${when}</span></span>`);
                         }
                     }
                     if (i.eventPlace) chips.push(`<span class="wl-chip" title="Место">📍 ${esc(i.eventPlace)}</span>`);
