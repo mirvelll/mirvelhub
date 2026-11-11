@@ -310,3 +310,11 @@
 .goal-hist p { margin-top: 4px; } .goal-hist b { color: #fbbf24; margin-right: 6px; }
 .goal-show { font-size: 11px; font-weight: 700; color: #6b7280; padding: 6px 4px; }
 .goal-show:hover { color: #fff; }
+
+/* ---------- Группы промптов ---------- */
+.pr-group { border-radius: 16px; padding: 4px 2px; }
+.pr-group > summary { list-style: none; cursor: pointer; }
+.pr-group > summary::-webkit-details-marker { display: none; }
+.pr-group-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; border-radius: 12px; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #a78bfa; background: rgba(167, 139, 250, 0.08); border: 1px solid rgba(167, 139, 250, 0.18); }
+.pr-group-h:hover { background: rgba(167, 139, 250, 0.14); }
+.pr-group:not([open]) .pr-group-h { opacity: 0.75; }
