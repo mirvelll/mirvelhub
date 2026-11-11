@@ -273,3 +273,40 @@
 /* ряд кнопок (4 шт. ≈ 140px) лежит поверх карточки справа сверху — оставляем под него место в строке чипов,
    чтобы чипы (платформа, формат, ачивки 23/33) переносились на вторую строку, а не прятались под кнопками */
 article.game-card > .flex > .min-w-0.flex-1 > .flex-wrap:first-child { padding-right: 144px; }
+
+/* ---------- Трек-лист и «Об издании» (CD / винил) ---------- */
+.tr-sum { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: #9ca3af; }
+.tr-sum b { color: #facc15; }
+.tr-flt { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.tr-list { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
+.tr-row {
+    display: grid; grid-template-columns: 24px minmax(0, 1fr) 56px; align-items: center; gap: 4px 8px;
+    padding: 6px 8px; border-radius: 12px; border: 1px solid transparent; background: rgba(255, 255, 255, 0.035);
+}
+.tr-row.is-top { background: rgba(250, 204, 21, 0.07); border-color: rgba(250, 204, 21, 0.2); }
+.tr-row.is-low { background: rgba(239, 68, 68, 0.06); border-color: rgba(239, 68, 68, 0.16); }
+.tr-n { font-size: 11px; font-weight: 800; color: #6b7280; text-align: center; font-variant-numeric: tabular-nums; }
+.tr-t, .tr-d, .tr-sep-t {
+    width: 100%; min-width: 0; padding: 4px 6px; border-radius: 8px; color: #fff; font-size: 14px;
+    background: transparent; border: 1px solid transparent; transition: background-color 0.15s, border-color 0.15s;
+}
+.tr-d { text-align: center; font-size: 12px; color: #9ca3af; font-variant-numeric: tabular-nums; }
+.tr-t:hover, .tr-d:hover, .tr-sep-t:hover, .tr-t:focus, .tr-d:focus, .tr-sep-t:focus { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.16); outline: none; }
+.tr-ctl { grid-column: 2 / 4; display: flex; align-items: center; justify-content: flex-end; gap: 2px; }
+.tr-stars { display: inline-flex; margin-right: 4px; }
+.tr-star { font-size: 18px; line-height: 1; padding: 3px 1px; color: #4b5563; cursor: pointer; transition: transform 0.12s, color 0.12s; }
+.tr-star.is-on { color: #facc15; }
+.tr-star:hover { transform: scale(1.2); }
+.tr-fav { font-size: 18px; line-height: 1; padding: 3px 5px; color: #4b5563; cursor: pointer; transition: transform 0.12s, color 0.12s; }
+.tr-fav.is-on { color: #f472b6; }
+.tr-fav:hover { transform: scale(1.2); }
+.tr-mini { font-size: 12px; line-height: 1; padding: 6px; border-radius: 8px; color: #6b7280; cursor: pointer; }
+.tr-mini:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
+.tr-sep { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 0 4px; }
+.tr-sep-t { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #a78bfa; }
+@media (min-width: 640px) {
+    .tr-row { grid-template-columns: 24px minmax(0, 1fr) 56px auto; }
+    .tr-ctl { grid-column: auto; }
+}
+.ph-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.ph-lbl { display: block; font-size: 11px; font-weight: 700; color: #9ca3af; margin-bottom: 4px; }
