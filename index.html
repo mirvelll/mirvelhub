@@ -492,7 +492,8 @@
                 <div class="flex flex-wrap gap-2 items-center">
                     <span class="text-xs text-gray-400 uppercase font-bold tracking-wider mr-2">Категории:</span>
                     <button onclick="setFilter(null)" id="filter-cat-all" class="px-3 py-1 rounded-full border border-white/10 text-xs bg-white/5 hover:bg-white/10 transition-all">Все</button>
-                    <button onclick="setFilter('music')" id="filter-cat-music" class="px-3 py-1 rounded-full border border-white/10 text-xs bg-white/5 hover:bg-white/10 transition-all">💿 Музыка</button>
+                    <button onclick="setFilter('cd')" id="filter-cat-cd" class="px-3 py-1 rounded-full border border-white/10 text-xs bg-white/5 hover:bg-white/10 transition-all">💿 CD</button>
+                    <button onclick="setFilter('vinyl')" id="filter-cat-vinyl" class="px-3 py-1 rounded-full border border-white/10 text-xs bg-white/5 hover:bg-white/10 transition-all">💽 Винил</button>
                     <button onclick="setFilter('merch')" id="filter-cat-merch" class="px-3 py-1 rounded-full border border-white/10 text-xs bg-white/5 hover:bg-white/10 transition-all">🎤 Мерч</button>
                     <button onclick="setFilter('clothing')" id="filter-cat-clothing" class="px-3 py-1 rounded-full border border-white/10 text-xs bg-white/5 hover:bg-white/10 transition-all">👕 Одежда</button>
                     <button onclick="setFilter('gear')" id="filter-cat-gear" class="px-3 py-1 rounded-full border border-white/10 text-xs bg-white/5 hover:bg-white/10 transition-all">🔌 Техника</button>
@@ -676,6 +677,8 @@
                 <div>
                     <label class="text-[10px] text-gray-400 font-bold block uppercase tracking-wider mb-1">Категория</label>
                     <select id="item-category" onchange="toggleCategoryFields()" class="w-full bg-[#0d0d14] p-3 rounded-xl border border-white/10 text-gray-300 focus:outline-none focus:border-purple-500/50 text-sm">
+                        <option value="cd">💿 CD</option>
+                        <option value="vinyl">💽 Винил</option>
                         <option value="music">💿 Музыка (CD / Винил)</option>
                         <option value="merch">🎤 Мерч</option>
                         <option value="clothing">👕 Одежда</option>
@@ -1063,6 +1066,6 @@
 
     <!-- Скрипты подключаются по порядку (общая глобальная область видимости) -->
     <!-- 00-storage.js открывает IndexedDB, читает данные и сам подгружает остальные скрипты по порядку (список — в нём) -->
-    <script src="js/00-storage.js?v=20.29"></script>
+    <script src="js/00-storage.js?v=20.32"></script>
 </body>
 </html>
